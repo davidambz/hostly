@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { Prisma } from '../generated/prisma/client.js'
-import { uniqueViolation, violates } from './prisma-errors.js'
+import { isExclusionViolation, uniqueViolation, violates } from './prisma-errors.js'
 
 function knownError(code: string, meta?: Record<string, unknown>) {
   return new Prisma.PrismaClientKnownRequestError('boom', { code, clientVersion: 'test', meta })
@@ -53,5 +53,32 @@ describe('violates', () => {
   it('does not match another field or table', () => {
     expect(violates({ constraint: 'users_cpf_key', fields: ['cpf'] }, field)).toBe(false)
     expect(violates({ constraint: 'brokers_email_key', fields: [] }, field)).toBe(false)
+  })
+})
+
+describe('isExclusionViolation', () => {
+  function exclusion(constraint: string, code = '23P01') {
+    return knownError('P2039', {
+      driverAdapterError: {
+        cause: {
+          originalCode: code,
+          originalMessage: `conflicting key value violates exclusion constraint "${constraint}"`,
+        },
+      },
+    })
+  }
+
+  it('recognizes a violation of the named exclusion constraint', () => {
+    expect(isExclusionViolation(exclusion('bookings_no_overlap'), 'bookings_no_overlap')).toBe(true)
+  })
+
+  it.each([
+    ['another constraint', exclusion('other_no_overlap')],
+    ['a constraint whose name contains it', exclusion('bookings_no_overlap_v2')],
+    ['another Postgres error', exclusion('bookings_no_overlap', '23514')],
+    ['an error without driver details', knownError('P2039')],
+    ['a plain error', new Error('bookings_no_overlap')],
+  ])('is false for %s', (_case, error) => {
+    expect(isExclusionViolation(error, 'bookings_no_overlap')).toBe(false)
   })
 })

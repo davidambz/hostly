@@ -19,3 +19,14 @@ export class RowInUseError extends Error {
     this.name = 'RowInUseError'
   }
 }
+
+/**
+ * Data-layer error: a write conflicts with an existing row under an exclusion constraint
+ * (e.g. two bookings sharing a night). Services decide what that means for the user.
+ */
+export class ExclusionConflictError extends Error {
+  constructor(readonly constraint: string) {
+    super(`Exclusion constraint ${constraint} violated`)
+    this.name = 'ExclusionConflictError'
+  }
+}

@@ -9,6 +9,7 @@ import {
 
 import type { Env } from './config/env.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
+import { bookingsRoutes } from './modules/bookings/bookings.routes.js'
 import { brokersRoutes } from './modules/brokers/brokers.routes.js'
 import { healthRoutes } from './modules/health/health.routes.js'
 import { propertiesRoutes } from './modules/properties/properties.routes.js'
@@ -85,6 +86,7 @@ export async function buildApp(env: Env, options: BuildAppOptions = {}) {
   await app.register(usersRoutes)
   await app.register(propertiesRoutes, { prefix: '/properties' })
   await app.register(brokersRoutes, { prefix: '/brokers' })
+  await app.register(bookingsRoutes, { prefix: '/bookings' })
 
   return app
 }

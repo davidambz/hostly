@@ -43,3 +43,19 @@ export function violates(
 export function isForeignKeyViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003'
 }
+
+interface DatabaseErrorMeta {
+  driverAdapterError?: { cause?: { originalCode?: string; originalMessage?: string } }
+}
+
+/**
+ * Whether the error is a violation of the exclusion constraint `constraint` (Postgres
+ * 23P01). Prisma has no code of its own for these, so it reads the driver's report.
+ */
+export function isExclusionViolation(error: unknown, constraint: string): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false
+  const cause = (error.meta as DatabaseErrorMeta | undefined)?.driverAdapterError?.cause
+  return (
+    cause?.originalCode === '23P01' && cause.originalMessage?.includes(`"${constraint}"`) === true
+  )
+}
