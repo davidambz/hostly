@@ -79,15 +79,11 @@ describe('POST /bookings', () => {
       amountPaid: 0,
       brokerCommissionBps: 0,
       financials: {
-        nights: 7,
         grossLodging: 315_000,
-        discount: 0,
         lodging: 315_000,
-        cleaningFee: 25_000,
         total: 340_000,
         brokerFee: 0,
         net: 340_000,
-        amountPaid: 0,
         balanceDue: 340_000,
       },
       createdAt: expect.any(String) as string,
@@ -234,6 +230,7 @@ describe('POST /bookings', () => {
 
 describe('POST /bookings/quote', () => {
   const quote = {
+    brokerId: '018f0000-0000-7000-8000-0000000000b1',
     checkIn: '2030-12-20',
     checkOut: '2030-12-27',
     nightlyRate: 45_000,
@@ -248,15 +245,11 @@ describe('POST /bookings/quote', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({
-      nights: 7,
       grossLodging: 315_000,
-      discount: 15_000,
       lodging: 300_000,
-      cleaningFee: 25_000,
       total: 325_000,
       brokerFee: 30_000,
       net: 295_000,
-      amountPaid: 100_000,
       balanceDue: 225_000,
     })
     expect(await db.booking.count()).toBe(0)
@@ -274,7 +267,9 @@ describe('POST /bookings/quote', () => {
 
   it('matches the financials of the booking it would create', async () => {
     const broker = await createBroker(db, { userId: owner.id })
-    const quoted = (await request('POST', '/bookings/quote', quote)).json<object>()
+    const quoted = (
+      await request('POST', '/bookings/quote', { ...quote, brokerId: broker.id })
+    ).json<object>()
 
     const created = (
       await book(quote.checkIn, quote.checkOut, { ...quote, brokerId: broker.id })
@@ -287,6 +282,8 @@ describe('POST /bookings/quote', () => {
     ['check-out before check-in', { checkOut: '2030-12-01' }, 'INVALID_DATES'],
     ['a discount above the lodging', { discount: 315_001 }, 'DISCOUNT_EXCEEDS_LODGING'],
     ['a payment above the total', { amountPaid: 325_001 }, 'PAYMENT_EXCEEDS_TOTAL'],
+    ['a commission without a broker', { brokerId: null }, 'COMMISSION_WITHOUT_BROKER'],
+    ['more than a year', { checkOut: '2031-12-21' }, 'INVALID_DATES'],
   ])('answers 400 for %s', async (_case, change, code) => {
     const response = await request('POST', '/bookings/quote', { ...quote, ...change })
 

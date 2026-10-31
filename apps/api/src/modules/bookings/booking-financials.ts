@@ -1,6 +1,6 @@
 /**
  * The money of a booking, all in cents. Pure: the same numbers always give the same result,
- * so the API and the quote endpoint (and the tests) agree to the cent.
+ * so the API, the quote endpoint and the validation agree to the cent.
  *
  *   gross lodging = nights × nightly rate
  *   lodging       = gross lodging − discount
@@ -21,16 +21,13 @@ export interface FinancialInput {
   brokerCommissionBps: number
 }
 
+/** Only the derived values: the inputs are on the booking itself. */
 export interface Financials {
-  nights: number
   grossLodging: number
-  discount: number
   lodging: number
-  cleaningFee: number
   total: number
   brokerFee: number
   net: number
-  amountPaid: number
   balanceDue: number
 }
 
@@ -47,15 +44,11 @@ export function computeFinancials(input: FinancialInput): Financials {
   const total = lodging + input.cleaningFee
   const brokerFee = applyBps(lodging, input.brokerCommissionBps)
   return {
-    nights: input.nights,
     grossLodging,
-    discount: input.discount,
     lodging,
-    cleaningFee: input.cleaningFee,
     total,
     brokerFee,
     net: total - brokerFee,
-    amountPaid: input.amountPaid,
     balanceDue: total - input.amountPaid,
   }
 }

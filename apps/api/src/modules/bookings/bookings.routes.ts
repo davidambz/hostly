@@ -78,8 +78,10 @@ export const bookingsRoutes: FastifyPluginAsyncZod = async (app) => {
         summary: 'Work out the money of a booking without saving it',
         description:
           'For the booking form to show totals as the user types. Same rules and 400 codes ' +
-          'as creating a booking (INVALID_DATES, DISCOUNT_EXCEEDS_LODGING, ' +
-          'PAYMENT_EXCEEDS_TOTAL). Amounts in cents, commission in basis points.',
+          'as creating a booking: INVALID_DATES (order or more than 365 nights), ' +
+          'DISCOUNT_EXCEEDS_LODGING, PAYMENT_EXCEEDS_TOTAL and COMMISSION_WITHOUT_BROKER ' +
+          '(send the chosen brokerId; it is not looked up). Amounts in cents, commission in ' +
+          'basis points.',
         body: quoteBodySchema,
         response: { 200: financialsSchema, ...errors },
       },

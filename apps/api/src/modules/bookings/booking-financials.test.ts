@@ -14,15 +14,11 @@ const base: FinancialInput = {
 describe('computeFinancials', () => {
   it('works out a full booking', () => {
     expect(computeFinancials(base)).toEqual({
-      nights: 7,
       grossLodging: 315_000,
-      discount: 15_000,
       lodging: 300_000,
-      cleaningFee: 25_000,
       total: 325_000,
       brokerFee: 30_000,
       net: 295_000,
-      amountPaid: 100_000,
       balanceDue: 225_000,
     })
   })
@@ -75,7 +71,7 @@ describe('computeFinancials', () => {
           discount: 101,
         })
         expect(result.net + result.brokerFee).toBe(result.total)
-        expect(result.amountPaid + result.balanceDue).toBe(result.total)
+        expect(base.amountPaid + result.balanceDue).toBe(result.total)
       }
     }
   })

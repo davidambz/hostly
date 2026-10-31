@@ -1,10 +1,10 @@
 import { z } from 'zod'
 
 import type { Booking } from '../../generated/prisma/client.js'
-import { computeFinancials } from './booking-financials.js'
 import { formatDate, nightsBetween, parseDate } from '../../shared/dates.js'
 import { pageSchema, paginationQuerySchema } from '../../shared/pagination.js'
 import { nameSchema } from '../../shared/validation/fields.js'
+import { computeFinancials } from './booking-financials.js'
 
 /** Longest stay accepted: a year. */
 export const MAX_NIGHTS = 365
@@ -90,6 +90,8 @@ export type CalendarQuery = z.infer<typeof calendarQuerySchema>
 
 /** Body of POST /bookings/quote: the money and dates of a booking, nothing else. */
 export const quoteBodySchema = z.object({
+  /** Only whether there is one matters: a commission needs a broker. */
+  brokerId: z.uuid().nullable().default(null),
   checkIn: dateSchema,
   checkOut: dateSchema,
   nightlyRate: centsSchema,
@@ -106,15 +108,11 @@ const cents = z.number().int()
 /** See booking-financials.ts for how each value is worked out. */
 export const financialsSchema = z
   .object({
-    nights: z.number().int(),
     grossLodging: cents,
-    discount: cents,
     lodging: cents,
-    cleaningFee: cents,
     total: cents,
     brokerFee: cents,
     net: cents,
-    amountPaid: cents,
     balanceDue: cents,
   })
   .meta({ id: 'BookingFinancials' })
@@ -166,7 +164,14 @@ export function toPublicBooking(booking: BookingWithRefs): PublicBooking {
     discount: booking.discount,
     amountPaid: booking.amountPaid,
     brokerCommissionBps: booking.brokerCommissionBps,
-    financials: computeFinancials({ ...booking, nights }),
+    financials: computeFinancials({
+      nights,
+      nightlyRate: booking.nightlyRate,
+      cleaningFee: booking.cleaningFee,
+      discount: booking.discount,
+      amountPaid: booking.amountPaid,
+      brokerCommissionBps: booking.brokerCommissionBps,
+    }),
     createdAt: booking.createdAt.toISOString(),
     updatedAt: booking.updatedAt.toISOString(),
   }

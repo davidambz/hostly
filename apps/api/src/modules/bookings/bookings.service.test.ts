@@ -347,6 +347,7 @@ describe('BookingsService.delete', () => {
 
 describe('BookingsService.quote', () => {
   const quote = {
+    brokerId: 'br1' as string | null,
     checkIn: '2026-12-20',
     checkOut: '2026-12-27',
     nightlyRate: 45_000,
@@ -360,15 +361,11 @@ describe('BookingsService.quote', () => {
     const { bookings, properties, service } = setup()
 
     expect(service.quote(quote)).toEqual({
-      nights: 7,
       grossLodging: 315_000,
-      discount: 15_000,
       lodging: 300_000,
-      cleaningFee: 25_000,
       total: 325_000,
       brokerFee: 30_000,
       net: 295_000,
-      amountPaid: 100_000,
       balanceDue: 225_000,
     })
     expect(bookings.create).not.toHaveBeenCalled()
@@ -387,9 +384,13 @@ describe('BookingsService.quote', () => {
     )
   })
 
-  it('takes a commission without a broker, since a quote has none', () => {
-    const { service } = setup()
+  it('rejects a commission without a broker, like a booking would, without looking it up', () => {
+    const { brokers, service } = setup()
 
-    expect(service.quote(quote).brokerFee).toBe(30_000)
+    expect(() => service.quote({ ...quote, brokerId: null })).toThrow(
+      expect.objectContaining({ code: 'COMMISSION_WITHOUT_BROKER' }) as Error,
+    )
+    service.quote(quote)
+    expect(brokers.find).not.toHaveBeenCalled()
   })
 })
