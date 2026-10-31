@@ -44,18 +44,26 @@ export function isForeignKeyViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003'
 }
 
-interface DatabaseErrorMeta {
-  driverAdapterError?: { cause?: { originalCode?: string; originalMessage?: string } }
+interface DriverErrorMeta {
+  driverAdapterError?: { cause?: { originalCode?: string; constraint?: { index?: string } } }
+}
+
+function driverCause(error: unknown) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return undefined
+  return (error.meta as DriverErrorMeta | undefined)?.driverAdapterError?.cause
 }
 
 /**
- * Whether the error is a violation of the exclusion constraint `constraint` (Postgres
- * 23P01). Prisma has no code of its own for these, so it reads the driver's report.
+ * Whether the error is an exclusion-constraint violation (Postgres 23P01). Prisma has no
+ * code of its own for these. Matched by SQLSTATE only, not by message text, which varies
+ * with the server's language: callers write to tables with a single exclusion constraint.
  */
-export function isExclusionViolation(error: unknown, constraint: string): boolean {
-  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false
-  const cause = (error.meta as DatabaseErrorMeta | undefined)?.driverAdapterError?.cause
-  return (
-    cause?.originalCode === '23P01' && cause.originalMessage?.includes(`"${constraint}"`) === true
-  )
+export function isExclusionViolation(error: unknown): boolean {
+  return driverCause(error)?.originalCode === '23P01'
+}
+
+/** The foreign key a write violated (e.g. `bookings_broker_id_user_id_fkey`), if any. */
+export function violatedForeignKey(error: unknown): string | undefined {
+  if (!isForeignKeyViolation(error)) return undefined
+  return driverCause(error)?.constraint?.index
 }

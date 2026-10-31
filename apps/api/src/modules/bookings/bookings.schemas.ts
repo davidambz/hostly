@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import type { Booking } from '../../generated/prisma/client.js'
-import { formatDate, nightsBetween } from '../../shared/dates.js'
+import { formatDate, nightsBetween, parseDate } from '../../shared/dates.js'
 import { pageSchema, paginationQuerySchema } from '../../shared/pagination.js'
 import { nameSchema } from '../../shared/validation/fields.js'
 
@@ -37,7 +37,10 @@ const bookingFields = {
   brokerCommissionBps: bpsSchema,
 }
 
-/** Dates, amounts and the broker/commission pair are checked by the service. */
+/**
+ * Rules across fields (dates, discount vs lodging, payment vs total, commission needs a
+ * broker) are checked by the service, against the booking as it ends up.
+ */
 export const createBookingBodySchema = z.object({
   ...bookingFields,
   brokerId: bookingFields.brokerId.default(null),
@@ -77,7 +80,7 @@ export const calendarQuerySchema = z
     propertyId: z.uuid().optional(),
   })
   .refine(({ from, to }) => from < to, { path: ['to'], message: 'Must be after from' })
-  .refine(({ from, to }) => nightsBetween(new Date(from), new Date(to)) <= MAX_CALENDAR_DAYS, {
+  .refine(({ from, to }) => nightsBetween(parseDate(from), parseDate(to)) <= MAX_CALENDAR_DAYS, {
     path: ['to'],
     message: `At most ${MAX_CALENDAR_DAYS} days`,
   })

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Booking } from '../../generated/prisma/client.js'
-import { ExclusionConflictError } from '../../shared/database-errors.js'
+import { ExclusionConflictError, MissingReferenceError } from '../../shared/database-errors.js'
 import { parseDate } from '../../shared/dates.js'
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js'
 import type { BookingsRepository } from './bookings.repository.js'
@@ -44,7 +44,7 @@ function setup() {
     current: stored as Booking | null,
     list: vi.fn(),
     calendar: vi.fn(),
-    find: vi.fn(),
+    find: vi.fn(() => Promise.resolve(bookings.current)),
     findOverlapping: vi.fn<() => Promise<Booking | null>>().mockResolvedValue(null),
     create: vi.fn((_u: string, data: object) => Promise.resolve({ ...stored, ...data, ...refs })),
     update: vi.fn((_u: string, _id: string, change: (current: Booking) => Partial<Booking>) => {
@@ -103,6 +103,13 @@ describe('BookingsService.create', () => {
     ['check-out before check-in', { checkOut: '2026-12-10' }, 'INVALID_DATES'],
     ['a stay longer than a year', { checkOut: '2027-12-21' }, 'INVALID_DATES'],
     ['a commission without a broker', { brokerCommissionBps: 500 }, 'COMMISSION_WITHOUT_BROKER'],
+    // 7 nights x 45000 = 315000 of lodging
+    ['a discount larger than the lodging', { discount: 315_001 }, 'DISCOUNT_EXCEEDS_LODGING'],
+    [
+      'a payment larger than the total',
+      { discount: 15_000, cleaningFee: 20_000, amountPaid: 320_001 },
+      'PAYMENT_EXCEEDS_TOTAL',
+    ],
   ])('answers 400 for %s, before any lookup', async (_case, change, code) => {
     const { bookings, properties, service } = setup()
 
@@ -112,6 +119,49 @@ describe('BookingsService.create', () => {
     expect(error).toMatchObject({ code })
     expect(properties.find).not.toHaveBeenCalled()
     expect(bookings.create).not.toHaveBeenCalled()
+  })
+
+  it('accepts a discount of the whole lodging and a payment of the whole total', async () => {
+    const { service } = setup()
+
+    await expect(
+      service.create('u1', {
+        ...input,
+        discount: 315_000,
+        cleaningFee: 20_000,
+        amountPaid: 20_000,
+      }),
+    ).resolves.toBeDefined()
+  })
+
+  it.each([
+    ['propertyId', 'PROPERTY_NOT_FOUND'],
+    ['brokerId', 'BROKER_NOT_FOUND'],
+  ])(
+    'answers the same 404 when the %s vanished between the check and the insert',
+    async (field, code) => {
+      const { bookings, service } = setup()
+      bookings.create.mockRejectedValue(new MissingReferenceError(field))
+
+      await expect(service.create('u1', input)).rejects.toMatchObject({
+        statusCode: 404,
+        code,
+        details: { field },
+      })
+    },
+  )
+
+  it('checks the property and the broker at the same time', async () => {
+    const { properties, brokers, service } = setup()
+    let resolveProperty: (value: object) => void = () => undefined
+    properties.find.mockReturnValue(new Promise((resolve) => (resolveProperty = resolve)))
+
+    const creating = service.create('u1', { ...input, brokerId: 'br1' })
+    await Promise.resolve()
+
+    expect(brokers.find).toHaveBeenCalled()
+    resolveProperty({ id: 'p1' })
+    await creating
   })
 
   it('accepts exactly a year', async () => {
@@ -225,12 +275,46 @@ describe('BookingsService.update', () => {
     expect(brokers.find).not.toHaveBeenCalled()
   })
 
-  it('answers 404 BOOKING_NOT_FOUND when the booking is missing', async () => {
-    const { bookings, service } = setup()
+  it('answers 404 BOOKING_NOT_FOUND for a missing booking before looking at the body', async () => {
+    const { bookings, properties, service } = setup()
     bookings.current = null
+    properties.find.mockResolvedValue(null)
+
+    await expect(service.update('u1', 'bk1', { propertyId: 'p9' })).rejects.toMatchObject({
+      code: 'BOOKING_NOT_FOUND',
+    })
+    expect(properties.find).not.toHaveBeenCalled()
+  })
+
+  it('answers 404 BOOKING_NOT_FOUND when the booking vanishes before the write', async () => {
+    const { bookings, service } = setup()
+    bookings.update.mockResolvedValueOnce(null)
 
     await expect(service.update('u1', 'bk1', { guestName: 'X' })).rejects.toMatchObject({
       code: 'BOOKING_NOT_FOUND',
+    })
+  })
+
+  it('validates the amounts against the booking as it ends up', async () => {
+    const { service } = setup()
+
+    await expect(service.update('u1', 'bk1', { discount: 315_001 })).rejects.toMatchObject({
+      code: 'DISCOUNT_EXCEEDS_LODGING',
+    })
+    await expect(
+      service.update('u1', 'bk1', { checkOut: '2026-12-21', discount: 45_001 }),
+    ).rejects.toMatchObject({ code: 'DISCOUNT_EXCEEDS_LODGING' })
+  })
+
+  it('answers the 404 of a property deleted between the check and the write', async () => {
+    const { bookings, service } = setup()
+    bookings.update.mockImplementationOnce((_u, _id, change) => {
+      change(stored)
+      return Promise.reject(new MissingReferenceError('propertyId'))
+    })
+
+    await expect(service.update('u1', 'bk1', { propertyId: 'p2' })).rejects.toMatchObject({
+      code: 'PROPERTY_NOT_FOUND',
     })
   })
 

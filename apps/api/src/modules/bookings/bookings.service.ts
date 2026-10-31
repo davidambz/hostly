@@ -1,8 +1,7 @@
 import type { Booking } from '../../generated/prisma/client.js'
-import { ExclusionConflictError } from '../../shared/database-errors.js'
-import { nightsBetween, parseDate, today } from '../../shared/dates.js'
+import { ExclusionConflictError, MissingReferenceError } from '../../shared/database-errors.js'
+import { formatDate, nightsBetween, parseDate, today } from '../../shared/dates.js'
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js'
-import { deleteOrFail } from '../../shared/owned-rows.js'
 import type { Page } from '../../shared/pagination.js'
 import type { BrokersRepository } from '../brokers/brokers.repository.js'
 import type { PropertiesRepository } from '../properties/properties.repository.js'
@@ -24,30 +23,42 @@ export interface BookingsServiceDeps {
   today?: () => string
 }
 
+type BookingState = Pick<
+  Booking,
+  | 'checkIn'
+  | 'checkOut'
+  | 'nightlyRate'
+  | 'cleaningFee'
+  | 'discount'
+  | 'amountPaid'
+  | 'brokerId'
+  | 'brokerCommissionBps'
+>
+
 const notFound = () => new NotFoundError('Booking not found', { code: 'BOOKING_NOT_FOUND' })
 
+function invalid(message: string, code: string, field: string) {
+  return new BadRequestError(message, { code, details: { field } })
+}
+
 /** The rules every booking must satisfy once all changes are applied. */
-function assertValid(
-  booking: Pick<Booking, 'checkIn' | 'checkOut' | 'brokerId' | 'brokerCommissionBps'>,
-) {
+function assertValid(booking: BookingState) {
   const nights = nightsBetween(booking.checkIn, booking.checkOut)
   if (nights < 1) {
-    throw new BadRequestError('Check-out must be after check-in', {
-      code: 'INVALID_DATES',
-      details: { field: 'checkOut' },
-    })
+    throw invalid('Check-out must be after check-in', 'INVALID_DATES', 'checkOut')
   }
   if (nights > MAX_NIGHTS) {
-    throw new BadRequestError(`A booking can last at most ${MAX_NIGHTS} nights`, {
-      code: 'INVALID_DATES',
-      details: { field: 'checkOut' },
-    })
+    throw invalid(`A booking can last at most ${MAX_NIGHTS} nights`, 'INVALID_DATES', 'checkOut')
+  }
+  const lodging = nights * booking.nightlyRate
+  if (booking.discount > lodging) {
+    throw invalid('The discount is larger than the lodging', 'DISCOUNT_EXCEEDS_LODGING', 'discount')
+  }
+  if (booking.amountPaid > lodging - booking.discount + booking.cleaningFee) {
+    throw invalid('The amount paid is larger than the total', 'PAYMENT_EXCEEDS_TOTAL', 'amountPaid')
   }
   if (booking.brokerId === null && booking.brokerCommissionBps > 0) {
-    throw new BadRequestError('A commission needs a broker', {
-      code: 'COMMISSION_WITHOUT_BROKER',
-      details: { field: 'brokerCommissionBps' },
-    })
+    throw invalid('A commission needs a broker', 'COMMISSION_WITHOUT_BROKER', 'brokerCommissionBps')
   }
 }
 
@@ -60,6 +71,18 @@ function toData(input: UpdateBookingInput): Partial<BookingData> {
     ...(checkOut === undefined ? {} : { checkOut: parseDate(checkOut) }),
   }
 }
+
+const propertyNotFound = () =>
+  new NotFoundError('Property not found', {
+    code: 'PROPERTY_NOT_FOUND',
+    details: { field: 'propertyId' },
+  })
+
+const brokerNotFound = () =>
+  new NotFoundError('Broker not found', {
+    code: 'BROKER_NOT_FOUND',
+    details: { field: 'brokerId' },
+  })
 
 export class BookingsService {
   private readonly today: () => string
@@ -85,13 +108,13 @@ export class BookingsService {
   }
 
   async create(userId: string, input: CreateBookingInput): Promise<BookingWithRefs> {
-    const data = toData(input) as BookingData
-    assertValid(data as Booking)
+    const data = toData(input) as BookingData & BookingState
+    assertValid(data)
     await this.assertOwned(userId, input)
     try {
       return await this.deps.bookings.create(userId, data)
     } catch (error) {
-      throw await this.overlapOr(error, userId, data as Booking)
+      throw await this.translate(error, userId, data as Booking)
     }
   }
 
@@ -100,7 +123,10 @@ export class BookingsService {
    * saying anything about the commission drops the commission too.
    */
   async update(userId: string, id: string, input: UpdateBookingInput): Promise<BookingWithRefs> {
+    // The booking in the URL comes first: a missing one is a 404 whatever the body says.
+    await this.get(userId, id)
     await this.assertOwned(userId, input)
+
     let final: Booking | undefined
     try {
       const updated = await this.deps.bookings.update(userId, id, (current) => {
@@ -117,15 +143,14 @@ export class BookingsService {
       }
       return updated
     } catch (error) {
-      throw final ? await this.overlapOr(error, userId, final, id) : error
+      throw final ? await this.translate(error, userId, final, id) : error
     }
   }
 
-  delete(userId: string, id: string): Promise<void> {
-    return deleteOrFail(() => this.deps.bookings.delete(userId, id), {
-      notFound,
-      inUse: notFound,
-    })
+  async delete(userId: string, id: string): Promise<void> {
+    if (!(await this.deps.bookings.delete(userId, id))) {
+      throw notFound()
+    }
   }
 
   /** 404 for a property or broker the user doesn't have, before touching the booking. */
@@ -133,22 +158,23 @@ export class BookingsService {
     userId: string,
     { propertyId, brokerId }: { propertyId?: string; brokerId?: string | null },
   ) {
-    if (propertyId !== undefined && !(await this.deps.properties.find(userId, propertyId))) {
-      throw new NotFoundError('Property not found', {
-        code: 'PROPERTY_NOT_FOUND',
-        details: { field: 'propertyId' },
-      })
-    }
-    if (brokerId && !(await this.deps.brokers.find(userId, brokerId))) {
-      throw new NotFoundError('Broker not found', {
-        code: 'BROKER_NOT_FOUND',
-        details: { field: 'brokerId' },
-      })
-    }
+    const [property, broker] = await Promise.all([
+      propertyId === undefined ? true : this.deps.properties.find(userId, propertyId),
+      brokerId ? this.deps.brokers.find(userId, brokerId) : true,
+    ])
+    if (!property) throw propertyNotFound()
+    if (!broker) throw brokerNotFound()
   }
 
-  /** The 409 for an overlap, naming the booking in the way; any other error as is. */
-  private async overlapOr(error: unknown, userId: string, booking: Booking, excludeId?: string) {
+  /**
+   * Data-layer errors to API errors: an overlap is a 409 naming the booking in the way; a
+   * property or broker deleted since the ownership check is the same 404 as if it had
+   * never been there. Anything else as is.
+   */
+  private async translate(error: unknown, userId: string, booking: Booking, excludeId?: string) {
+    if (error instanceof MissingReferenceError) {
+      return error.field === 'brokerId' ? brokerNotFound() : propertyNotFound()
+    }
     if (!(error instanceof ExclusionConflictError)) {
       return error
     }
@@ -158,8 +184,8 @@ export class BookingsService {
       details: conflicting
         ? {
             conflictingBookingId: conflicting.id,
-            checkIn: conflicting.checkIn.toISOString().slice(0, 10),
-            checkOut: conflicting.checkOut.toISOString().slice(0, 10),
+            checkIn: formatDate(conflicting.checkIn),
+            checkOut: formatDate(conflicting.checkOut),
           }
         : undefined,
     })

@@ -491,3 +491,38 @@ describe('alphanumeric CNPJ', () => {
     )
   })
 })
+
+describe('booking overlap constraint', () => {
+  it('refuses two bookings of a property sharing a night, but not back to back', async () => {
+    const { user, property } = await userWithProperty()
+    const base = { userId: user.id, propertyId: property.id }
+    await createBooking(db, { ...base, checkIn: day(0), checkOut: day(5) })
+
+    await expect(
+      db.booking.create({ data: buildBooking({ ...base, checkIn: day(4), checkOut: day(8) }) }),
+    ).rejects.toThrow('bookings_no_overlap')
+    await expect(
+      createBooking(db, { ...base, checkIn: day(5), checkOut: day(8) }),
+    ).resolves.toBeDefined()
+  })
+
+  it('lets two properties have the same nights', async () => {
+    const { user, property } = await userWithProperty()
+    const other = await createProperty(db, { userId: user.id })
+
+    await createBooking(db, {
+      userId: user.id,
+      propertyId: property.id,
+      checkIn: day(0),
+      checkOut: day(5),
+    })
+    await expect(
+      createBooking(db, {
+        userId: user.id,
+        propertyId: other.id,
+        checkIn: day(0),
+        checkOut: day(5),
+      }),
+    ).resolves.toBeDefined()
+  })
+})

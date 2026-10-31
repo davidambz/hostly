@@ -1,10 +1,10 @@
 import type { Booking, Prisma } from '../../generated/prisma/client.js'
 import type { Database } from '../../shared/database.js'
-import { ExclusionConflictError } from '../../shared/database-errors.js'
+import { ExclusionConflictError, MissingReferenceError } from '../../shared/database-errors.js'
 import { parseDate } from '../../shared/dates.js'
-import { deleteOwnedRow, lockOwnedRow } from '../../shared/owned-rows.js'
+import { lockOwnedRow } from '../../shared/owned-rows.js'
 import { type Page, toSkipTake } from '../../shared/pagination.js'
-import { isExclusionViolation } from '../../shared/prisma-errors.js'
+import { isExclusionViolation, violatedForeignKey } from '../../shared/prisma-errors.js'
 import { escapeLike } from '../../shared/search.js'
 import type { BookingWithRefs, CalendarQuery, ListBookingsQuery } from './bookings.schemas.js'
 
@@ -17,10 +17,20 @@ const withRefs = {
   broker: { select: { id: true, name: true } },
 } satisfies Prisma.BookingInclude
 
-/** Rethrows an overlap as an ExclusionConflictError, anything else as is. */
+/** Which booking field each of its foreign keys is about. */
+const FOREIGN_KEY_FIELDS: Record<string, string> = {
+  bookings_property_id_user_id_fkey: 'propertyId',
+  bookings_broker_id_user_id_fkey: 'brokerId',
+}
+
+/** Rethrows an overlap or a vanished property/broker as data-layer errors, the rest as is. */
 function rethrow(error: unknown): never {
-  if (isExclusionViolation(error, OVERLAP_CONSTRAINT)) {
+  if (isExclusionViolation(error)) {
     throw new ExclusionConflictError(OVERLAP_CONSTRAINT)
+  }
+  const field = FOREIGN_KEY_FIELDS[violatedForeignKey(error) ?? '']
+  if (field) {
+    throw new MissingReferenceError(field)
   }
   throw error
 }
@@ -121,8 +131,9 @@ export class BookingsRepository {
     }
   }
 
-  /** Nothing references a booking, so this only ever reports whether it existed. */
-  delete(userId: string, id: string): Promise<boolean> {
-    return deleteOwnedRow(() => this.db.booking.deleteMany({ where: { id, userId } }), 'nothing')
+  /** Returns false when the user has no such booking. Nothing references bookings. */
+  async delete(userId: string, id: string): Promise<boolean> {
+    const { count } = await this.db.booking.deleteMany({ where: { id, userId } })
+    return count === 1
   }
 }

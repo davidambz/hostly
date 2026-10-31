@@ -30,3 +30,14 @@ export class ExclusionConflictError extends Error {
     this.name = 'ExclusionConflictError'
   }
 }
+
+/**
+ * Data-layer error: a write points at a row that no longer exists (a foreign key failed),
+ * e.g. a property deleted between the check and the insert.
+ */
+export class MissingReferenceError extends Error {
+  constructor(readonly field: string) {
+    super(`Referenced row for ${field} does not exist`)
+    this.name = 'MissingReferenceError'
+  }
+}

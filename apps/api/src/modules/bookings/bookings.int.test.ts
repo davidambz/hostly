@@ -438,6 +438,26 @@ describe('GET /bookings/:id', () => {
 })
 
 describe('PATCH /bookings/:id', () => {
+  it('answers BOOKING_NOT_FOUND for a missing booking, whatever the body points at', async () => {
+    const response = await request('PATCH', '/bookings/018f0000-0000-7000-8000-000000000001', {
+      propertyId: '018f0000-0000-7000-8000-000000000002',
+    })
+
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toMatchObject({ code: 'BOOKING_NOT_FOUND' })
+  })
+
+  it('answers 400 PAYMENT_EXCEEDS_TOTAL when a shorter stay leaves the payment above the total', async () => {
+    const id = (await book('2030-12-20', '2030-12-27', { amountPaid: 200_000 })).json<{
+      id: string
+    }>().id
+
+    const response = await request('PATCH', `/bookings/${id}`, { checkOut: '2030-12-22' })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toMatchObject({ code: 'PAYMENT_EXCEEDS_TOTAL' })
+  })
+
   async function created(checkIn = '2030-12-20', checkOut = '2030-12-27', extra: object = {}) {
     return (await book(checkIn, checkOut, extra)).json<{ id: string }>().id
   }
