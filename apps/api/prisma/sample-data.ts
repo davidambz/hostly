@@ -20,6 +20,9 @@ export async function seedSampleData(db: Database, today = new Date()) {
       Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()) + offset * DAY_MS,
     )
 
+  // Hashed up front: argon2 is slow on purpose and shouldn't hold the transaction open.
+  const passwordHash = await hash(SAMPLE_PASSWORD)
+
   await db.$transaction(async (tx) => {
     // Cascades to the user's properties, brokers and bookings.
     await tx.user.deleteMany({ where: { email: SAMPLE_EMAIL } })
@@ -30,7 +33,7 @@ export async function seedSampleData(db: Database, today = new Date()) {
         email: SAMPLE_EMAIL,
         cpf: '52998224725',
         phone: '48999887766',
-        passwordHash: await hash(SAMPLE_PASSWORD),
+        passwordHash,
       },
     })
 

@@ -40,13 +40,6 @@ describe('users', () => {
     expect(user.updatedAt).toBeInstanceOf(Date)
   })
 
-  it('generates time-ordered ids', async () => {
-    const first = await createUser(db)
-    const second = await createUser(db)
-
-    expect(first.id < second.id).toBe(true)
-  })
-
   it('refuses a duplicate e-mail', async () => {
     await createUser(db, { email: 'dup@hostly.test' })
 

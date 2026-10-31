@@ -1,13 +1,15 @@
 import { type Env, loadEnv } from '../config/env.js'
+import { DEFAULT_TEST_DATABASE_URL } from './integration/database-url.js'
 
-/** Never connected to by the unit tests, which inject a fake database. */
-const TEST_DATABASE_URL = 'postgresql://hostly:hostly@localhost:5432/hostly_test'
-
+/**
+ * Env for tests. DATABASE_URL points at the integration test database; unit tests
+ * inject a fake database instead, so they never connect to it.
+ */
 export function testEnv(overrides: Partial<Record<keyof Env, string>> = {}): Env {
   return loadEnv({
     NODE_ENV: 'test',
     LOG_LEVEL: 'silent',
-    DATABASE_URL: TEST_DATABASE_URL,
+    DATABASE_URL: DEFAULT_TEST_DATABASE_URL,
     ...overrides,
   })
 }

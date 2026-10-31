@@ -18,7 +18,11 @@ const next = () => ++sequence
 let passwordHash: Promise<string> | undefined
 /** Hashing is slow on purpose, so every test user shares one hash of TEST_PASSWORD. */
 function testPasswordHash() {
-  passwordHash ??= hash(TEST_PASSWORD)
+  passwordHash ??= hash(TEST_PASSWORD).catch((error: unknown) => {
+    // Don't cache a failure: the next call tries again.
+    passwordHash = undefined
+    throw error
+  })
   return passwordHash
 }
 

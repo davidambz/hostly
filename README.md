@@ -63,8 +63,8 @@ pnpm install
 | `pnpm format`    | Prettier em tudo                 |
 | `pnpm typecheck` | `tsc --noEmit` em cada workspace |
 | `pnpm test`      | testes de cada workspace         |
+| `pnpm build`     | build de cada workspace          |
 
 Os testes de integração da API precisam de um Postgres: suba o do compose (`docker compose up -d postgres`). Eles usam o banco `hostly_test` (ou `TEST_DATABASE_URL`), que é recriado a cada execução. Só os unitários: `pnpm --filter @hostly/api test:unit`.
-| `pnpm build` | build de cada workspace |
 
 Os commits seguem [Conventional Commits](https://www.conventionalcommits.org/) e são validados no hook de `commit-msg`.

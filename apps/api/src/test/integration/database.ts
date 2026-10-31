@@ -2,6 +2,7 @@ import { createDatabase, type Database } from '../../shared/database.js'
 import { testDatabaseUrl } from './database-url.js'
 
 let db: Database | undefined
+let truncateStatement: string | undefined
 
 /** One client per test file, connected to the migrated test database. */
 export function testDatabase(): Database {
@@ -17,11 +18,19 @@ export async function disconnectTestDatabase() {
 /** Empties every table (keeping the migrations history) so each test starts clean. */
 export async function resetTestDatabase() {
   const database = testDatabase()
+  // The tables don't change during a run, so the statement is built once per file.
+  truncateStatement ??= await buildTruncateStatement(database)
+  if (truncateStatement) {
+    await database.$executeRawUnsafe(truncateStatement)
+  }
+}
+
+async function buildTruncateStatement(database: Database) {
   const tables = await database.$queryRaw<{ tablename: string }[]>`
     SELECT tablename FROM pg_tables
     WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'
   `
-  if (tables.length === 0) return
+  if (tables.length === 0) return ''
   const list = tables.map(({ tablename }) => `"public"."${tablename}"`).join(', ')
-  await database.$executeRawUnsafe(`TRUNCATE ${list} RESTART IDENTITY CASCADE`)
+  return `TRUNCATE ${list} RESTART IDENTITY CASCADE`
 }

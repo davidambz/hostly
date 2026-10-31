@@ -170,6 +170,18 @@ describe('health routes', () => {
       expect(db.$queryRaw).toHaveBeenCalledTimes(2)
     })
 
+    it('answers 503 with a real client when nothing listens at DATABASE_URL', async () => {
+      // Nothing listens on port 1, so connecting fails right away; no database needed.
+      app = await buildApp(
+        testEnv({ DATABASE_URL: 'postgresql://hostly:hostly@127.0.0.1:1/hostly_test' }),
+      )
+
+      const response = await app.inject({ method: 'GET', url: '/health/ready' })
+
+      expect(response.statusCode).toBe(503)
+      expect(response.json()).toEqual({ status: 'unavailable', checks: { database: 'down' } })
+    })
+
     it('is never rate limited', async () => {
       await app?.close()
       app = await buildApp(testEnv({ RATE_LIMIT_MAX: '1' }), { db: fakeDatabase() })
