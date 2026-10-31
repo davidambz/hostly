@@ -23,6 +23,26 @@ Monorepo com pnpm workspaces (Node 24, pnpm via corepack). TypeScript `strict` e
 | `pnpm test`      | testes de cada workspace         |
 | `pnpm build`     | build de cada workspace          |
 
+## API (`apps/api`)
+
+```
+src/
+  config/env.ts   # env validada com Zod; falha no boot se algo estiver errado
+  plugins/        # error-handler, security (helmet/cors/rate limit), not-found, swagger
+  modules/<x>/    # x.routes.ts → x.service.ts → x.repository.ts, com x.schemas.ts
+  shared/         # erros de domínio (AppError e subclasses) e tipos compartilhados
+  test/           # helpers de teste
+  app.ts          # buildApp(env), usado pelo server e pelos testes
+  server.ts       # listen + shutdown gracioso
+```
+
+- As rotas só validam entrada e saída com Zod (`fastify-type-provider-zod`) e chamam o service. A regra de negócio fica no service e o acesso a dados no repository.
+- Erros esperados: o service lança `NotFoundError`, `ConflictError` etc. e o error handler converte para `{ statusCode, code, message, details? }`. Nenhuma rota monta resposta de erro na mão.
+- Erro inesperado vira 500 genérico, e o original vai para o log com o `reqId`.
+- Toda rota, inclusive a 404, passa pelo rate limit. A exceção é `/health`, com `config: { rateLimit: false }`.
+- Os testes ficam ao lado do código (`*.test.ts`) e usam `app.inject()`. O env dos testes vem de `src/test/env.ts`.
+- Docs em `/docs` (Swagger UI) e `/docs/json` (OpenAPI).
+
 ## Fluxo de trabalho
 
 - Tudo começa por uma issue. A branch sai da `dev` atualizada e se chama `feat/<n>-slug` (ou `fix/`, `chore/`, `docs/`, `test/`, `ci/`). O PR vai para `dev`.

@@ -30,6 +30,8 @@ export default defineConfig(
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+      // Fastify plugins and hooks are async by contract, even when they don't await.
+      '@typescript-eslint/require-await': 'off',
     },
   },
   prettier,
