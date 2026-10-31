@@ -118,6 +118,19 @@ describe('toPublicBooking', () => {
     broker: null,
   }
 
+  it('includes the financials', () => {
+    expect(
+      toPublicBooking({ ...booking, cleaningFee: 25_000, brokerCommissionBps: 0 }).financials,
+    ).toEqual({
+      grossLodging: 315_000,
+      lodging: 315_000,
+      total: 340_000,
+      brokerFee: 0,
+      net: 340_000,
+      balanceDue: 340_000,
+    })
+  })
+
   it('shows dates as YYYY-MM-DD, the nights, and the property name, without the owner', () => {
     const output = toPublicBooking(booking)
 

@@ -4,6 +4,7 @@ import type { Booking } from '../../generated/prisma/client.js'
 import { formatDate, nightsBetween, parseDate } from '../../shared/dates.js'
 import { pageSchema, paginationQuerySchema } from '../../shared/pagination.js'
 import { nameSchema } from '../../shared/validation/fields.js'
+import { computeFinancials } from './booking-financials.js'
 
 /** Longest stay accepted: a year. */
 export const MAX_NIGHTS = 365
@@ -87,6 +88,35 @@ export const calendarQuerySchema = z
 
 export type CalendarQuery = z.infer<typeof calendarQuerySchema>
 
+/** Body of POST /bookings/quote: the money and dates of a booking, nothing else. */
+export const quoteBodySchema = z.object({
+  /** Only whether there is one matters: a commission needs a broker. */
+  brokerId: z.uuid().nullable().default(null),
+  checkIn: dateSchema,
+  checkOut: dateSchema,
+  nightlyRate: centsSchema,
+  cleaningFee: centsSchema.default(0),
+  discount: centsSchema.default(0),
+  amountPaid: centsSchema.default(0),
+  brokerCommissionBps: bpsSchema.default(0),
+})
+
+export type QuoteInput = z.infer<typeof quoteBodySchema>
+
+const cents = z.number().int()
+
+/** See booking-financials.ts for how each value is worked out. */
+export const financialsSchema = z
+  .object({
+    grossLodging: cents,
+    lodging: cents,
+    total: cents,
+    brokerFee: cents,
+    net: cents,
+    balanceDue: cents,
+  })
+  .meta({ id: 'BookingFinancials' })
+
 const reference = z.object({ id: z.uuid(), name: z.string() })
 
 export const bookingSchema = z
@@ -103,6 +133,7 @@ export const bookingSchema = z
     discount: z.number().int(),
     amountPaid: z.number().int(),
     brokerCommissionBps: z.number().int(),
+    financials: financialsSchema,
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
   })
@@ -119,6 +150,7 @@ export type BookingWithRefs = Booking & {
 }
 
 export function toPublicBooking(booking: BookingWithRefs): PublicBooking {
+  const nights = nightsBetween(booking.checkIn, booking.checkOut)
   return {
     id: booking.id,
     property: booking.property,
@@ -126,12 +158,20 @@ export function toPublicBooking(booking: BookingWithRefs): PublicBooking {
     guestName: booking.guestName,
     checkIn: formatDate(booking.checkIn),
     checkOut: formatDate(booking.checkOut),
-    nights: nightsBetween(booking.checkIn, booking.checkOut),
+    nights,
     nightlyRate: booking.nightlyRate,
     cleaningFee: booking.cleaningFee,
     discount: booking.discount,
     amountPaid: booking.amountPaid,
     brokerCommissionBps: booking.brokerCommissionBps,
+    financials: computeFinancials({
+      nights,
+      nightlyRate: booking.nightlyRate,
+      cleaningFee: booking.cleaningFee,
+      discount: booking.discount,
+      amountPaid: booking.amountPaid,
+      brokerCommissionBps: booking.brokerCommissionBps,
+    }),
     createdAt: booking.createdAt.toISOString(),
     updatedAt: booking.updatedAt.toISOString(),
   }

@@ -12,7 +12,9 @@ import {
   bookingSchema,
   calendarQuerySchema,
   createBookingBodySchema,
+  financialsSchema,
   listBookingsQuerySchema,
+  quoteBodySchema,
   toPublicBooking,
   updateBookingBodySchema,
 } from './bookings.schemas.js'
@@ -65,6 +67,26 @@ export const bookingsRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) =>
       (await service.calendar(request.user.sub, request.query)).map(toPublicBooking),
+  )
+
+  app.post(
+    '/quote',
+    {
+      schema: {
+        tags,
+        security,
+        summary: 'Work out the money of a booking without saving it',
+        description:
+          'For the booking form to show totals as the user types. Same rules and 400 codes ' +
+          'as creating a booking: INVALID_DATES (order or more than 365 nights), ' +
+          'DISCOUNT_EXCEEDS_LODGING, PAYMENT_EXCEEDS_TOTAL and COMMISSION_WITHOUT_BROKER ' +
+          '(send the chosen brokerId; it is not looked up). Amounts in cents, commission in ' +
+          'basis points.',
+        body: quoteBodySchema,
+        response: { 200: financialsSchema, ...errors },
+      },
+    },
+    (request) => service.quote(request.body),
   )
 
   app.get(

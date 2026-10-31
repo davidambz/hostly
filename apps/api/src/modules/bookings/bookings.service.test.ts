@@ -344,3 +344,53 @@ describe('BookingsService.delete', () => {
     await expect(service.delete('u1', 'bk1')).rejects.toMatchObject({ code: 'BOOKING_NOT_FOUND' })
   })
 })
+
+describe('BookingsService.quote', () => {
+  const quote = {
+    brokerId: 'br1' as string | null,
+    checkIn: '2026-12-20',
+    checkOut: '2026-12-27',
+    nightlyRate: 45_000,
+    cleaningFee: 25_000,
+    discount: 15_000,
+    amountPaid: 100_000,
+    brokerCommissionBps: 1000,
+  }
+
+  it('works out the money without touching the database', () => {
+    const { bookings, properties, service } = setup()
+
+    expect(service.quote(quote)).toEqual({
+      grossLodging: 315_000,
+      lodging: 300_000,
+      total: 325_000,
+      brokerFee: 30_000,
+      net: 295_000,
+      balanceDue: 225_000,
+    })
+    expect(bookings.create).not.toHaveBeenCalled()
+    expect(properties.find).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['invalid dates', { checkOut: '2026-12-20' }, 'INVALID_DATES'],
+    ['a discount above the lodging', { discount: 315_001 }, 'DISCOUNT_EXCEEDS_LODGING'],
+    ['a payment above the total', { amountPaid: 325_001 }, 'PAYMENT_EXCEEDS_TOTAL'],
+  ])('rejects %s like a booking would', (_case, change, code) => {
+    const { service } = setup()
+
+    expect(() => service.quote({ ...quote, ...change })).toThrow(
+      expect.objectContaining({ code }) as Error,
+    )
+  })
+
+  it('rejects a commission without a broker, like a booking would, without looking it up', () => {
+    const { brokers, service } = setup()
+
+    expect(() => service.quote({ ...quote, brokerId: null })).toThrow(
+      expect.objectContaining({ code: 'COMMISSION_WITHOUT_BROKER' }) as Error,
+    )
+    service.quote(quote)
+    expect(brokers.find).not.toHaveBeenCalled()
+  })
+})
