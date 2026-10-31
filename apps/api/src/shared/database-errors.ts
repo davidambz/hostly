@@ -19,3 +19,25 @@ export class RowInUseError extends Error {
     this.name = 'RowInUseError'
   }
 }
+
+/**
+ * Data-layer error: a write conflicts with an existing row under an exclusion constraint
+ * (e.g. two bookings sharing a night). Services decide what that means for the user.
+ */
+export class ExclusionConflictError extends Error {
+  constructor(readonly constraint: string) {
+    super(`Exclusion constraint ${constraint} violated`)
+    this.name = 'ExclusionConflictError'
+  }
+}
+
+/**
+ * Data-layer error: a write points at a row that no longer exists (a foreign key failed),
+ * e.g. a property deleted between the check and the insert.
+ */
+export class MissingReferenceError extends Error {
+  constructor(readonly field: string) {
+    super(`Referenced row for ${field} does not exist`)
+    this.name = 'MissingReferenceError'
+  }
+}

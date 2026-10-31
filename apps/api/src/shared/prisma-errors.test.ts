@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import { Prisma } from '../generated/prisma/client.js'
-import { uniqueViolation, violates } from './prisma-errors.js'
+import {
+  isExclusionViolation,
+  uniqueViolation,
+  violatedForeignKey,
+  violates,
+} from './prisma-errors.js'
 
 function knownError(code: string, meta?: Record<string, unknown>) {
   return new Prisma.PrismaClientKnownRequestError('boom', { code, clientVersion: 'test', meta })
@@ -53,5 +58,50 @@ describe('violates', () => {
   it('does not match another field or table', () => {
     expect(violates({ constraint: 'users_cpf_key', fields: ['cpf'] }, field)).toBe(false)
     expect(violates({ constraint: 'brokers_email_key', fields: [] }, field)).toBe(false)
+  })
+})
+
+describe('isExclusionViolation', () => {
+  function driverError(
+    prismaCode: string,
+    originalCode: string,
+    message = 'any wording, any language',
+  ) {
+    return knownError(prismaCode, {
+      driverAdapterError: { cause: { originalCode, originalMessage: message } },
+    })
+  }
+
+  it('recognizes Postgres 23P01 by SQLSTATE, whatever the message says', () => {
+    expect(isExclusionViolation(driverError('P2039', '23P01', 'conflito de chave'))).toBe(true)
+  })
+
+  it.each([
+    ['another Postgres error', driverError('P2039', '23514')],
+    ['an error without driver details', knownError('P2039')],
+    ['a plain error', new Error('23P01')],
+  ])('is false for %s', (_case, error) => {
+    expect(isExclusionViolation(error)).toBe(false)
+  })
+})
+
+describe('violatedForeignKey', () => {
+  it('names the foreign key reported by the driver', () => {
+    const error = knownError('P2003', {
+      driverAdapterError: { cause: { constraint: { index: 'bookings_broker_id_user_id_fkey' } } },
+    })
+
+    expect(violatedForeignKey(error)).toBe('bookings_broker_id_user_id_fkey')
+  })
+
+  it.each([
+    ['a foreign key error without details', knownError('P2003')],
+    [
+      'another Prisma error',
+      knownError('P2002', { driverAdapterError: { cause: { constraint: { index: 'x' } } } }),
+    ],
+    ['a plain error', new Error('fkey')],
+  ])('is undefined for %s', (_case, error) => {
+    expect(violatedForeignKey(error)).toBeUndefined()
   })
 })
