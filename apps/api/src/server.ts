@@ -15,4 +15,10 @@ closeWithGrace({ delay: 10_000 }, async ({ signal, err }) => {
   await app.close()
 })
 
-await app.listen({ host: env.HOST, port: env.PORT })
+try {
+  await app.listen({ host: env.HOST, port: env.PORT })
+} catch (err) {
+  app.log.fatal({ err }, 'failed to start the server')
+  await app.close()
+  process.exit(1)
+}

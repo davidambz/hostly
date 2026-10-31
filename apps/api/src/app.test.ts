@@ -127,6 +127,23 @@ describe('unknown routes', () => {
 
     expect(statuses).toEqual([404, 404, 429])
   })
+
+  it('checks the limit before reading the body, so malformed payloads count too', async () => {
+    const api = await start({ RATE_LIMIT_MAX: '2' })
+
+    const statuses = []
+    for (let i = 0; i < 3; i++) {
+      const response = await api.inject({
+        method: 'POST',
+        url: '/scan',
+        headers: { 'content-type': 'application/json' },
+        payload: '{"broken": ',
+      })
+      statuses.push(response.statusCode)
+    }
+
+    expect(statuses.at(-1)).toBe(429)
+  })
 })
 
 describe('security headers', () => {
@@ -232,6 +249,43 @@ describe('rate limit', () => {
 
     expect([first.statusCode, second.statusCode, firstAgain.statusCode]).toEqual([200, 200, 429])
   })
+
+  describe('behind a proxy', () => {
+    async function hitThroughProxy(api: App, clientIp: string) {
+      const response = await api.inject({
+        method: 'GET',
+        url: '/limited',
+        remoteAddress: '10.0.0.254',
+        headers: { 'x-forwarded-for': clientIp },
+      })
+      return response.statusCode
+    }
+
+    it('limits each client IP separately when TRUST_PROXY is on', async () => {
+      const api = await start({ RATE_LIMIT_MAX: '1', TRUST_PROXY: 'true' })
+      api.get('/limited', () => ({ ok: true }))
+
+      const statuses = [
+        await hitThroughProxy(api, '203.0.113.1'),
+        await hitThroughProxy(api, '203.0.113.2'),
+        await hitThroughProxy(api, '203.0.113.1'),
+      ]
+
+      expect(statuses).toEqual([200, 200, 429])
+    })
+
+    it('ignores x-forwarded-for when TRUST_PROXY is off, so it cannot be spoofed', async () => {
+      const api = await start({ RATE_LIMIT_MAX: '1', TRUST_PROXY: 'false' })
+      api.get('/limited', () => ({ ok: true }))
+
+      const statuses = [
+        await hitThroughProxy(api, '203.0.113.1'),
+        await hitThroughProxy(api, '203.0.113.2'),
+      ]
+
+      expect(statuses).toEqual([200, 429])
+    })
+  })
 })
 
 describe('API docs', () => {
@@ -258,6 +312,18 @@ describe('API docs', () => {
 
     const paths = Object.keys(response.json<{ paths: object }>().paths)
     expect(paths.filter((path) => path.startsWith('/docs'))).toEqual([])
+  })
+
+  it('is not exposed when DOCS_ENABLED is off', async () => {
+    const api = await start({ DOCS_ENABLED: 'false' })
+
+    const [json, ui] = await Promise.all([
+      api.inject({ method: 'GET', url: '/docs/json' }),
+      api.inject({ method: 'GET', url: '/docs/' }),
+    ])
+
+    expect(json.statusCode).toBe(404)
+    expect(ui.statusCode).toBe(404)
   })
 
   it('serves the Swagger UI', async () => {

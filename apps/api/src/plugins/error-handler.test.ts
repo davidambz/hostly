@@ -62,6 +62,29 @@ async function buildTestApp() {
     // eslint-disable-next-line @typescript-eslint/only-throw-error
     throw 'boom'
   })
+  instance.get('/errors/thrown-undefined', () => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    throw undefined
+  })
+  instance.get('/errors/thrown-null', () => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    throw null
+  })
+  instance.get('/errors/client-without-code', () => {
+    throw Object.assign(new Error('Gone for good'), { statusCode: 410 })
+  })
+  instance.get('/errors/client-without-message', () => {
+    throw Object.assign(new Error(''), { statusCode: 418 })
+  })
+  instance.get('/errors/client-with-unknown-status', () => {
+    throw Object.assign(new Error(''), { statusCode: 499 })
+  })
+  instance.get('/errors/client-with-non-string-code', () => {
+    throw Object.assign(new Error('Nope'), { statusCode: 404, code: 42 })
+  })
+  instance.get('/errors/status-not-a-number', () => {
+    throw Object.assign(new Error('weird'), { statusCode: '404' })
+  })
 
   instance.post(
     '/validate/:id',
@@ -236,6 +259,47 @@ describe('error handler', () => {
         code: 'FST_ERR_CTP_INVALID_MEDIA_TYPE',
       })
     })
+
+    it('derives the code from the status when a client error has none', async () => {
+      const response = await app.inject({ method: 'GET', url: '/errors/client-without-code' })
+
+      expect(response.statusCode).toBe(410)
+      expect(response.json()).toEqual({ statusCode: 410, code: 'GONE', message: 'Gone for good' })
+    })
+
+    it('ignores a code that is not a string', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/errors/client-with-non-string-code',
+      })
+
+      expect(response.json()).toEqual({ statusCode: 404, code: 'NOT_FOUND', message: 'Nope' })
+    })
+
+    it('falls back to the status text when a client error has no message', async () => {
+      const response = await app.inject({ method: 'GET', url: '/errors/client-without-message' })
+
+      expect(response.statusCode).toBe(418)
+      expect(response.json()).toEqual({
+        statusCode: 418,
+        code: 'I_M_A_TEAPOT',
+        message: "I'm a Teapot",
+      })
+    })
+
+    it('handles a 4xx status that has no standard name', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/errors/client-with-unknown-status',
+      })
+
+      expect(response.statusCode).toBe(499)
+      expect(response.json()).toEqual({
+        statusCode: 499,
+        code: 'CLIENT_ERROR',
+        message: 'Client error',
+      })
+    })
   })
 
   describe('unexpected errors', () => {
@@ -272,12 +336,20 @@ describe('error handler', () => {
       expect(response.body).not.toContain('upstream')
     })
 
-    it('handles values thrown that are not errors', async () => {
-      const response = await app.inject({ method: 'GET', url: '/errors/thrown-string' })
+    it.each(['thrown-string', 'thrown-undefined', 'thrown-null', 'status-not-a-number'])(
+      'answers the standard 500 for %s',
+      async (route) => {
+        const response = await app.inject({ method: 'GET', url: `/errors/${route}` })
 
-      expect(response.statusCode).toBe(500)
-      expect(response.json()).toMatchObject({ code: 'INTERNAL_SERVER_ERROR' })
-    })
+        expect(response.statusCode).toBe(500)
+        expect(response.json()).toEqual({
+          statusCode: 500,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Something went wrong',
+        })
+        expect(logs).toContainEqual(expect.objectContaining({ msg: 'unhandled error' }))
+      },
+    )
 
     it('answers 500 when a response does not match its schema', async () => {
       const response = await app.inject({ method: 'GET', url: '/serialization' })

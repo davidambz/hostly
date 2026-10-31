@@ -30,6 +30,7 @@ function loggerOptions(env: Env): FastifyServerOptions['logger'] {
 export async function buildApp(env: Env) {
   const app = Fastify({
     logger: loggerOptions(env),
+    trustProxy: env.TRUST_PROXY,
     // Reuse the caller's request id (e.g. from a proxy) only when it is safe to log.
     genReqId: (request) => {
       const incoming = request.headers[REQUEST_ID_HEADER]
@@ -52,7 +53,9 @@ export async function buildApp(env: Env) {
     rateLimitMax: env.RATE_LIMIT_MAX,
   })
   await app.register(notFound)
-  await app.register(swagger)
+  if (env.DOCS_ENABLED) {
+    await app.register(swagger)
+  }
 
   await app.register(healthRoutes)
 
