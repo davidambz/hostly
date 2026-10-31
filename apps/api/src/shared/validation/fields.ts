@@ -1,6 +1,13 @@
 import { z } from 'zod'
 
-import { isValidCpf, isValidPhone, normalizePhone, onlyDigits } from './brazil.js'
+import {
+  isValidCep,
+  isValidCpf,
+  isValidPhone,
+  normalizePhone,
+  onlyDigits,
+  STATES,
+} from './brazil.js'
 
 /**
  * Reusable request fields. They accept what people type (masks, spaces, any case) and
@@ -34,3 +41,36 @@ export const passwordSchema = z
   .string()
   .min(PASSWORD_MIN_LENGTH, `Must have at least ${PASSWORD_MIN_LENGTH} characters`)
   .max(PASSWORD_MAX_LENGTH)
+
+/** Absent, null and '' all mean "no value". */
+function blankToNull(value: string | null | undefined): string | null {
+  return value === undefined || value === null || value === '' ? null : value
+}
+
+/**
+ * An optional free-text field: trimmed, with blank meaning "no value" (null), so clearing
+ * a field in a form works the same whether the client sends "" or null.
+ */
+export function optionalText(max: number) {
+  return z.string().trim().max(max).nullish().transform(blankToNull)
+}
+
+/** Accepts `88053-700` or `88053700`; yields digits only. Blank means no value. */
+export const cepSchema = z
+  .string()
+  .regex(/^[\d.\-\s]*$/, 'Invalid CEP')
+  .transform(onlyDigits)
+  .nullish()
+  .transform(blankToNull)
+  .refine((value) => value === null || isValidCep(value), { message: 'Invalid CEP' })
+
+/**
+ * A UF in any case, e.g. `sc`; yields `SC`. Blank means no value. Normalized before the
+ * enum check, so the OpenAPI spec lists the valid UFs.
+ */
+export const stateSchema = z
+  .preprocess(
+    (value) => (typeof value === 'string' ? blankToNull(value.trim().toUpperCase()) : value),
+    z.enum(STATES, { error: 'Invalid state (UF)' }).nullish(),
+  )
+  .transform((value) => value ?? null)

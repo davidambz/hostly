@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
+import { STATES } from './brazil.js'
 import {
+  cepSchema,
   cpfSchema,
   emailSchema,
   nameSchema,
+  optionalText,
   PASSWORD_MAX_LENGTH,
   passwordSchema,
   phoneSchema,
+  stateSchema,
 } from './fields.js'
 
 describe('nameSchema', () => {
@@ -84,5 +88,61 @@ describe('passwordSchema', () => {
   it('accepts the boundaries', () => {
     expect(passwordSchema.safeParse('a'.repeat(8)).success).toBe(true)
     expect(passwordSchema.safeParse('a'.repeat(PASSWORD_MAX_LENGTH)).success).toBe(true)
+  })
+})
+
+describe('optionalText', () => {
+  const schema = optionalText(5)
+
+  it.each([
+    ['  abc ', 'abc'],
+    ['', null],
+    ['   ', null],
+    [null, null],
+    [undefined, null],
+  ])('%j → %j', (input, output) => {
+    expect(schema.parse(input)).toBe(output)
+  })
+
+  it('rejects text over the limit', () => {
+    expect(schema.safeParse('abcdef').success).toBe(false)
+  })
+})
+
+describe('cepSchema', () => {
+  it.each([
+    ['88053-700', '88053700'],
+    ['88053700', '88053700'],
+    ['88.053-700', '88053700'],
+    ['', null],
+    [null, null],
+  ])('%j → %j', (input, output) => {
+    expect(cepSchema.parse(input)).toBe(output)
+  })
+
+  it.each(['8805-370', '880537001', '00000-000', 'abcde-fgh', '88053_700'])('rejects %s', (cep) => {
+    expect(cepSchema.safeParse(cep).success).toBe(false)
+  })
+})
+
+describe('stateSchema', () => {
+  it.each([
+    ['sc', 'SC'],
+    [' SP ', 'SP'],
+    ['', null],
+    [null, null],
+  ])('%j → %j', (input, output) => {
+    expect(stateSchema.parse(input)).toBe(output)
+  })
+
+  it.each(['XX', 'S', 'SCC', 'Santa Catarina'])('rejects %s', (state) => {
+    expect(stateSchema.safeParse(state).success).toBe(false)
+  })
+
+  it('accepts all 27 UFs', () => {
+    for (const uf of STATES) {
+      expect(stateSchema.parse(uf.toLowerCase())).toBe(uf)
+    }
+    expect(STATES).toHaveLength(27)
   })
 })
