@@ -116,3 +116,14 @@ describe('authenticate', () => {
     })
   })
 })
+
+describe('authenticate scheme', () => {
+  it.each(['bearer', 'BEARER', 'Bearer'])(
+    'accepts the %s scheme, which is case-insensitive',
+    async (scheme) => {
+      const response = await get(`${scheme} ${app.jwt.sign({ sub: 'u1' })}`)
+
+      expect(response.statusCode).toBe(200)
+    },
+  )
+})

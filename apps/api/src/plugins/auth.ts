@@ -37,7 +37,8 @@ const auth: FastifyPluginAsync<AuthPluginOptions> = async (app, options) => {
   })
 
   app.decorate('authenticate', async (request: FastifyRequest) => {
-    if (!request.headers.authorization?.startsWith('Bearer ')) {
+    // Auth schemes are case-insensitive (RFC 7235); jwtVerify parses it the same way.
+    if (!/^bearer\s+\S/i.test(request.headers.authorization ?? '')) {
       throw new UnauthorizedError('Missing access token')
     }
     try {

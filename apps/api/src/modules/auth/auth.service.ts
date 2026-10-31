@@ -6,14 +6,24 @@ import { ConflictError, UnauthorizedError } from '../../shared/errors.js'
 import type { UserUniqueField, UsersRepository } from '../users/users.repository.js'
 import type { LoginInput, RegisterInput } from './auth.schemas.js'
 import { generateRefreshToken, hashRefreshToken } from './refresh-token.js'
-import type { RefreshTokensRepository } from './refresh-tokens.repository.js'
+import type { NewRefreshToken, RefreshTokensRepository } from './refresh-tokens.repository.js'
+
+/**
+ * How long after a rotation the old token is still recognized as "just rotated" rather
+ * than stolen: two tabs or a retried request refreshing with the same cookie land here.
+ */
+export const ROTATION_GRACE_MS = 30_000
 
 export interface AuthServiceDeps {
   users: Pick<UsersRepository, 'create' | 'takenFields' | 'findByEmail'>
-  refreshTokens: Pick<RefreshTokensRepository, 'create' | 'findByHash' | 'rotate' | 'revokeFamily'>
+  refreshTokens: Pick<
+    RefreshTokensRepository,
+    'create' | 'findByHash' | 'replace' | 'revokeFamily' | 'deleteExpired'
+  >
   hashPassword: (password: string) => Promise<string>
   verifyPassword: (passwordHash: string, password: string) => Promise<boolean>
   signAccessToken: (userId: string) => string
+  /** How long a login lasts. Fixed at login: refreshing doesn't extend it. */
   refreshTokenTtlMs: number
   now?: () => Date
 }
@@ -41,6 +51,12 @@ const invalidCredentials = () =>
 const invalidRefreshToken = () =>
   new UnauthorizedError('Invalid refresh token', { code: 'INVALID_REFRESH_TOKEN' })
 
+/** Retryable: the token was just rotated by a concurrent request, whose new cookie wins. */
+const justRotated = () =>
+  new UnauthorizedError('Refresh token was just rotated; retry with the new one', {
+    code: 'REFRESH_TOKEN_ROTATED',
+  })
+
 export class AuthService {
   private readonly now: () => Date
   /** Verified against when the e-mail is unknown, so both cases take as long. */
@@ -48,6 +64,8 @@ export class AuthService {
 
   constructor(private readonly deps: AuthServiceDeps) {
     this.now = deps.now ?? (() => new Date())
+    // Computed up front, so not even the first unknown-e-mail login is slower.
+    this.getDummyHash().catch(() => undefined)
   }
 
   /** Creates the account; throws ConflictError (EMAIL_TAKEN / CPF_TAKEN) if either is in use. */
@@ -77,30 +95,44 @@ export class AuthService {
   async login({ email, password }: LoginInput): Promise<{ user: User; session: Session }> {
     const user = await this.deps.users.findByEmail(email)
     if (!user) {
-      this.dummyHash ??= this.deps.hashPassword('not a real password')
-      await this.deps.verifyPassword(await this.dummyHash, password)
+      await this.deps.verifyPassword(await this.getDummyHash(), password)
       throw invalidCredentials()
     }
     if (!(await this.deps.verifyPassword(user.passwordHash, password))) {
       throw invalidCredentials()
     }
-    return { user, session: await this.issueSession(user.id, randomUUID()) }
+
+    const now = this.now()
+    await this.deps.refreshTokens.deleteExpired(user.id, now)
+    const next = this.newRefreshToken(
+      user.id,
+      randomUUID(),
+      now.getTime() + this.deps.refreshTokenTtlMs,
+    )
+    await this.deps.refreshTokens.create(next.record)
+    return { user, session: this.session(user.id, next) }
   }
 
   /**
    * Trades a refresh token for a new access token and a new refresh token (rotation).
-   * A token that was already rotated means it leaked: its whole family is revoked, which
-   * logs out both the attacker and the user. A token revoked any other way (logout, a
-   * previous reuse) is simply no longer valid.
+   * Presenting a token rotated more than ROTATION_GRACE_MS ago means it leaked: the whole
+   * family is revoked, logging out both the attacker and the user. A token revoked any
+   * other way (logout, a previous reuse) is simply no longer valid.
    */
-  async refresh(token: string): Promise<Session> {
+  async refresh(token: string | undefined): Promise<Session> {
+    if (!token) {
+      throw invalidRefreshToken()
+    }
     const stored = await this.deps.refreshTokens.findByHash(hashRefreshToken(token))
     if (!stored) {
       throw invalidRefreshToken()
     }
     const now = this.now()
 
-    if (stored.revokedReason === 'ROTATED') {
+    if (stored.revokedReason === 'ROTATED' && stored.revokedAt) {
+      if (now.getTime() - stored.revokedAt.getTime() <= ROTATION_GRACE_MS) {
+        throw justRotated()
+      }
       await this.deps.refreshTokens.revokeFamily(stored.familyId, now, 'REUSE_DETECTED')
       throw new UnauthorizedError('Refresh token reused; session revoked', {
         code: 'REFRESH_TOKEN_REUSED',
@@ -112,12 +144,14 @@ export class AuthService {
     if (stored.expiresAt <= now) {
       throw new UnauthorizedError('Refresh token expired', { code: 'REFRESH_TOKEN_EXPIRED' })
     }
-    // A concurrent refresh with the same token got here first.
-    if (!(await this.deps.refreshTokens.rotate(stored.id, now))) {
-      throw invalidRefreshToken()
-    }
 
-    return this.issueSession(stored.userId, stored.familyId)
+    // The successor keeps the login's expiry, so a session can't be stretched forever.
+    const next = this.newRefreshToken(stored.userId, stored.familyId, stored.expiresAt.getTime())
+    if (!(await this.deps.refreshTokens.replace(stored.id, next.record, now))) {
+      // A concurrent refresh with the same token got there first.
+      throw justRotated()
+    }
+    return this.session(stored.userId, next)
   }
 
   /** Ends the session the token belongs to. Unknown or missing tokens are fine. */
@@ -129,19 +163,31 @@ export class AuthService {
     }
   }
 
-  private async issueSession(userId: string, familyId: string): Promise<Session> {
-    const refreshToken = generateRefreshToken()
-    const refreshTokenExpiresAt = new Date(this.now().getTime() + this.deps.refreshTokenTtlMs)
-    await this.deps.refreshTokens.create({
+  private getDummyHash(): Promise<string> {
+    this.dummyHash ??= this.deps.hashPassword('not a real password').catch((error: unknown) => {
+      // Don't cache a failure: the next unknown-e-mail login tries again.
+      this.dummyHash = undefined
+      throw error
+    })
+    return this.dummyHash
+  }
+
+  private newRefreshToken(userId: string, familyId: string, expiresAtMs: number) {
+    const token = generateRefreshToken()
+    const record: NewRefreshToken = {
       userId,
       familyId,
-      tokenHash: hashRefreshToken(refreshToken),
-      expiresAt: refreshTokenExpiresAt,
-    })
+      tokenHash: hashRefreshToken(token),
+      expiresAt: new Date(expiresAtMs),
+    }
+    return { token, record }
+  }
+
+  private session(userId: string, next: { token: string; record: NewRefreshToken }): Session {
     return {
       accessToken: this.deps.signAccessToken(userId),
-      refreshToken,
-      refreshTokenExpiresAt,
+      refreshToken: next.token,
+      refreshTokenExpiresAt: next.record.expiresAt,
     }
   }
 }

@@ -4,7 +4,7 @@ import type { RefreshToken, User } from '../../generated/prisma/client.js'
 import { UniqueFieldError } from '../../shared/database-errors.js'
 import { ConflictError, UnauthorizedError } from '../../shared/errors.js'
 import type { NewUser, UserUniqueField } from '../users/users.repository.js'
-import { AuthService } from './auth.service.js'
+import { AuthService, ROTATION_GRACE_MS } from './auth.service.js'
 import { hashRefreshToken } from './refresh-token.js'
 import type { NewRefreshToken } from './refresh-tokens.repository.js'
 
@@ -57,8 +57,11 @@ function setup() {
       Promise.resolve(storedToken({ ...data, id: 'rt-new' })),
     ),
     findByHash: vi.fn<(hash: string) => Promise<RefreshToken | null>>().mockResolvedValue(null),
-    rotate: vi.fn<() => Promise<boolean>>().mockResolvedValue(true),
+    replace: vi
+      .fn<(id: string, next: NewRefreshToken, at: Date) => Promise<boolean>>()
+      .mockResolvedValue(true),
     revokeFamily: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    deleteExpired: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   }
   const hashPassword = vi.fn((_password: string) => Promise.resolve('$argon2id$fake-hash'))
   const verifyPassword = vi.fn((hash: string, password: string) =>
@@ -126,7 +129,7 @@ describe('AuthService.register', () => {
 
       expect(error).toBeInstanceOf(ConflictError)
       expect(error).toMatchObject({ statusCode: 409, code, message, details: { field } })
-      expect(hashPassword).not.toHaveBeenCalled()
+      expect(hashPassword).not.toHaveBeenCalledWith('correct horse')
       expect(users.create).not.toHaveBeenCalled()
     },
   )
@@ -169,7 +172,7 @@ describe('AuthService.register', () => {
 describe('AuthService.login', () => {
   const credentials = { email: 'ana@hostly.dev', password: 'correct horse' }
 
-  it('starts a session in a new family for the right password', async () => {
+  it('starts a session in a new family, valid for the configured TTL', async () => {
     const { refreshTokens, signAccessToken, service } = setup()
 
     const { user, session } = await service.login(credentials)
@@ -205,6 +208,14 @@ describe('AuthService.login', () => {
     expect(first).not.toBe(second)
   })
 
+  it("cleans up the user's expired refresh tokens", async () => {
+    const { refreshTokens, service } = setup()
+
+    await service.login(credentials)
+
+    expect(refreshTokens.deleteExpired).toHaveBeenCalledWith('u1', NOW)
+  })
+
   it('answers 401 INVALID_CREDENTIALS for a wrong password', async () => {
     const { refreshTokens, service } = setup()
 
@@ -229,31 +240,86 @@ describe('AuthService.login', () => {
     expect(refreshTokens.create).not.toHaveBeenCalled()
   })
 
-  it('computes the dummy hash only once', async () => {
+  it('computes the dummy hash once, up front', async () => {
     const { users, hashPassword, service } = setup()
     users.findByEmail.mockResolvedValue(null)
 
+    expect(hashPassword).toHaveBeenCalledTimes(1)
     await rejectionOf(service.login(credentials))
     await rejectionOf(service.login(credentials))
 
     expect(hashPassword).toHaveBeenCalledTimes(1)
   })
+
+  it('retries the dummy hash after a failure instead of failing every unknown e-mail', async () => {
+    const { users, refreshTokens } = setup()
+    users.findByEmail.mockResolvedValue(null)
+    const hashPassword = vi
+      .fn<(password: string) => Promise<string>>()
+      .mockRejectedValueOnce(new Error('out of memory'))
+      .mockResolvedValue('$argon2id$dummy')
+    const verifyPassword = vi.fn(() => Promise.resolve(false))
+    const service = new AuthService({
+      users,
+      refreshTokens,
+      hashPassword,
+      verifyPassword,
+      signAccessToken: () => 'a',
+      refreshTokenTtlMs: DAY_MS,
+      now: () => NOW,
+    })
+    // Let the eager attempt from the constructor fail.
+    await new Promise((resolve) => setImmediate(resolve))
+
+    await expect(service.login(credentials)).rejects.toMatchObject({
+      code: 'INVALID_CREDENTIALS',
+    })
+    expect(hashPassword).toHaveBeenCalledTimes(2)
+    expect(verifyPassword).toHaveBeenCalledWith('$argon2id$dummy', 'correct horse')
+  })
 })
 
 describe('AuthService.refresh', () => {
-  it('rotates the token within the same family', async () => {
+  it('rotates the token within the same family, atomically', async () => {
     const { refreshTokens, service } = setup()
     refreshTokens.findByHash.mockResolvedValue(storedToken())
 
     const session = await service.refresh('the-token')
 
     expect(refreshTokens.findByHash).toHaveBeenCalledWith(hashRefreshToken('the-token'))
-    expect(refreshTokens.rotate).toHaveBeenCalledWith('rt1', NOW)
-    expect(refreshTokens.create).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'u1', familyId: 'family-1' }),
+    expect(refreshTokens.replace).toHaveBeenCalledWith(
+      'rt1',
+      {
+        userId: 'u1',
+        familyId: 'family-1',
+        tokenHash: hashRefreshToken(session.refreshToken),
+        expiresAt: storedToken().expiresAt,
+      },
+      NOW,
     )
+    expect(refreshTokens.create).not.toHaveBeenCalled()
     expect(session.accessToken).toBe('access-for-u1')
     expect(session.refreshToken).not.toBe('the-token')
+  })
+
+  it("keeps the login's expiry, so refreshing never extends a session", async () => {
+    const { refreshTokens, service } = setup()
+    const loginExpiry = new Date(NOW.getTime() + 2 * DAY_MS)
+    refreshTokens.findByHash.mockResolvedValue(storedToken({ expiresAt: loginExpiry }))
+
+    const session = await service.refresh('the-token')
+
+    expect(session.refreshTokenExpiresAt).toEqual(loginExpiry)
+  })
+
+  it.each([
+    ['no token', undefined],
+    ['an empty token', ''],
+  ])('answers 401 INVALID_REFRESH_TOKEN for %s', async (_case, token) => {
+    const { refreshTokens, service } = setup()
+
+    await expect(service.refresh(token)).rejects.toMatchObject({ code: 'INVALID_REFRESH_TOKEN' })
+    expect(refreshTokens.findByHash).not.toHaveBeenCalled()
   })
 
   it('answers 401 INVALID_REFRESH_TOKEN for an unknown token', async () => {
@@ -263,21 +329,40 @@ describe('AuthService.refresh', () => {
       statusCode: 401,
       code: 'INVALID_REFRESH_TOKEN',
     })
-    expect(refreshTokens.create).not.toHaveBeenCalled()
+    expect(refreshTokens.replace).not.toHaveBeenCalled()
   })
 
-  it('revokes the whole family when a rotated token is presented again', async () => {
+  it('revokes the whole family when a token rotated long ago is presented again', async () => {
     const { refreshTokens, service } = setup()
+    const rotatedAt = new Date(NOW.getTime() - ROTATION_GRACE_MS - 1)
     refreshTokens.findByHash.mockResolvedValue(
-      storedToken({ revokedAt: NOW, revokedReason: 'ROTATED' }),
+      storedToken({ revokedAt: rotatedAt, revokedReason: 'ROTATED' }),
     )
 
     await expect(service.refresh('the-token')).rejects.toMatchObject({
       code: 'REFRESH_TOKEN_REUSED',
     })
     expect(refreshTokens.revokeFamily).toHaveBeenCalledWith('family-1', NOW, 'REUSE_DETECTED')
-    expect(refreshTokens.create).not.toHaveBeenCalled()
+    expect(refreshTokens.replace).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ['at the moment of rotation', 0],
+    ['at the end of the grace period', ROTATION_GRACE_MS],
+  ])(
+    'answers the retryable REFRESH_TOKEN_ROTATED for a token rotated %s, without revoking',
+    async (_case, agoMs) => {
+      const { refreshTokens, service } = setup()
+      refreshTokens.findByHash.mockResolvedValue(
+        storedToken({ revokedAt: new Date(NOW.getTime() - agoMs), revokedReason: 'ROTATED' }),
+      )
+
+      await expect(service.refresh('the-token')).rejects.toMatchObject({
+        code: 'REFRESH_TOKEN_ROTATED',
+      })
+      expect(refreshTokens.revokeFamily).not.toHaveBeenCalled()
+    },
+  )
 
   it.each(['LOGOUT', 'REUSE_DETECTED'] as const)(
     'answers 401 INVALID_REFRESH_TOKEN for a token revoked by %s, without flagging theft',
@@ -289,7 +374,7 @@ describe('AuthService.refresh', () => {
         code: 'INVALID_REFRESH_TOKEN',
       })
       expect(refreshTokens.revokeFamily).not.toHaveBeenCalled()
-      expect(refreshTokens.create).not.toHaveBeenCalled()
+      expect(refreshTokens.replace).not.toHaveBeenCalled()
     },
   )
 
@@ -303,8 +388,7 @@ describe('AuthService.refresh', () => {
     await expect(service.refresh('the-token')).rejects.toMatchObject({
       code: 'REFRESH_TOKEN_EXPIRED',
     })
-    expect(refreshTokens.rotate).not.toHaveBeenCalled()
-    expect(refreshTokens.create).not.toHaveBeenCalled()
+    expect(refreshTokens.replace).not.toHaveBeenCalled()
   })
 
   it('accepts a token one millisecond before it expires', async () => {
@@ -318,16 +402,16 @@ describe('AuthService.refresh', () => {
     })
   })
 
-  it('answers 401 without revoking the family when a concurrent refresh won the race', async () => {
-    const { refreshTokens, service } = setup()
+  it('answers REFRESH_TOKEN_ROTATED when a concurrent refresh won the race', async () => {
+    const { refreshTokens, signAccessToken, service } = setup()
     refreshTokens.findByHash.mockResolvedValue(storedToken())
-    refreshTokens.rotate.mockResolvedValue(false)
+    refreshTokens.replace.mockResolvedValue(false)
 
     await expect(service.refresh('the-token')).rejects.toMatchObject({
-      code: 'INVALID_REFRESH_TOKEN',
+      code: 'REFRESH_TOKEN_ROTATED',
     })
     expect(refreshTokens.revokeFamily).not.toHaveBeenCalled()
-    expect(refreshTokens.create).not.toHaveBeenCalled()
+    expect(signAccessToken).not.toHaveBeenCalled()
   })
 })
 

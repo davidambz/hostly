@@ -20,15 +20,20 @@ export class RefreshTokensRepository {
   }
 
   /**
-   * Marks the token as rotated, only if it is still active. Returns false when it was
-   * already revoked, so of two concurrent refreshes with the same token only one wins.
+   * Marks `id` as rotated and stores its successor, atomically: either both happen or
+   * neither, so a failure can't leave the client holding a rotated token. Returns false
+   * (and stores nothing) when `id` was no longer active, e.g. a concurrent refresh won.
    */
-  async rotate(id: string, at: Date): Promise<boolean> {
-    const { count } = await this.db.refreshToken.updateMany({
-      where: { id, revokedAt: null },
-      data: { revokedAt: at, revokedReason: 'ROTATED' },
+  async replace(id: string, next: NewRefreshToken, at: Date): Promise<boolean> {
+    return this.db.$transaction(async (tx) => {
+      const { count } = await tx.refreshToken.updateMany({
+        where: { id, revokedAt: null },
+        data: { revokedAt: at, revokedReason: 'ROTATED' },
+      })
+      if (count === 0) return false
+      await tx.refreshToken.create({ data: next })
+      return true
     })
-    return count === 1
   }
 
   /** Revokes every still-active token of the family; already revoked ones keep their reason. */
@@ -37,5 +42,10 @@ export class RefreshTokensRepository {
       where: { familyId, revokedAt: null },
       data: { revokedAt: at, revokedReason: reason },
     })
+  }
+
+  /** Expired tokens are useless, even for reuse detection; this keeps the table bounded. */
+  async deleteExpired(userId: string, now: Date): Promise<void> {
+    await this.db.refreshToken.deleteMany({ where: { userId, expiresAt: { lte: now } } })
   }
 }

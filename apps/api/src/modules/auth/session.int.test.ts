@@ -6,6 +6,8 @@ import { testEnv } from '../../test/env.js'
 import { createUser, TEST_PASSWORD } from '../../test/factories.js'
 import { testDatabase } from '../../test/integration/database.js'
 import { REFRESH_COOKIE } from './auth.routes.js'
+import { ROTATION_GRACE_MS } from './auth.service.js'
+import { RefreshTokensRepository } from './refresh-tokens.repository.js'
 
 const db = testDatabase()
 let app: App
@@ -58,6 +60,14 @@ function refresh(token?: string) {
     method: 'POST',
     url: '/auth/refresh',
     cookies: token === undefined ? {} : { [REFRESH_COOKIE]: token },
+  })
+}
+
+/** Moves every rotation of the user past the grace period, as if it happened long ago. */
+async function ageRotations() {
+  await db.refreshToken.updateMany({
+    where: { revokedReason: 'ROTATED' },
+    data: { revokedAt: new Date(Date.now() - ROTATION_GRACE_MS - 1000) },
   })
 }
 
@@ -166,6 +176,46 @@ describe('POST /auth/login', () => {
   })
 })
 
+describe('refresh token cleanup', () => {
+  it("deletes the user's expired tokens on login, and nobody else's", async () => {
+    await loggedIn()
+    const other = await createUser(db, { email: 'other@hostly.test' })
+    await login('other@hostly.test')
+    await db.refreshToken.updateMany({ data: { expiresAt: new Date(Date.now() - 1000) } })
+
+    await login()
+
+    const left = await db.refreshToken.findMany({ select: { userId: true, expiresAt: true } })
+    expect(left.filter((t) => t.userId === user.id)).toHaveLength(1)
+    expect(left.filter((t) => t.userId === other.id)).toHaveLength(1)
+  })
+})
+
+describe('RefreshTokensRepository.replace', () => {
+  it('rolls the rotation back when storing the successor fails', async () => {
+    await loggedIn()
+    const repository = new RefreshTokensRepository(db)
+    const [current] = await db.refreshToken.findMany()
+    if (!current) throw new Error('no token')
+
+    // Reusing the current hash makes the insert fail on the unique constraint.
+    const replacing = repository.replace(
+      current.id,
+      {
+        userId: user.id,
+        familyId: current.familyId,
+        tokenHash: current.tokenHash,
+        expiresAt: current.expiresAt,
+      },
+      new Date(),
+    )
+
+    await expect(replacing).rejects.toThrow('refresh_tokens_token_hash_key')
+    const after = await db.refreshToken.findUniqueOrThrow({ where: { id: current.id } })
+    expect(after.revokedAt).toBeNull()
+  })
+})
+
 describe('GET /me', () => {
   it('answers the logged-in user', async () => {
     const { accessToken } = await loggedIn()
@@ -242,6 +292,7 @@ describe('POST /auth/refresh', () => {
   it('treats a reused token as stolen: 401 REFRESH_TOKEN_REUSED and the session is gone', async () => {
     const { refresh: original } = await loggedIn()
     const rotated = refreshCookie(await refresh(original))?.value
+    await ageRotations()
 
     const reuse = await refresh(original)
 
@@ -263,6 +314,7 @@ describe('POST /auth/refresh', () => {
     const phone = await loggedIn()
     const laptop = await loggedIn()
     await refresh(phone.refresh)
+    await ageRotations()
     await refresh(phone.refresh)
 
     expect((await refresh(laptop.refresh)).statusCode).toBe(200)
@@ -295,15 +347,53 @@ describe('POST /auth/refresh', () => {
     expect(cleared?.expires?.getTime()).toBeLessThanOrEqual(Date.now())
   })
 
-  it('lets exactly one of two simultaneous refreshes with the same token through', async () => {
+  it('lets exactly one of two simultaneous refreshes through; the other may retry', async () => {
     const { refresh: token } = await loggedIn()
 
     const responses = await Promise.all([refresh(token), refresh(token)])
 
     expect(responses.map((r) => r.statusCode).sort()).toEqual([200, 401])
-    // A lost race is not treated as theft: the winner's new token keeps working.
+    const loser = responses.find((r) => r.statusCode === 401)
+    expect(loser?.json()).toMatchObject({ code: 'REFRESH_TOKEN_ROTATED' })
+    // The loser must not clear the cookie the winner just set.
+    expect(refreshCookie(loser ?? { cookies: [] })).toBeUndefined()
+    // Not treated as theft: the winner's new token keeps working.
     const winner = responses.find((r) => r.statusCode === 200)
     expect((await refresh(refreshCookie(winner ?? { cookies: [] })?.value)).statusCode).toBe(200)
+  })
+
+  it('treats a second tab refreshing with the just-rotated cookie as a retry, not theft', async () => {
+    const { refresh: token } = await loggedIn()
+    const first = refreshCookie(await refresh(token))?.value
+
+    const second = await refresh(token)
+
+    expect(second.statusCode).toBe(401)
+    expect(second.json()).toMatchObject({ code: 'REFRESH_TOKEN_ROTATED' })
+    expect((await refresh(first)).statusCode).toBe(200)
+  })
+
+  it("never extends the session: every rotated cookie keeps the login's expiry", async () => {
+    const loginResponse = await login()
+    const loginExpiry = refreshCookie(loginResponse)?.expires?.getTime()
+
+    const rotated = refreshCookie(await refresh(refreshCookie(loginResponse)?.value))
+
+    expect(rotated?.expires?.getTime()).toBe(loginExpiry)
+    const stored = await db.refreshToken.findMany({ select: { expiresAt: true } })
+    expect(new Set(stored.map((t) => t.expiresAt.getTime())).size).toBe(1)
+  })
+
+  it('is rate limited per client with the auth limit', async () => {
+    await app.close()
+    app = await buildApp(testEnv({ AUTH_RATE_LIMIT_MAX: '2' }), { db })
+
+    const statuses = []
+    for (let i = 0; i < 3; i++) {
+      statuses.push((await refresh('guess')).statusCode)
+    }
+
+    expect(statuses).toEqual([401, 401, 429])
   })
 
   it('stops working once the user is deleted', async () => {

@@ -21,7 +21,7 @@ export const REFRESH_COOKIE = 'hostly_refresh_token'
 const REFRESH_COOKIE_PATH = '/auth'
 
 export interface AuthRoutesOptions {
-  /** Requests per minute per client on signup and login. */
+  /** Requests per minute per client on every auth route. */
   rateLimitMax: number
   accessTokenTtlSeconds: number
   refreshTokenTtlDays: number
@@ -126,19 +126,20 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
         description:
           'Uses the refresh token cookie and rotates it. 401 codes: INVALID_REFRESH_TOKEN, ' +
           'REFRESH_TOKEN_EXPIRED, REFRESH_TOKEN_REUSED (the session was revoked because an ' +
-          'old token was presented again). The cookie is cleared on any 401.',
-        response: { 200: accessTokenSchema, 401: errorResponseSchema },
+          'old token was presented again) and REFRESH_TOKEN_ROTATED (a concurrent request ' +
+          'just rotated it: retry once, the browser already has the new cookie). The cookie ' +
+          'is cleared on every 401 except REFRESH_TOKEN_ROTATED.',
+        response: { 200: accessTokenSchema, 401: errorResponseSchema, 429: errorResponseSchema },
       },
+      config: { rateLimit },
     },
     async (request, reply) => {
-      const token = request.cookies[REFRESH_COOKIE]
       try {
-        if (!token) {
-          throw new UnauthorizedError('Missing refresh token', { code: 'INVALID_REFRESH_TOKEN' })
-        }
-        return startSession(reply, await service.refresh(token))
+        return startSession(reply, await service.refresh(request.cookies[REFRESH_COOKIE]))
       } catch (error) {
-        if (error instanceof UnauthorizedError) {
+        // REFRESH_TOKEN_ROTATED means a concurrent request already set a newer cookie,
+        // which clearing would wipe out.
+        if (error instanceof UnauthorizedError && error.code !== 'REFRESH_TOKEN_ROTATED') {
           endSession(reply)
         }
         throw error
@@ -153,8 +154,9 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
         tags: ['auth'],
         summary: 'Log out',
         description: 'Revokes the session of the refresh token cookie and clears it.',
-        response: { 204: z.null() },
+        response: { 204: z.null(), 429: errorResponseSchema },
       },
+      config: { rateLimit },
     },
     async (request, reply) => {
       await service.logout(request.cookies[REFRESH_COOKIE])

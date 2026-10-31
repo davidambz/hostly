@@ -1,12 +1,12 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 
 import { errorResponseSchema } from '../../shared/error-response.js'
-import { UnauthorizedError } from '../../shared/errors.js'
 import { UsersRepository } from './users.repository.js'
 import { publicUserSchema, toPublicUser } from './users.schemas.js'
+import { UsersService } from './users.service.js'
 
 export const usersRoutes: FastifyPluginAsyncZod = async (app) => {
-  const users = new UsersRepository(app.db)
+  const service = new UsersService(new UsersRepository(app.db))
 
   app.get(
     '/me',
@@ -19,13 +19,6 @@ export const usersRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: publicUserSchema, 401: errorResponseSchema },
       },
     },
-    async (request) => {
-      const user = await users.findById(request.user.sub)
-      // The token outlived the account.
-      if (!user) {
-        throw new UnauthorizedError('Account no longer exists', { code: 'INVALID_TOKEN' })
-      }
-      return toPublicUser(user)
-    },
+    async (request) => toPublicUser(await service.me(request.user.sub)),
   )
 }
