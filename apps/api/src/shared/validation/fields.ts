@@ -6,7 +6,7 @@ import {
   isValidLandlinePhone,
   isValidMobilePhone,
   isValidPhone,
-  normalizeCnpj,
+  normalizeDocument,
   normalizePhone,
   onlyDigits,
   STATES,
@@ -87,15 +87,19 @@ export const optionalEmailSchema = z
   .transform(blankToNull)
   .pipe(z.email().max(255).nullable())
 
+/**
+ * An optional field typed with a mask: only `allowed` characters are accepted, then
+ * `normalize` strips the mask. Blank or absent means no value (null).
+ */
+function optionalMasked(allowed: RegExp, message: string, normalize: (value: string) => string) {
+  return z.string().regex(allowed, message).transform(normalize).nullish().transform(blankToNull)
+}
+
 function optionalPhoneSchema(isValid: (phone: string) => boolean, message: string) {
-  return z
-    .string()
-    .regex(/^[\d\s().+-]*$/, message)
-    .nullish()
-    .transform((value) =>
-      blankToNull(value === null || value === undefined ? null : normalizePhone(value)),
-    )
-    .refine((value) => value === null || isValid(value), { message })
+  return optionalMasked(/^[\d\s().+-]*$/, message, normalizePhone).refine(
+    (value) => value === null || isValid(value),
+    { message },
+  )
 }
 
 /** Optional mobile number, DDD + 9 digits. */
@@ -114,10 +118,8 @@ export const optionalLandlinePhoneSchema = optionalPhoneSchema(
  * A CPF or CNPJ as typed: keeps letters and digits, uppercased (the alphanumeric CNPJ has
  * letters). Which of the two it must be depends on another field, so it is checked there.
  */
-export const optionalDocumentSchema = z
-  .string()
-  .regex(/^[0-9A-Za-z.\-/\s]*$/, 'Invalid document')
-  .nullish()
-  .transform((value) =>
-    blankToNull(value === null || value === undefined ? null : normalizeCnpj(value)),
-  )
+export const optionalDocumentSchema = optionalMasked(
+  /^[0-9A-Za-z.\-/\s]*$/,
+  'Invalid document',
+  normalizeDocument,
+)

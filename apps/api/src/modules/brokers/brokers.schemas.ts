@@ -1,8 +1,7 @@
 import { z } from 'zod'
 
-import type { Broker, BrokerType } from '../../generated/prisma/client.js'
+import type { Broker } from '../../generated/prisma/client.js'
 import { pageSchema, paginationQuerySchema } from '../../shared/pagination.js'
-import { isValidCnpj, isValidCpf } from '../../shared/validation/brazil.js'
 import {
   nameSchema,
   optionalDocumentSchema,
@@ -13,16 +12,6 @@ import {
 
 export const brokerTypeSchema = z.enum(['INDIVIDUAL', 'COMPANY'])
 
-/**
- * Why `document` doesn't fit `type`, or undefined when it does: an individual has a CPF,
- * a company a CNPJ (numeric or alphanumeric). No document is fine for both.
- */
-export function documentError(type: BrokerType, document: string | null): string | undefined {
-  if (document === null) return undefined
-  if (type === 'INDIVIDUAL') return isValidCpf(document) ? undefined : 'Invalid CPF'
-  return isValidCnpj(document) ? undefined : 'Invalid CNPJ'
-}
-
 const brokerFields = {
   name: nameSchema,
   email: optionalEmailSchema,
@@ -32,14 +21,8 @@ const brokerFields = {
   landlinePhone: optionalLandlinePhoneSchema,
 }
 
-export const createBrokerBodySchema = z
-  .object({ type: brokerTypeSchema, ...brokerFields })
-  .superRefine((broker, ctx) => {
-    const message = documentError(broker.type, broker.document)
-    if (message) {
-      ctx.addIssue({ code: 'custom', path: ['document'], message })
-    }
-  })
+/** Whether the document fits the type is checked by the service (400 INVALID_DOCUMENT). */
+export const createBrokerBodySchema = z.object({ type: brokerTypeSchema, ...brokerFields })
 
 export type CreateBrokerInput = z.infer<typeof createBrokerBodySchema>
 

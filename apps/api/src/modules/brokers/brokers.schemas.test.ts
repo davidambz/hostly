@@ -4,33 +4,21 @@ import type { Broker } from '../../generated/prisma/client.js'
 import {
   brokerSchema,
   createBrokerBodySchema,
-  documentError,
   toPublicBroker,
   updateBrokerBodySchema,
 } from './brokers.schemas.js'
 
-describe('documentError', () => {
-  it.each([
-    ['INDIVIDUAL', '52998224725'],
-    ['COMPANY', '11222333000181'],
-    ['COMPANY', '12ABC34501DE35'],
-    ['INDIVIDUAL', null],
-    ['COMPANY', null],
-  ] as const)('accepts %s with %s', (type, document) => {
-    expect(documentError(type, document)).toBeUndefined()
-  })
-
-  it.each([
-    ['INDIVIDUAL', '11222333000181', 'Invalid CPF'],
-    ['INDIVIDUAL', '52998224726', 'Invalid CPF'],
-    ['COMPANY', '52998224725', 'Invalid CNPJ'],
-    ['COMPANY', '12ABC34501DE36', 'Invalid CNPJ'],
-  ] as const)('rejects %s with %s', (type, document, message) => {
-    expect(documentError(type, document)).toBe(message)
-  })
-})
-
 describe('createBrokerBodySchema', () => {
+  it('leaves the document-vs-type check to the service', () => {
+    expect(
+      createBrokerBodySchema.safeParse({
+        type: 'INDIVIDUAL',
+        name: 'X',
+        document: '11222333000181',
+      }).success,
+    ).toBe(true)
+  })
+
   it('normalizes a company', () => {
     expect(
       createBrokerBodySchema.parse({
@@ -63,12 +51,6 @@ describe('createBrokerBodySchema', () => {
   })
 
   it.each([
-    [
-      'a CNPJ for an individual',
-      { type: 'INDIVIDUAL', name: 'X', document: '11222333000181' },
-      'document',
-    ],
-    ['a CPF for a company', { type: 'COMPANY', name: 'X', document: '52998224725' }, 'document'],
     [
       'a landline as mobile',
       { type: 'COMPANY', name: 'X', mobilePhone: '4833221100' },

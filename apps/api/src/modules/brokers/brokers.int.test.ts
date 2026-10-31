@@ -98,9 +98,6 @@ describe('POST /brokers', () => {
   })
 
   it.each([
-    ['a CPF for a company', { ...company, document: '529.982.247-25' }, 'document'],
-    ['a CNPJ for an individual', { ...individual, document: '11.222.333/0001-81' }, 'document'],
-    ['a CNPJ with wrong check digits', { ...company, document: '12.ABC.345/01DE-36' }, 'document'],
     [
       'a landline in the mobile field',
       { ...company, mobilePhone: '(48) 3322-1100' },
@@ -120,6 +117,38 @@ describe('POST /brokers', () => {
     expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR', details: [{ path }] })
     expect(await db.broker.count()).toBe(0)
   })
+})
+
+describe('POST /brokers with a document that does not fit', () => {
+  it.each([
+    ['a CPF for a company', { ...company, document: '529.982.247-25' }, 'Invalid CNPJ', 'COMPANY'],
+    [
+      'a CNPJ for an individual',
+      { ...individual, document: '11.222.333/0001-81' },
+      'Invalid CPF',
+      'INDIVIDUAL',
+    ],
+    [
+      'wrong check digits',
+      { ...company, document: '12.ABC.345/01DE-36' },
+      'Invalid CNPJ',
+      'COMPANY',
+    ],
+  ])(
+    'answers 400 INVALID_DOCUMENT for %s, the same as on update',
+    async (_case, body, message, type) => {
+      const response = await request('POST', '/brokers', body)
+
+      expect(response.statusCode).toBe(400)
+      expect(response.json()).toEqual({
+        statusCode: 400,
+        code: 'INVALID_DOCUMENT',
+        message,
+        details: { field: 'document', type },
+      })
+      expect(await db.broker.count()).toBe(0)
+    },
+  )
 })
 
 describe('GET /brokers', () => {

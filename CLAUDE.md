@@ -58,8 +58,9 @@ src/
 
 - O schema fica em `prisma/schema.prisma` e as migrations em `prisma/migrations`. O cliente é gerado em `src/generated/prisma` (no gitignore) por `pnpm db:generate`, que roda sozinho no `pnpm install`.
 - `app.db` é o Prisma Client (plugin `database`). Os testes injetam um banco com `buildApp(env, { db })`.
-- Ids UUID v7, dinheiro em centavos (`Int`), porcentagem em basis points (1000 = 10%), documento e telefone só com dígitos, e-mail em minúsculas.
+- Ids UUID v7, dinheiro em centavos (`Int`), porcentagem em basis points (1000 = 10%), CPF, CEP e telefone só com dígitos; CNPJ com dígitos e letras maiúsculas (o CNPJ alfanumérico existe desde jul/2026, então nunca use `onlyDigits` nele, só `normalizeDocument`); e-mail em minúsculas.
 - Toda linha de domínio tem `userId`, e toda query filtra por ele. Reservas apontam para imóvel e intermediador por FK composta `(id, user_id)`, então o banco recusa uma reserva com imóvel ou intermediador de outro usuário.
+- Recursos do usuário (imóveis, intermediadores, reservas) seguem o mesmo molde: o repository filtra tudo por `userId` (recurso de outro usuário = 404), o update lê-decide-escreve numa transação com `lockOwnedRow` (`SELECT … FOR UPDATE`), e o delete usa `deleteOwnedRow` no repository e `deleteOrFail` no service (404 quando não há o que apagar, 409 quando há FK apontando).
 - As regras de integridade também ficam no banco, como CHECK constraints escritas à mão no SQL da migration (o Prisma não modela CHECK). Ao criar uma migration nova, use `--create-only` quando precisar acrescentar SQL.
 - O `.pnpmfile.cjs` tira o peer `prisma` do `@prisma/client`, para a CLI não ir para a imagem de produção. A CLI só existe na imagem `migrate`.
 

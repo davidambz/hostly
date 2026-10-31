@@ -30,3 +30,10 @@ describe('validAlphanumericCnpj', () => {
     expect(cnpjs.every((cnpj) => /^AB\d{10}\d{2}$/.test(cnpj))).toBe(true)
   })
 })
+
+it('computes the alphanumeric CNPJ check digits (known answer: 12.ABC.345/01DE-35)', async () => {
+  const { cnpjCheckDigits } = await import('../shared/validation/brazil.js')
+
+  // Same algorithm, two implementations: they must agree on the official example.
+  expect(cnpjCheckDigits('12ABC34501DE')).toBe('35')
+})

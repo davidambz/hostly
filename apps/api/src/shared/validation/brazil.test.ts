@@ -10,7 +10,7 @@ import {
   isValidLandlinePhone,
   isValidMobilePhone,
   isValidPhone,
-  normalizeCnpj,
+  normalizeDocument,
   normalizePhone,
   onlyDigits,
 } from './brazil.js'
@@ -160,12 +160,12 @@ describe('isValidCnpj', () => {
   })
 })
 
-describe('normalizeCnpj', () => {
+describe('normalizeDocument', () => {
   it.each([
     ['11.222.333/0001-81', '11222333000181'],
     ['12.abc.345/01de-35', '12ABC34501DE35'],
     [' 12 ABC 345 01DE 35 ', '12ABC34501DE35'],
   ])('%s → %s', (input, output) => {
-    expect(normalizeCnpj(input)).toBe(output)
+    expect(normalizeDocument(input)).toBe(output)
   })
 })

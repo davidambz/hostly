@@ -1,4 +1,8 @@
-/** Validators for Brazilian documents and phones. They take digits only; see `onlyDigits`. */
+/**
+ * Validators for Brazilian documents and phones. They take the normalized value: digits
+ * only for CPF, CEP and phones (`onlyDigits`), digits and uppercase letters for CNPJ, which
+ * can be alphanumeric (`normalizeDocument`).
+ */
 
 export function onlyDigits(value: string): string {
   return value.replace(/\D/g, '')
@@ -129,7 +133,10 @@ export function isValidCnpj(cnpj: string): boolean {
   return cnpjCheckDigits(cnpj.slice(0, 12)) === cnpj.slice(12)
 }
 
-/** CNPJ as typed: keeps letters and digits, uppercased. */
-export function normalizeCnpj(value: string): string {
+/**
+ * A CPF or CNPJ as typed: keeps letters and digits, uppercased. Never `onlyDigits` for a
+ * CNPJ, which would strip the letters of an alphanumeric one.
+ */
+export function normalizeDocument(value: string): string {
   return value.toUpperCase().replace(/[^0-9A-Z]/g, '')
 }

@@ -1,9 +1,7 @@
 import type { Broker, Prisma } from '../../generated/prisma/client.js'
 import type { Database } from '../../shared/database.js'
-import { RowInUseError } from '../../shared/database-errors.js'
-import { lockOwnedRow } from '../../shared/owned-rows.js'
+import { deleteOwnedRow, lockOwnedRow } from '../../shared/owned-rows.js'
 import { type Page, toSkipTake } from '../../shared/pagination.js'
-import { isForeignKeyViolation } from '../../shared/prisma-errors.js'
 import { escapeLike } from '../../shared/search.js'
 import type { ListBrokersQuery } from './brokers.schemas.js'
 
@@ -58,15 +56,7 @@ export class BrokersRepository {
    * Returns false when the user has no such broker; throws RowInUseError when bookings
    * still reference it.
    */
-  async delete(userId: string, id: string): Promise<boolean> {
-    try {
-      const { count } = await this.db.broker.deleteMany({ where: { id, userId } })
-      return count === 1
-    } catch (error) {
-      if (isForeignKeyViolation(error)) {
-        throw new RowInUseError('bookings')
-      }
-      throw error
-    }
+  delete(userId: string, id: string): Promise<boolean> {
+    return deleteOwnedRow(() => this.db.broker.deleteMany({ where: { id, userId } }), 'bookings')
   }
 }

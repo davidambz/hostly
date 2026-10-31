@@ -1,6 +1,6 @@
 import type { Property } from '../../generated/prisma/client.js'
-import { RowInUseError } from '../../shared/database-errors.js'
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js'
+import { deleteOrFail } from '../../shared/owned-rows.js'
 import type { Page } from '../../shared/pagination.js'
 import type { PropertiesRepository } from './properties.repository.js'
 import {
@@ -56,20 +56,13 @@ export class PropertiesService {
     return updated
   }
 
-  async delete(userId: string, id: string): Promise<void> {
-    let deleted: boolean
-    try {
-      deleted = await this.properties.delete(userId, id)
-    } catch (error) {
-      if (error instanceof RowInUseError) {
-        throw new ConflictError('The property has bookings; delete them first', {
+  delete(userId: string, id: string): Promise<void> {
+    return deleteOrFail(() => this.properties.delete(userId, id), {
+      notFound,
+      inUse: () =>
+        new ConflictError('The property has bookings; delete them first', {
           code: 'PROPERTY_HAS_BOOKINGS',
-        })
-      }
-      throw error
-    }
-    if (!deleted) {
-      throw notFound()
-    }
+        }),
+    })
   }
 }

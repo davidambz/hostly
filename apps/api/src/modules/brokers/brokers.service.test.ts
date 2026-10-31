@@ -4,7 +4,7 @@ import type { Broker } from '../../generated/prisma/client.js'
 import { RowInUseError } from '../../shared/database-errors.js'
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js'
 import type { BrokersRepository } from './brokers.repository.js'
-import { BrokersService } from './brokers.service.js'
+import { BrokersService, documentError } from './brokers.service.js'
 
 const company: Broker = {
   id: 'b1',
@@ -27,11 +27,63 @@ function setup() {
       const current = repository.current
       return Promise.resolve(current ? { ...current, ...change(current) } : null)
     }),
+    create: vi.fn((_u: string, data: object) => Promise.resolve({ ...company, ...data })),
     delete: vi.fn<() => Promise<boolean>>().mockResolvedValue(true),
   }
   const service = new BrokersService(repository as unknown as BrokersRepository)
   return { repository, service }
 }
+
+describe('documentError', () => {
+  it.each([
+    ['INDIVIDUAL', '52998224725'],
+    ['COMPANY', '11222333000181'],
+    ['COMPANY', '12ABC34501DE35'],
+    ['INDIVIDUAL', null],
+    ['COMPANY', null],
+  ] as const)('accepts %s with %s', (type, document) => {
+    expect(documentError(type, document)).toBeUndefined()
+  })
+
+  it.each([
+    ['INDIVIDUAL', '11222333000181', 'Invalid CPF'],
+    ['INDIVIDUAL', '52998224726', 'Invalid CPF'],
+    ['COMPANY', '52998224725', 'Invalid CNPJ'],
+    ['COMPANY', '12ABC34501DE36', 'Invalid CNPJ'],
+  ] as const)('rejects %s with %s', (type, document, message) => {
+    expect(documentError(type, document)).toBe(message)
+  })
+})
+
+describe('BrokersService.create', () => {
+  const base = { name: 'X', email: null, mobilePhone: null, landlinePhone: null }
+
+  it('creates a broker whose document fits its type', async () => {
+    const { repository, service } = setup()
+
+    await service.create('u1', { ...base, type: 'COMPANY', document: '12ABC34501DE35' })
+
+    expect(repository.create).toHaveBeenCalled()
+  })
+
+  it.each([
+    ['INDIVIDUAL', '11222333000181', 'Invalid CPF'],
+    ['COMPANY', '52998224725', 'Invalid CNPJ'],
+  ] as const)(
+    'answers 400 INVALID_DOCUMENT for a %s with %s, like an update would',
+    async (type, document, message) => {
+      const { repository, service } = setup()
+
+      await expect(service.create('u1', { ...base, type, document })).rejects.toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_DOCUMENT',
+        message,
+        details: { field: 'document', type },
+      })
+      expect(repository.create).not.toHaveBeenCalled()
+    },
+  )
+})
 
 describe('BrokersService.get', () => {
   it('answers 404 BROKER_NOT_FOUND for a broker the user does not have', async () => {
