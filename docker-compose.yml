@@ -1,0 +1,45 @@
+name: hostly
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hostly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hostly}
+      POSTGRES_DB: ${POSTGRES_DB:-hostly}
+    ports:
+      - 127.0.0.1:${POSTGRES_PORT:-5432}:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: dev
+    restart: unless-stopped
+    init: true
+    env_file:
+      - path: apps/api/.env
+        required: false
+    # HOST/PORT are fixed inside the container (they win over apps/api/.env);
+    # change the published port with API_PORT in the root .env.
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3333
+    ports:
+      - 127.0.0.1:${API_PORT:-3333}:3333
+    volumes:
+      - ./apps/api/src:/repo/apps/api/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
