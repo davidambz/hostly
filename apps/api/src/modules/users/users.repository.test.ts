@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { Prisma } from '../../generated/prisma/client.js'
 import type { Database } from '../../shared/database.js'
-import { ConflictError } from '../../shared/errors.js'
+import { UniqueFieldError } from '../../shared/database-errors.js'
 import { UsersRepository } from './users.repository.js'
 
 const newUser = {
@@ -13,11 +13,11 @@ const newUser = {
   passwordHash: 'hash',
 }
 
-function uniqueViolation(index: string) {
+function uniqueViolation(meta: Record<string, unknown>) {
   return new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
     code: 'P2002',
     clientVersion: 'test',
-    meta: { driverAdapterError: { cause: { constraint: { index } } } },
+    meta,
   })
 }
 
@@ -28,19 +28,29 @@ function repositoryFailingWith(error: unknown) {
 
 describe('UsersRepository.create', () => {
   it.each([
-    ['users_email_key', 'EMAIL_TAKEN', 'email'],
-    ['users_cpf_key', 'CPF_TAKEN', 'cpf'],
-  ])('turns a violation of %s into a 409 %s', async (index, code, field) => {
-    const error = await repositoryFailingWith(uniqueViolation(index))
+    [
+      'the adapter constraint users_email_key',
+      { driverAdapterError: { cause: { constraint: { index: 'users_email_key' } } } },
+      'email',
+    ],
+    [
+      'the adapter constraint users_cpf_key',
+      { driverAdapterError: { cause: { constraint: { index: 'users_cpf_key' } } } },
+      'cpf',
+    ],
+    ['meta.target [email]', { target: ['email'] }, 'email'],
+    ['meta.target cpf', { target: 'cpf' }, 'cpf'],
+  ])('reports a violation found through %s as a UniqueFieldError', async (_case, meta, field) => {
+    const error = await repositoryFailingWith(uniqueViolation(meta))
       .create(newUser)
       .catch((e: unknown) => e)
 
-    expect(error).toBeInstanceOf(ConflictError)
-    expect(error).toMatchObject({ code, details: { field } })
+    expect(error).toBeInstanceOf(UniqueFieldError)
+    expect(error).toMatchObject({ field })
   })
 
   it('lets a violation of any other unique constraint through untouched', async () => {
-    const violation = uniqueViolation('users_something_else_key')
+    const violation = uniqueViolation({ target: ['phone'] })
 
     await expect(repositoryFailingWith(violation).create(newUser)).rejects.toBe(violation)
   })

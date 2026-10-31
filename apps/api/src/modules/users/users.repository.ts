@@ -1,7 +1,7 @@
 import type { User } from '../../generated/prisma/client.js'
 import type { Database } from '../../shared/database.js'
-import { ConflictError } from '../../shared/errors.js'
-import { violatedUniqueConstraint } from '../../shared/prisma-errors.js'
+import { UniqueFieldError } from '../../shared/database-errors.js'
+import { uniqueViolation, violates } from '../../shared/prisma-errors.js'
 
 export interface NewUser {
   name: string
@@ -11,27 +11,36 @@ export interface NewUser {
   passwordHash: string
 }
 
-/** Which field a unique violation is about, as told to the client. */
-const TAKEN = {
-  users_email_key: { code: 'EMAIL_TAKEN', field: 'email', message: 'E-mail already registered' },
-  users_cpf_key: { code: 'CPF_TAKEN', field: 'cpf', message: 'CPF already registered' },
-} as const
+export type UserUniqueField = 'email' | 'cpf'
+
+const UNIQUE_FIELDS: UserUniqueField[] = ['email', 'cpf']
 
 export class UsersRepository {
   constructor(private readonly db: Database) {}
 
+  /** Which of `email` and `cpf` already belong to an account. */
+  async takenFields(values: Pick<NewUser, UserUniqueField>): Promise<UserUniqueField[]> {
+    const users = await this.db.user.findMany({
+      where: { OR: [{ email: values.email }, { cpf: values.cpf }] },
+      select: { email: true, cpf: true },
+    })
+    return UNIQUE_FIELDS.filter((field) => users.some((user) => user[field] === values[field]))
+  }
+
   /**
-   * Relies on the unique constraints instead of checking first, so two signups racing
-   * for the same e-mail or CPF can't both get in.
+   * Throws UniqueFieldError when the e-mail or CPF is taken. The unique constraints are
+   * the real guard: two signups racing for the same e-mail can't both get in.
    */
   async create(data: NewUser): Promise<User> {
     try {
       return await this.db.user.create({ data })
     } catch (error) {
-      const constraint = violatedUniqueConstraint(error)
-      if (constraint === 'users_email_key' || constraint === 'users_cpf_key') {
-        const { code, field, message } = TAKEN[constraint]
-        throw new ConflictError(message, { code, details: { field } })
+      const violation = uniqueViolation(error)
+      const field = violation
+        ? UNIQUE_FIELDS.find((f) => violates(violation, { table: 'users', field: f }))
+        : undefined
+      if (field) {
+        throw new UniqueFieldError(field)
       }
       throw error
     }

@@ -10,44 +10,49 @@ export interface AppErrorOptions {
 }
 
 export abstract class AppError extends Error {
-  abstract readonly statusCode: number
-  protected abstract readonly defaultCode: string
+  // Plain own fields (not getters), so they show up when the error is logged or serialized.
+  readonly code: string
   readonly details?: unknown
-  private readonly customCode?: string
 
-  constructor(message: string, { code, details }: AppErrorOptions = {}) {
+  protected constructor(
+    readonly statusCode: number,
+    defaultCode: string,
+    message: string,
+    { code, details }: AppErrorOptions = {},
+  ) {
     super(message)
     this.name = new.target.name
-    this.customCode = code
+    this.code = code ?? defaultCode
     this.details = details
-  }
-
-  get code(): string {
-    return this.customCode ?? this.defaultCode
   }
 }
 
 export class BadRequestError extends AppError {
-  readonly statusCode = 400
-  protected readonly defaultCode = 'BAD_REQUEST'
+  constructor(message: string, options?: AppErrorOptions) {
+    super(400, 'BAD_REQUEST', message, options)
+  }
 }
 
 export class UnauthorizedError extends AppError {
-  readonly statusCode = 401
-  protected readonly defaultCode = 'UNAUTHORIZED'
+  constructor(message: string, options?: AppErrorOptions) {
+    super(401, 'UNAUTHORIZED', message, options)
+  }
 }
 
 export class ForbiddenError extends AppError {
-  readonly statusCode = 403
-  protected readonly defaultCode = 'FORBIDDEN'
+  constructor(message: string, options?: AppErrorOptions) {
+    super(403, 'FORBIDDEN', message, options)
+  }
 }
 
 export class NotFoundError extends AppError {
-  readonly statusCode = 404
-  protected readonly defaultCode = 'NOT_FOUND'
+  constructor(message: string, options?: AppErrorOptions) {
+    super(404, 'NOT_FOUND', message, options)
+  }
 }
 
 export class ConflictError extends AppError {
-  readonly statusCode = 409
-  protected readonly defaultCode = 'CONFLICT'
+  constructor(message: string, options?: AppErrorOptions) {
+    super(409, 'CONFLICT', message, options)
+  }
 }

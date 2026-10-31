@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import type { User } from '../../generated/prisma/client.js'
+import { UniqueFieldError } from '../../shared/database-errors.js'
 import { ConflictError } from '../../shared/errors.js'
-import type { NewUser } from '../users/users.repository.js'
+import type { NewUser, UserUniqueField } from '../users/users.repository.js'
 import { AuthService } from './auth.service.js'
 
 const input = {
@@ -15,6 +16,7 @@ const input = {
 
 function setup() {
   const users = {
+    takenFields: vi.fn<() => Promise<UserUniqueField[]>>().mockResolvedValue([]),
     create: vi.fn((data: NewUser) =>
       Promise.resolve({
         ...data,
@@ -24,7 +26,7 @@ function setup() {
       } satisfies User),
     ),
   }
-  const hashPassword = vi.fn((password: string) => Promise.resolve(`hashed:${password}`))
+  const hashPassword = vi.fn((_password: string) => Promise.resolve('$argon2id$fake-hash'))
   return { users, hashPassword, service: new AuthService({ users, hashPassword }) }
 }
 
@@ -34,13 +36,16 @@ describe('AuthService.register', () => {
 
     const user = await service.register(input)
 
+    expect(users.takenFields).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'ana@hostly.dev', cpf: '52998224725' }),
+    )
     expect(hashPassword).toHaveBeenCalledWith('correct horse')
     expect(users.create).toHaveBeenCalledWith({
       name: 'Ana Souza',
       email: 'ana@hostly.dev',
       cpf: '52998224725',
       phone: '48999990000',
-      passwordHash: 'hashed:correct horse',
+      passwordHash: '$argon2id$fake-hash',
     })
     expect(user.id).toBe('u1')
   })
@@ -50,15 +55,53 @@ describe('AuthService.register', () => {
 
     await service.register(input)
 
-    expect(JSON.stringify(users.create.mock.calls)).not.toContain('"password"')
+    expect(JSON.stringify([users.create.mock.calls, users.takenFields.mock.calls])).not.toContain(
+      'correct horse',
+    )
   })
 
-  it('lets a conflict from the repository through', async () => {
-    const { users, service } = setup()
-    const conflict = new ConflictError('E-mail already registered', { code: 'EMAIL_TAKEN' })
-    users.create.mockRejectedValueOnce(conflict)
+  it.each([
+    ['email', 'EMAIL_TAKEN', 'E-mail already registered'],
+    ['cpf', 'CPF_TAKEN', 'CPF already registered'],
+  ] as const)(
+    'answers %s taken with a 409 %s, without paying for a hash',
+    async (field, code, message) => {
+      const { users, hashPassword, service } = setup()
+      users.takenFields.mockResolvedValueOnce([field])
 
-    await expect(service.register(input)).rejects.toBe(conflict)
+      const error = await service.register(input).catch((e: unknown) => e)
+
+      expect(error).toBeInstanceOf(ConflictError)
+      expect(error).toMatchObject({ statusCode: 409, code, message, details: { field } })
+      expect(hashPassword).not.toHaveBeenCalled()
+      expect(users.create).not.toHaveBeenCalled()
+    },
+  )
+
+  it('reports the e-mail first when both are taken', async () => {
+    const { users, service } = setup()
+    users.takenFields.mockResolvedValueOnce(['email', 'cpf'])
+
+    await expect(service.register(input)).rejects.toMatchObject({ code: 'EMAIL_TAKEN' })
+  })
+
+  it('turns a unique violation from a race after the check into the same 409', async () => {
+    const { users, service } = setup()
+    users.create.mockRejectedValueOnce(new UniqueFieldError('cpf'))
+
+    await expect(service.register(input)).rejects.toMatchObject({
+      statusCode: 409,
+      code: 'CPF_TAKEN',
+      details: { field: 'cpf' },
+    })
+  })
+
+  it('lets any other repository error through', async () => {
+    const { users, service } = setup()
+    const failure = new Error('connection reset')
+    users.create.mockRejectedValueOnce(failure)
+
+    await expect(service.register(input)).rejects.toBe(failure)
   })
 
   it('does not create anything when hashing fails', async () => {

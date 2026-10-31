@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import { validCpf } from '../../test/documents.js'
 import {
+  cpfCheckDigits,
   isValidCpf,
   isValidLandlinePhone,
   isValidMobilePhone,
   isValidPhone,
+  normalizePhone,
   onlyDigits,
 } from './brazil.js'
 
@@ -79,5 +81,32 @@ describe('phones', () => {
   it('does not take a mobile for a landline or the other way around', () => {
     expect(isValidLandlinePhone('48999990000')).toBe(false)
     expect(isValidMobilePhone('4833334444')).toBe(false)
+  })
+})
+
+describe('cpfCheckDigits', () => {
+  it.each([
+    ['529982247', '25'],
+    ['111444777', '35'],
+    ['390533447', '05'],
+  ])('%s → %s', (base, digits) => {
+    expect(cpfCheckDigits(base)).toBe(digits)
+  })
+})
+
+describe('normalizePhone', () => {
+  it.each([
+    ['(48) 99999-0000', '48999990000'],
+    ['+55 (48) 99999-0000', '48999990000'],
+    ['55 48 3333-4444', '4833334444'],
+    ['048 99999-0000', '48999990000'],
+    ['0 48 3333-4444', '4833334444'],
+    ['48999990000', '48999990000'],
+  ])('%s → %s', (input, output) => {
+    expect(normalizePhone(input)).toBe(output)
+  })
+
+  it('keeps a number that only happens to start with 55 (area code 55)', () => {
+    expect(normalizePhone('55999990000')).toBe('55999990000')
   })
 })

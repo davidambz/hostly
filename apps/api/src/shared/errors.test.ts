@@ -43,3 +43,15 @@ describe('domain errors', () => {
     expect(new NotFoundError('missing', { details: { id: 'x' } }).code).toBe('NOT_FOUND')
   })
 })
+
+describe('logging', () => {
+  it('keeps code, status and details as own enumerable fields', () => {
+    const error = new ConflictError('taken', { code: 'EMAIL_TAKEN', details: { field: 'email' } })
+
+    expect(JSON.parse(JSON.stringify(error))).toMatchObject({
+      code: 'EMAIL_TAKEN',
+      statusCode: 409,
+      details: { field: 'email' },
+    })
+  })
+})
