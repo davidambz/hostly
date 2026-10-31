@@ -68,7 +68,6 @@ jobs:
           tags: hostly-api:dev
           load: true
           cache-from: type=gha,scope=api
-          cache-to: type=gha,mode=max,scope=api
 
       - name: Build migrate
         uses: docker/build-push-action@v7
@@ -89,7 +88,8 @@ jobs:
           tags: hostly-api:prod
           load: true
           cache-from: type=gha,scope=api
-          cache-to: type=gha,mode=max,scope=api-prod
+          # One shared scope; the prod chain covers every stage except the tiny dev/migrate tails.
+          cache-to: type=gha,mode=max,scope=api
 
       - name: Start Postgres
         run: |

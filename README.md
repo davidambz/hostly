@@ -19,7 +19,9 @@ docker compose up
 | API      | http://localhost:3333 (docs em `/docs`)        |
 | Postgres | `localhost:5432`, usuário/senha/banco `hostly` |
 
-Os valores vazios nos `.env` usam os padrões acima. O `apps/api/src` é montado no container e recarrega sozinho a cada alteração. Ao subir, o container gera o Prisma Client e aplica as migrations pendentes. As portas ficam presas ao `127.0.0.1`. Para mudar a porta da API no host, use `API_PORT` no `.env` da raiz.
+A API tem `/health` (liveness) e `/health/ready` (checa o banco).
+
+Os valores vazios nos `.env` usam os padrões acima. O `DATABASE_URL` da API no compose é montado a partir de `POSTGRES_*`, então a senha não pode ter caracteres reservados de URL (`@ : / # ?`). O `apps/api/src` é montado no container e recarrega sozinho a cada alteração. Ao subir, o container gera o Prisma Client e aplica as migrations pendentes. As portas ficam presas ao `127.0.0.1`. Para mudar a porta da API no host, use `API_PORT` no `.env` da raiz.
 
 | Comando                                                 | O que faz                                                                            |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------ |

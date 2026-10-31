@@ -69,6 +69,7 @@ model Property {
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings Booking[]
 
+  @@unique([id, userId])
   @@index([userId, name])
   @@map("properties")
 }
@@ -96,6 +97,7 @@ model Broker {
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings Booking[]
 
+  @@unique([id, userId])
   @@index([userId, name])
   @@map("brokers")
 }
@@ -125,8 +127,8 @@ model Booking {
   // NoAction (checked at the end of the statement) instead of Restrict, so deleting a
   // user can still cascade through its bookings; deleting a property or broker that
   // has bookings fails either way.
-  property Property @relation(fields: [propertyId], references: [id], onDelete: NoAction)
-  broker   Broker?  @relation(fields: [brokerId], references: [id], onDelete: NoAction)
+  property Property @relation(fields: [propertyId, userId], references: [id, userId], onDelete: NoAction)
+  broker   Broker?  @relation(fields: [brokerId, userId], references: [id, userId], onDelete: NoAction)
 
   @@index([userId, checkOut])
   @@index([propertyId, checkIn])

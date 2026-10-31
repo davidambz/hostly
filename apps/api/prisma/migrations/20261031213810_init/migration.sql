@@ -86,7 +86,13 @@ CREATE UNIQUE INDEX "users_cpf_key" ON "users"("cpf");
 CREATE INDEX "properties_user_id_name_idx" ON "properties"("user_id", "name");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "properties_id_user_id_key" ON "properties"("id", "user_id");
+
+-- CreateIndex
 CREATE INDEX "brokers_user_id_name_idx" ON "brokers"("user_id", "name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "brokers_id_user_id_key" ON "brokers"("id", "user_id");
 
 -- CreateIndex
 CREATE INDEX "bookings_user_id_check_out_idx" ON "bookings"("user_id", "check_out");
@@ -107,10 +113,10 @@ ALTER TABLE "brokers" ADD CONSTRAINT "brokers_user_id_fkey" FOREIGN KEY ("user_i
 ALTER TABLE "bookings" ADD CONSTRAINT "bookings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "bookings" ADD CONSTRAINT "bookings_property_id_fkey" FOREIGN KEY ("property_id") REFERENCES "properties"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
+ALTER TABLE "bookings" ADD CONSTRAINT "bookings_property_id_user_id_fkey" FOREIGN KEY ("property_id", "user_id") REFERENCES "properties"("id", "user_id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "bookings" ADD CONSTRAINT "bookings_broker_id_fkey" FOREIGN KEY ("broker_id") REFERENCES "brokers"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
+ALTER TABLE "bookings" ADD CONSTRAINT "bookings_broker_id_user_id_fkey" FOREIGN KEY ("broker_id", "user_id") REFERENCES "brokers"("id", "user_id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- Integrity checks (Prisma doesn't model CHECK constraints, so they live here).
 -- The API validates all of this too; the database is the last line of defense.

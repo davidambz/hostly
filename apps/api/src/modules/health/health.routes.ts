@@ -1,36 +1,49 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
-import { z } from 'zod'
 
+import { HealthRepository } from './health.repository.js'
+import { livenessSchema, readinessSchema } from './health.schemas.js'
 import { HealthService } from './health.service.js'
 
-const componentStatusSchema = z.enum(['up', 'down'])
-
-const healthReportSchema = z.object({
-  status: z.enum(['ok', 'unavailable']),
-  checks: z.object({ database: componentStatusSchema }),
-})
-
 export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
-  const service = new HealthService(app.db)
+  const service = new HealthService(new HealthRepository(app.db))
 
   app.get(
     '/health',
     {
       schema: {
         tags: ['health'],
-        summary: 'Health check',
-        description: 'Answers 200 when the API and its database are up, 503 otherwise.',
-        response: { 200: healthReportSchema, 503: healthReportSchema },
+        summary: 'Liveness',
+        description:
+          'Answers 200 while the process is up, whatever the state of its dependencies. ' +
+          'Use it to decide whether to restart the container.',
+        response: { 200: livenessSchema },
+      },
+      config: { rateLimit: false },
+    },
+    () => ({ status: 'ok' as const }),
+  )
+
+  // The 503 here is the readiness report itself, not an API error, so it keeps this
+  // shape instead of going through the error handler.
+  app.get(
+    '/health/ready',
+    {
+      schema: {
+        tags: ['health'],
+        summary: 'Readiness',
+        description:
+          'Answers 200 when the API can serve requests (database reachable) and 503 ' +
+          'otherwise. Use it to decide whether to send traffic to the instance.',
+        response: { 200: readinessSchema, 503: readinessSchema },
       },
       config: { rateLimit: false },
     },
     async (request, reply) => {
-      const report = await service.check()
-      if (report.status !== 'ok') {
-        request.log.warn({ checks: report.checks }, 'health check failed')
-        return reply.status(503).send(report)
+      const report = await service.readiness()
+      if (report.status !== 'ready') {
+        request.log.warn({ checks: report.checks }, 'readiness check failed')
       }
-      return report
+      return reply.status(report.status === 'ready' ? 200 : 503).send(report)
     },
   )
 }

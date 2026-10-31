@@ -1,24 +1,19 @@
-import type { Database } from '../../shared/database.js'
+import type { HealthRepository } from './health.repository.js'
+import type { ComponentStatus, Readiness } from './health.schemas.js'
 
-export type ComponentStatus = 'up' | 'down'
-
-export interface HealthReport {
-  status: 'ok' | 'unavailable'
-  checks: { database: ComponentStatus }
-}
-
+/** Upper bound for the readiness check, so a hanging database can't hang the probe. */
 export const DATABASE_CHECK_TIMEOUT_MS = 2000
 
 export class HealthService {
   constructor(
-    private readonly db: Database,
+    private readonly repository: Pick<HealthRepository, 'ping'>,
     private readonly timeoutMs = DATABASE_CHECK_TIMEOUT_MS,
   ) {}
 
-  async check(): Promise<HealthReport> {
+  async readiness(): Promise<Readiness> {
     const database = await this.checkDatabase()
     return {
-      status: database === 'up' ? 'ok' : 'unavailable',
+      status: database === 'up' ? 'ready' : 'unavailable',
       checks: { database },
     }
   }
@@ -32,7 +27,7 @@ export class HealthService {
     })
 
     try {
-      await Promise.race([this.db.$queryRaw`SELECT 1`, timeout])
+      await Promise.race([this.repository.ping(), timeout])
       return 'up'
     } catch {
       return 'down'
