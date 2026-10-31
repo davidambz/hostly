@@ -4,31 +4,44 @@
 ARG NODE_VERSION=24
 
 FROM node:${NODE_VERSION}-alpine AS base
+# COREPACK_HOME outside /root, so the pinned pnpm is usable by the node user offline.
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
+    COREPACK_HOME=/corepack \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-RUN corepack enable
+# openssl lets Prisma detect the libssl version and pick the right schema engine.
+RUN apk add --no-cache openssl \
+ && corepack enable
 WORKDIR /repo
 
 # Download every package in the lockfile into the store. Depends only on the
 # lockfile, so it stays cached until a dependency changes.
 FROM base AS fetch
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .pnpmfile.cjs ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm fetch
+    corepack install \
+ && pnpm fetch
 
 FROM fetch AS source
 COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --offline --frozen-lockfile --filter @hostly/api...
+    pnpm install --offline --frozen-lockfile --filter @hostly/api... \
+ && pnpm --filter @hostly/api db:generate
 
-# Development: docker compose bind-mounts apps/api/src and tsx reloads on change.
+# Development: docker compose bind-mounts apps/api/src (tsx reloads on change) and
+# apps/api/prisma, then regenerates the client and applies pending migrations on start.
 FROM source AS dev
-RUN chown -R node:node /repo
 USER node
 WORKDIR /repo/apps/api
 EXPOSE 3333
-CMD ["pnpm", "dev"]
+CMD ["sh", "-c", "pnpm db:generate && pnpm db:deploy && exec pnpm dev"]
+
+# One-off job that applies pending migrations before a deploy (needs DATABASE_URL).
+# Kept apart from prod so the runtime image does not carry the Prisma CLI.
+FROM source AS migrate
+USER node
+WORKDIR /repo/apps/api
+CMD ["pnpm", "db:deploy"]
 
 FROM source AS build
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \

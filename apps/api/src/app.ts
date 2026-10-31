@@ -9,10 +9,12 @@ import {
 
 import type { Env } from './config/env.js'
 import { healthRoutes } from './modules/health/health.routes.js'
+import database from './plugins/database.js'
 import errorHandler from './plugins/error-handler.js'
 import notFound from './plugins/not-found.js'
 import security from './plugins/security.js'
 import swagger from './plugins/swagger.js'
+import type { Database } from './shared/database.js'
 
 const REQUEST_ID_HEADER = 'x-request-id'
 const VALID_REQUEST_ID = /^[\w-]{1,128}$/
@@ -27,7 +29,12 @@ function loggerOptions(env: Env): FastifyServerOptions['logger'] {
   return { level: env.LOG_LEVEL }
 }
 
-export async function buildApp(env: Env) {
+export interface BuildAppOptions {
+  /** Reuse an existing database client instead of opening one from DATABASE_URL. */
+  db?: Database
+}
+
+export async function buildApp(env: Env, options: BuildAppOptions = {}) {
   const app = Fastify({
     logger: loggerOptions(env),
     trustProxy: env.TRUST_PROXY,
@@ -53,6 +60,7 @@ export async function buildApp(env: Env) {
     rateLimitMax: env.RATE_LIMIT_MAX,
   })
   await app.register(notFound)
+  await app.register(database, { url: env.DATABASE_URL, client: options.db })
   if (env.DOCS_ENABLED) {
     await app.register(swagger)
   }

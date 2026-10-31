@@ -20,6 +20,10 @@ const envSchema = z
     NODE_ENV: optional(z.enum(['development', 'test', 'production']).default('production')),
     HOST: optional(z.string().default('0.0.0.0')),
     PORT: optional(z.coerce.number().int().min(1).max(65_535).default(3333)),
+    DATABASE_URL: z.url({
+      protocol: /^postgres(ql)?$/,
+      error: 'Expected a postgresql:// connection URL',
+    }),
     LOG_LEVEL: optional(
       z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
     ),

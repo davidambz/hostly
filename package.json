@@ -14,7 +14,8 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "pnpm -r --if-present db:generate"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [

@@ -1,0 +1,135 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Conventions:
+// - ids are UUID v7 (time-ordered, so they index well)
+// - money is stored in cents and percentages in basis points (1000 = 10%), always integers
+// - documents and phones are stored as digits only
+// - every domain row belongs to a user, and every query filters by user_id
+
+model User {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  name         String   @db.VarChar(255)
+  /// Always stored lowercase.
+  email        String   @unique @db.VarChar(255)
+  /// CPF, 11 digits.
+  cpf          String   @unique @db.Char(11)
+  /// DDD + number, 10 or 11 digits.
+  phone        String   @db.VarChar(11)
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  properties Property[]
+  brokers    Broker[]
+  bookings   Booking[]
+
+  @@map("users")
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+
+  @@map("property_type")
+}
+
+model Property {
+  id           String       @id @default(uuid(7)) @db.Uuid
+  userId       String       @map("user_id") @db.Uuid
+  /// How the owner identifies the property, e.g. "Casa da praia".
+  name         String       @db.VarChar(255)
+  type         PropertyType
+  /// CEP, 8 digits.
+  zipCode      String?      @map("zip_code") @db.Char(8)
+  /// UF, e.g. "SC".
+  state        String?      @db.Char(2)
+  city         String?      @db.VarChar(255)
+  neighborhood String?      @db.VarChar(255)
+  street       String?      @db.VarChar(255)
+  number       String?      @db.VarChar(20)
+  complement   String?      @db.VarChar(255)
+  /// Apartment only.
+  building     String?      @db.VarChar(255)
+  /// Apartment only.
+  block        String?      @db.VarChar(50)
+  /// Apartment only.
+  unit         String?      @db.VarChar(20)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([userId, name])
+  @@map("properties")
+}
+
+enum BrokerType {
+  INDIVIDUAL
+  COMPANY
+
+  @@map("broker_type")
+}
+
+model Broker {
+  id            String     @id @default(uuid(7)) @db.Uuid
+  userId        String     @map("user_id") @db.Uuid
+  type          BrokerType
+  name          String     @db.VarChar(255)
+  email         String?    @db.VarChar(255)
+  /// CPF (11 digits) for INDIVIDUAL, CNPJ (14 digits) for COMPANY.
+  document      String?    @db.VarChar(14)
+  mobilePhone   String?    @map("mobile_phone") @db.VarChar(11)
+  landlinePhone String?    @map("landline_phone") @db.VarChar(10)
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([userId, name])
+  @@map("brokers")
+}
+
+model Booking {
+  id                  String   @id @default(uuid(7)) @db.Uuid
+  userId              String   @map("user_id") @db.Uuid
+  propertyId          String   @map("property_id") @db.Uuid
+  brokerId            String?  @map("broker_id") @db.Uuid
+  guestName           String   @map("guest_name") @db.VarChar(255)
+  checkIn             DateTime @map("check_in") @db.Date
+  checkOut            DateTime @map("check_out") @db.Date
+  /// Cents.
+  nightlyRate         Int      @map("nightly_rate")
+  /// Cents.
+  cleaningFee         Int      @default(0) @map("cleaning_fee")
+  /// Cents, taken off the lodging total.
+  discount            Int      @default(0)
+  /// Cents already paid by the guest.
+  amountPaid          Int      @default(0) @map("amount_paid")
+  /// Basis points (1000 = 10%); only meaningful with a broker.
+  brokerCommissionBps Int      @default(0) @map("broker_commission_bps")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // NoAction (checked at the end of the statement) instead of Restrict, so deleting a
+  // user can still cascade through its bookings; deleting a property or broker that
+  // has bookings fails either way.
+  property Property @relation(fields: [propertyId], references: [id], onDelete: NoAction)
+  broker   Broker?  @relation(fields: [brokerId], references: [id], onDelete: NoAction)
+
+  @@index([userId, checkOut])
+  @@index([propertyId, checkIn])
+  @@index([brokerId])
+  @@map("bookings")
+}

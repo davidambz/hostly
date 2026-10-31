@@ -43,6 +43,15 @@ src/
 - Os testes ficam ao lado do código (`*.test.ts`) e usam `app.inject()`. O env dos testes vem de `src/test/env.ts`.
 - Docs em `/docs` (Swagger UI) e `/docs/json` (OpenAPI).
 
+### Banco (Prisma 7 + Postgres)
+
+- O schema fica em `prisma/schema.prisma` e as migrations em `prisma/migrations`. O cliente é gerado em `src/generated/prisma` (no gitignore) por `pnpm db:generate`, que roda sozinho no `pnpm install`.
+- `app.db` é o Prisma Client (plugin `database`). Os testes injetam um banco com `buildApp(env, { db })`.
+- Ids UUID v7, dinheiro em centavos (`Int`), porcentagem em basis points (1000 = 10%), documento e telefone só com dígitos, e-mail em minúsculas.
+- Toda linha de domínio tem `userId`, e toda query filtra por ele.
+- As regras de integridade também ficam no banco, como CHECK constraints escritas à mão no SQL da migration (o Prisma não modela CHECK). Ao criar uma migration nova, use `--create-only` quando precisar acrescentar SQL.
+- O `.pnpmfile.cjs` tira o peer `prisma` do `@prisma/client`, para a CLI não ir para a imagem de produção. A CLI só existe na imagem `migrate`.
+
 ## Fluxo de trabalho
 
 - Tudo começa por uma issue. A branch sai da `dev` atualizada e se chama `feat/<n>-slug` (ou `fix/`, `chore/`, `docs/`, `test/`, `ci/`). O PR vai para `dev`.
