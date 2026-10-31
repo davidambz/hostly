@@ -2,40 +2,52 @@
  * Domain errors. Services throw these and the error handler turns them into
  * the standard error response, so no route has to build error replies by hand.
  */
+
+export interface AppErrorOptions {
+  /** A specific code for clients to branch on (e.g. `EMAIL_TAKEN`); defaults to the generic one. */
+  code?: string
+  details?: unknown
+}
+
 export abstract class AppError extends Error {
   abstract readonly statusCode: number
-  abstract readonly code: string
+  protected abstract readonly defaultCode: string
+  readonly details?: unknown
+  private readonly customCode?: string
 
-  constructor(
-    message: string,
-    readonly details?: unknown,
-  ) {
+  constructor(message: string, { code, details }: AppErrorOptions = {}) {
     super(message)
     this.name = new.target.name
+    this.customCode = code
+    this.details = details
+  }
+
+  get code(): string {
+    return this.customCode ?? this.defaultCode
   }
 }
 
 export class BadRequestError extends AppError {
   readonly statusCode = 400
-  readonly code = 'BAD_REQUEST'
+  protected readonly defaultCode = 'BAD_REQUEST'
 }
 
 export class UnauthorizedError extends AppError {
   readonly statusCode = 401
-  readonly code = 'UNAUTHORIZED'
+  protected readonly defaultCode = 'UNAUTHORIZED'
 }
 
 export class ForbiddenError extends AppError {
   readonly statusCode = 403
-  readonly code = 'FORBIDDEN'
+  protected readonly defaultCode = 'FORBIDDEN'
 }
 
 export class NotFoundError extends AppError {
   readonly statusCode = 404
-  readonly code = 'NOT_FOUND'
+  protected readonly defaultCode = 'NOT_FOUND'
 }
 
 export class ConflictError extends AppError {
   readonly statusCode = 409
-  readonly code = 'CONFLICT'
+  protected readonly defaultCode = 'CONFLICT'
 }

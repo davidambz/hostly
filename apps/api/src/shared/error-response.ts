@@ -1,10 +1,16 @@
+import { z } from 'zod'
+
 /** Body of every error response the API sends. */
-export interface ErrorResponse {
-  statusCode: number
-  code: string
-  message: string
-  details?: unknown
-}
+export const errorResponseSchema = z
+  .object({
+    statusCode: z.number().int(),
+    code: z.string(),
+    message: z.string(),
+    details: z.unknown().optional(),
+  })
+  .meta({ id: 'ErrorResponse' })
+
+export type ErrorResponse = z.infer<typeof errorResponseSchema>
 
 /** One entry of `details` in a `VALIDATION_ERROR` response. */
 export interface ValidationIssue {

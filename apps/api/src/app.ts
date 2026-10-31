@@ -8,6 +8,7 @@ import {
 } from 'fastify-type-provider-zod'
 
 import type { Env } from './config/env.js'
+import { authRoutes } from './modules/auth/auth.routes.js'
 import { healthRoutes } from './modules/health/health.routes.js'
 import database from './plugins/database.js'
 import errorHandler from './plugins/error-handler.js'
@@ -66,6 +67,7 @@ export async function buildApp(env: Env, options: BuildAppOptions = {}) {
   }
 
   await app.register(healthRoutes)
+  await app.register(authRoutes, { prefix: '/auth', rateLimitMax: env.AUTH_RATE_LIMIT_MAX })
 
   return app
 }

@@ -15,6 +15,7 @@ describe('loadEnv', () => {
       LOG_LEVEL: 'info',
       CORS_ORIGINS: ['http://localhost:5173'],
       RATE_LIMIT_MAX: 100,
+      AUTH_RATE_LIMIT_MAX: 10,
       TRUST_PROXY: false,
       DOCS_ENABLED: false,
     })
@@ -29,6 +30,7 @@ describe('loadEnv', () => {
       LOG_LEVEL: '',
       CORS_ORIGINS: '',
       RATE_LIMIT_MAX: '',
+      AUTH_RATE_LIMIT_MAX: '',
       TRUST_PROXY: '',
       DOCS_ENABLED: '',
     })
@@ -45,6 +47,7 @@ describe('loadEnv', () => {
       LOG_LEVEL: 'warn',
       CORS_ORIGINS: 'https://hostly.app',
       RATE_LIMIT_MAX: '20',
+      AUTH_RATE_LIMIT_MAX: '5',
       TRUST_PROXY: 'true',
       DOCS_ENABLED: 'false',
     })
@@ -57,6 +60,7 @@ describe('loadEnv', () => {
       LOG_LEVEL: 'warn',
       CORS_ORIGINS: ['https://hostly.app'],
       RATE_LIMIT_MAX: 20,
+      AUTH_RATE_LIMIT_MAX: 5,
       TRUST_PROXY: true,
       DOCS_ENABLED: false,
     })
@@ -157,6 +161,8 @@ describe('loadEnv', () => {
     ['LOG_LEVEL', 'verbose'],
     ['RATE_LIMIT_MAX', '0'],
     ['RATE_LIMIT_MAX', '-5'],
+    ['AUTH_RATE_LIMIT_MAX', '0'],
+    ['AUTH_RATE_LIMIT_MAX', 'abc'],
   ])('rejects %s=%s', (key, value) => {
     expect(() => loadEnv({ ...base, [key]: value })).toThrow(InvalidEnvError)
   })
