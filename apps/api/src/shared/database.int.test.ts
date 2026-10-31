@@ -419,3 +419,52 @@ describe('bookings', () => {
     })
   })
 })
+
+describe('refresh tokens', () => {
+  const tokenHash = 'a'.repeat(64)
+
+  async function newToken(overrides: object = {}) {
+    const user = await createUser(db)
+    return db.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        familyId: '018f0000-0000-7000-8000-000000000001',
+        expiresAt: day(30),
+        ...overrides,
+      },
+    })
+  }
+
+  it('stores an active token without a revocation', async () => {
+    await expect(newToken()).resolves.toMatchObject({ revokedAt: null, revokedReason: null })
+  })
+
+  it.each([
+    ['a revocation date without a reason', { revokedAt: day(1) }],
+    ['a reason without a revocation date', { revokedReason: 'LOGOUT' }],
+  ])('refuses %s', async (_case, revocation) => {
+    await expectViolation(newToken(revocation), 'refresh_tokens_revocation_check')
+  })
+
+  it('refuses a hash that is not lowercase hex SHA-256', async () => {
+    await expectViolation(
+      newToken({ tokenHash: 'Z'.repeat(64) }),
+      'refresh_tokens_token_hash_format_check',
+    )
+  })
+
+  it('refuses the same hash twice', async () => {
+    await newToken()
+
+    await expectViolation(newToken(), 'refresh_tokens_token_hash_key')
+  })
+
+  it('is deleted with its user', async () => {
+    const token = await newToken()
+
+    await db.user.delete({ where: { id: token.userId } })
+
+    expect(await db.refreshToken.count()).toBe(0)
+  })
+})

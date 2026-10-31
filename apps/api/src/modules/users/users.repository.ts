@@ -18,6 +18,14 @@ const UNIQUE_FIELDS: UserUniqueField[] = ['email', 'cpf']
 export class UsersRepository {
   constructor(private readonly db: Database) {}
 
+  findById(id: string): Promise<User | null> {
+    return this.db.user.findUnique({ where: { id } })
+  }
+
+  findByEmail(email: string): Promise<User | null> {
+    return this.db.user.findUnique({ where: { email } })
+  }
+
   /** Which of `email` and `cpf` already belong to an account. */
   async takenFields(values: Pick<NewUser, UserUniqueField>): Promise<UserUniqueField[]> {
     const users = await this.db.user.findMany({

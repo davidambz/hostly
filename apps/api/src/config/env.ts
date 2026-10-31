@@ -14,6 +14,9 @@ const origin = z.url({ protocol: /^https?$/ }).refine(isBareOrigin, {
 
 const booleanString = z.enum(['true', 'false']).transform((value) => value === 'true')
 
+/** docker-compose's default JWT secret starts with this; production refuses it. */
+export const DEV_JWT_SECRET_PREFIX = 'dev-only-'
+
 const envSchema = z
   .object({
     // Defaults to production so a deploy that forgets NODE_ENV never runs in dev mode.
@@ -41,10 +44,30 @@ const envSchema = z
     // (from x-forwarded-for) instead of the proxy's.
     TRUST_PROXY: optional(booleanString.default(false)),
     DOCS_ENABLED: optional(booleanString.optional()),
+    /** Signs the access tokens (HS256). Generate with `openssl rand -base64 48`. */
+    JWT_SECRET: z.string().min(32, 'Must have at least 32 characters'),
+    ACCESS_TOKEN_TTL_SECONDS: optional(
+      z.coerce
+        .number()
+        .int()
+        .positive()
+        .default(15 * 60),
+    ),
+    REFRESH_TOKEN_TTL_DAYS: optional(z.coerce.number().int().positive().default(30)),
+    /** Send the refresh cookie only over HTTPS. Defaults to on in production. */
+    COOKIE_SECURE: optional(booleanString.optional()),
   })
-  .transform(({ DOCS_ENABLED, ...env }) => ({
+  .refine(
+    (env) => env.NODE_ENV !== 'production' || !env.JWT_SECRET.startsWith(DEV_JWT_SECRET_PREFIX),
+    {
+      path: ['JWT_SECRET'],
+      message: 'The development JWT secret must not be used in production',
+    },
+  )
+  .transform(({ DOCS_ENABLED, COOKIE_SECURE, ...env }) => ({
     ...env,
     DOCS_ENABLED: DOCS_ENABLED ?? env.NODE_ENV !== 'production',
+    COOKIE_SECURE: COOKIE_SECURE ?? env.NODE_ENV === 'production',
   }))
 
 export type Env = z.infer<typeof envSchema>
