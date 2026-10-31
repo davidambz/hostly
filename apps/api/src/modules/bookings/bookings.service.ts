@@ -5,6 +5,7 @@ import { BadRequestError, ConflictError, NotFoundError } from '../../shared/erro
 import type { Page } from '../../shared/pagination.js'
 import type { BrokersRepository } from '../brokers/brokers.repository.js'
 import type { PropertiesRepository } from '../properties/properties.repository.js'
+import { computeFinancials, type Financials } from './booking-financials.js'
 import type { BookingData, BookingsRepository } from './bookings.repository.js'
 import {
   type BookingWithRefs,
@@ -12,6 +13,7 @@ import {
   type CreateBookingInput,
   type ListBookingsQuery,
   MAX_NIGHTS,
+  type QuoteInput,
   type UpdateBookingInput,
 } from './bookings.schemas.js'
 
@@ -41,8 +43,8 @@ function invalid(message: string, code: string, field: string) {
   return new BadRequestError(message, { code, details: { field } })
 }
 
-/** The rules every booking must satisfy once all changes are applied. */
-function assertValid(booking: BookingState) {
+/** Dates and money rules, shared by bookings and quotes. */
+function assertDatesAndAmounts(booking: Omit<BookingState, 'brokerId' | 'brokerCommissionBps'>) {
   const nights = nightsBetween(booking.checkIn, booking.checkOut)
   if (nights < 1) {
     throw invalid('Check-out must be after check-in', 'INVALID_DATES', 'checkOut')
@@ -57,6 +59,11 @@ function assertValid(booking: BookingState) {
   if (booking.amountPaid > lodging - booking.discount + booking.cleaningFee) {
     throw invalid('The amount paid is larger than the total', 'PAYMENT_EXCEEDS_TOTAL', 'amountPaid')
   }
+}
+
+/** The rules every booking must satisfy once all changes are applied. */
+function assertValid(booking: BookingState) {
+  assertDatesAndAmounts(booking)
   if (booking.brokerId === null && booking.brokerCommissionBps > 0) {
     throw invalid('A commission needs a broker', 'COMMISSION_WITHOUT_BROKER', 'brokerCommissionBps')
   }
@@ -97,6 +104,17 @@ export class BookingsService {
 
   calendar(userId: string, query: CalendarQuery): Promise<BookingWithRefs[]> {
     return this.deps.bookings.calendar(userId, query)
+  }
+
+  /**
+   * The financials of a booking that isn't saved, for a form to show as the user types.
+   * Same rules and errors as creating one; no property or broker needed.
+   */
+  quote(input: QuoteInput): Financials {
+    const checkIn = parseDate(input.checkIn)
+    const checkOut = parseDate(input.checkOut)
+    assertDatesAndAmounts({ ...input, checkIn, checkOut })
+    return computeFinancials({ ...input, nights: nightsBetween(checkIn, checkOut) })
   }
 
   async get(userId: string, id: string): Promise<BookingWithRefs> {

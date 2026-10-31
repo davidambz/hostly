@@ -78,6 +78,18 @@ describe('POST /bookings', () => {
       discount: 0,
       amountPaid: 0,
       brokerCommissionBps: 0,
+      financials: {
+        nights: 7,
+        grossLodging: 315_000,
+        discount: 0,
+        lodging: 315_000,
+        cleaningFee: 25_000,
+        total: 340_000,
+        brokerFee: 0,
+        net: 340_000,
+        amountPaid: 0,
+        balanceDue: 340_000,
+      },
       createdAt: expect.any(String) as string,
       updatedAt: expect.any(String) as string,
     })
@@ -217,6 +229,79 @@ describe('POST /bookings', () => {
 
     expect(response.statusCode).toBe(400)
     expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR', details: [{ path }] })
+  })
+})
+
+describe('POST /bookings/quote', () => {
+  const quote = {
+    checkIn: '2030-12-20',
+    checkOut: '2030-12-27',
+    nightlyRate: 45_000,
+    cleaningFee: 25_000,
+    discount: 15_000,
+    amountPaid: 100_000,
+    brokerCommissionBps: 1000,
+  }
+
+  it('answers the financials and saves nothing', async () => {
+    const response = await request('POST', '/bookings/quote', quote)
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      nights: 7,
+      grossLodging: 315_000,
+      discount: 15_000,
+      lodging: 300_000,
+      cleaningFee: 25_000,
+      total: 325_000,
+      brokerFee: 30_000,
+      net: 295_000,
+      amountPaid: 100_000,
+      balanceDue: 225_000,
+    })
+    expect(await db.booking.count()).toBe(0)
+  })
+
+  it('defaults the optional amounts to zero', async () => {
+    const response = await request('POST', '/bookings/quote', {
+      checkIn: '2030-12-20',
+      checkOut: '2030-12-21',
+      nightlyRate: 10_000,
+    })
+
+    expect(response.json()).toMatchObject({ total: 10_000, brokerFee: 0, balanceDue: 10_000 })
+  })
+
+  it('matches the financials of the booking it would create', async () => {
+    const broker = await createBroker(db, { userId: owner.id })
+    const quoted = (await request('POST', '/bookings/quote', quote)).json<object>()
+
+    const created = (
+      await book(quote.checkIn, quote.checkOut, { ...quote, brokerId: broker.id })
+    ).json<{ financials: object }>()
+
+    expect(created.financials).toEqual(quoted)
+  })
+
+  it.each([
+    ['check-out before check-in', { checkOut: '2030-12-01' }, 'INVALID_DATES'],
+    ['a discount above the lodging', { discount: 315_001 }, 'DISCOUNT_EXCEEDS_LODGING'],
+    ['a payment above the total', { amountPaid: 325_001 }, 'PAYMENT_EXCEEDS_TOTAL'],
+  ])('answers 400 for %s', async (_case, change, code) => {
+    const response = await request('POST', '/bookings/quote', { ...quote, ...change })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toMatchObject({ code })
+  })
+
+  it('answers 400 VALIDATION_ERROR without dates', async () => {
+    expect((await request('POST', '/bookings/quote', { nightlyRate: 1 })).statusCode).toBe(400)
+  })
+
+  it('needs a token', async () => {
+    expect(
+      (await app.inject({ method: 'POST', url: '/bookings/quote', payload: quote })).statusCode,
+    ).toBe(401)
   })
 })
 
@@ -575,5 +660,6 @@ it('documents the routes', async () => {
 
   expect(Object.keys(paths['/bookings/'] ?? paths['/bookings'] ?? {})).toEqual(['get', 'post'])
   expect(Object.keys(paths['/bookings/calendar'] ?? {})).toEqual(['get'])
+  expect(Object.keys(paths['/bookings/quote'] ?? {})).toEqual(['post'])
   expect(Object.keys(paths['/bookings/{id}'] ?? {})).toEqual(['get', 'patch', 'delete'])
 })
