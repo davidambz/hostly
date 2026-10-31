@@ -38,3 +38,8 @@ export function violates(
 ): boolean {
   return violation.constraint === `${table}_${field}_key` || violation.fields.includes(field)
 }
+
+/** Whether the error is a foreign key violation (P2003). */
+export function isForeignKeyViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003'
+}

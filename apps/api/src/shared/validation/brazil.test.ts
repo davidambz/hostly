@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { validCpf } from '../../test/documents.js'
 import {
   cpfCheckDigits,
+  isValidCep,
   isValidCpf,
   isValidLandlinePhone,
   isValidMobilePhone,
@@ -108,5 +109,15 @@ describe('normalizePhone', () => {
 
   it('keeps a number that only happens to start with 55 (area code 55)', () => {
     expect(normalizePhone('55999990000')).toBe('55999990000')
+  })
+})
+
+describe('isValidCep', () => {
+  it.each(['88053700', '01001000'])('accepts %s', (cep) => {
+    expect(isValidCep(cep)).toBe(true)
+  })
+
+  it.each(['00000000', '8805370', '880537000', '88053-70', ''])('rejects %s', (cep) => {
+    expect(isValidCep(cep)).toBe(false)
   })
 })

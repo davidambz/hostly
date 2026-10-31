@@ -63,3 +63,41 @@ export function normalizePhone(value: string): string {
   }
   return digits
 }
+
+/** The 26 states and the Federal District. */
+export const STATES = [
+  'AC',
+  'AL',
+  'AP',
+  'AM',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MT',
+  'MS',
+  'MG',
+  'PA',
+  'PB',
+  'PR',
+  'PE',
+  'PI',
+  'RJ',
+  'RN',
+  'RS',
+  'RO',
+  'RR',
+  'SC',
+  'SP',
+  'SE',
+  'TO',
+] as const
+
+export type State = (typeof STATES)[number]
+
+/** A CEP: 8 digits, not all zeros. */
+export function isValidCep(cep: string): boolean {
+  return /^\d{8}$/.test(cep) && cep !== '00000000'
+}

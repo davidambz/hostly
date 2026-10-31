@@ -8,3 +8,14 @@ export class UniqueFieldError<Field extends string = string> extends Error {
     this.name = 'UniqueFieldError'
   }
 }
+
+/**
+ * Data-layer error: a row can't be deleted because other rows still reference it
+ * (a foreign key). Services decide what that means for the user (usually a 409).
+ */
+export class RowInUseError extends Error {
+  constructor(readonly referencedBy: string) {
+    super(`Row is still referenced by ${referencedBy}`)
+    this.name = 'RowInUseError'
+  }
+}

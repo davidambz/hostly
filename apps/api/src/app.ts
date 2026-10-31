@@ -10,6 +10,7 @@ import {
 import type { Env } from './config/env.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
 import { healthRoutes } from './modules/health/health.routes.js'
+import { propertiesRoutes } from './modules/properties/properties.routes.js'
 import { usersRoutes } from './modules/users/users.routes.js'
 import auth from './plugins/auth.js'
 import database from './plugins/database.js'
@@ -81,6 +82,7 @@ export async function buildApp(env: Env, options: BuildAppOptions = {}) {
     cookieSecure: env.COOKIE_SECURE,
   })
   await app.register(usersRoutes)
+  await app.register(propertiesRoutes, { prefix: '/properties' })
 
   return app
 }
