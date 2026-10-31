@@ -31,8 +31,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 # Development: docker compose bind-mounts apps/api/src (tsx reloads on change) and
 # apps/api/prisma, then regenerates the client and applies pending migrations on start.
 FROM source AS dev
-# The dev command regenerates the client into src/generated, so node must own src.
-RUN chown -R node:node apps/api/src
+# node must own the app dir: the dev command regenerates src/generated and the tests
+# write coverage/. (Its node_modules only holds symlinks, so this layer stays small.)
+RUN chown -R node:node apps/api
 USER node
 WORKDIR /repo/apps/api
 EXPOSE 3333

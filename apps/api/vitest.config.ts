@@ -1,10 +1,38 @@
+import { fileURLToPath } from 'node:url'
+
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
-    include: ['src/**/*.test.ts'],
+    // Inside the app instead of the workspace root's node_modules, which the dev
+    // container's node user can't write to.
+    fsModuleCachePath: fileURLToPath(new URL('node_modules/.vitest-cache', import.meta.url)),
     clearMocks: true,
     restoreMocks: true,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          include: ['src/**/*.test.ts', 'prisma/**/*.test.ts'],
+          exclude: ['**/*.int.test.ts'],
+        },
+      },
+      {
+        // Against a real Postgres (TEST_DATABASE_URL), recreated and migrated on each
+        // run and emptied before each test. Files run one at a time since they share it.
+        extends: true,
+        test: {
+          name: 'integration',
+          include: ['src/**/*.int.test.ts', 'prisma/**/*.int.test.ts'],
+          globalSetup: ['src/test/integration/global-setup.ts'],
+          setupFiles: ['src/test/integration/setup.ts'],
+          fileParallelism: false,
+          testTimeout: 15_000,
+          hookTimeout: 60_000,
+        },
+      },
+    ],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
