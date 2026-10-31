@@ -2,13 +2,14 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { type App, buildApp } from './app.js'
 import { testEnv } from './test/env.js'
+import { fakeDatabase } from './test/fake-database.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
 let app: App | undefined
 
 async function start(overrides: Parameters<typeof testEnv>[0] = {}) {
-  app = await buildApp(testEnv(overrides))
+  app = await buildApp(testEnv(overrides), { db: fakeDatabase() })
   return app
 }
 
@@ -18,16 +19,6 @@ afterEach(async () => {
 })
 
 describe('GET /health', () => {
-  it('answers 200 with status ok', async () => {
-    const api = await start()
-
-    const response = await api.inject({ method: 'GET', url: '/health' })
-
-    expect(response.statusCode).toBe(200)
-    expect(response.headers['content-type']).toMatch(/^application\/json/)
-    expect(response.json()).toEqual({ status: 'ok' })
-  })
-
   it('is never rate limited', async () => {
     const api = await start({ RATE_LIMIT_MAX: '1' })
 

@@ -19,19 +19,32 @@ docker compose up
 | API      | http://localhost:3333 (docs em `/docs`)        |
 | Postgres | `localhost:5432`, usuário/senha/banco `hostly` |
 
-Os valores vazios nos `.env` usam os padrões acima. O `apps/api/src` é montado no container e recarrega sozinho a cada alteração. As portas ficam presas ao `127.0.0.1`. Para mudar a porta da API no host, use `API_PORT` no `.env` da raiz.
+A API tem `/health` (liveness) e `/health/ready` (checa o banco).
 
-| Comando                      | O que faz                                                                            |
-| ---------------------------- | ------------------------------------------------------------------------------------ |
-| `docker compose up --build`  | recria a imagem depois de mudar dependências ou configs (`package.json`, `tsconfig`) |
-| `docker compose logs -f api` | acompanha os logs da API                                                             |
-| `docker compose down`        | para tudo (mantém o banco)                                                           |
-| `docker compose down -v`     | para tudo e apaga o banco                                                            |
+Os valores vazios nos `.env` usam os padrões acima. O `DATABASE_URL` da API no compose é montado a partir de `POSTGRES_*`, então a senha não pode ter caracteres reservados de URL (`@ : / # ?`). O `apps/api/src` é montado no container e recarrega sozinho a cada alteração. Ao subir, o container gera o Prisma Client e aplica as migrations pendentes. As portas ficam presas ao `127.0.0.1`. Para mudar a porta da API no host, use `API_PORT` no `.env` da raiz.
 
-Imagem de produção da API (multi-stage, usuário não-root e só dependências de produção):
+| Comando                                                 | O que faz                                                                            |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `docker compose up --build`                             | recria a imagem depois de mudar dependências ou configs (`package.json`, `tsconfig`) |
+| `docker compose logs -f api`                            | acompanha os logs da API                                                             |
+| `docker compose exec api pnpm db:seed`                  | popula dados de exemplo (login `ana@hostly.dev` / `hostly123`)                       |
+| `docker compose exec api pnpm db:migrate --name <nome>` | cria e aplica uma migration nova a partir do `schema.prisma`                         |
+| `docker compose down`                                   | para tudo (mantém o banco)                                                           |
+| `docker compose down -v`                                | para tudo e apaga o banco                                                            |
+
+### Imagens de produção
+
+O Dockerfile da API tem dois alvos de produção, os dois multi-stage, com usuário não-root:
+
+- `prod`: o runtime da API, só com dependências de produção e `HEALTHCHECK` em `/health`.
+- `migrate`: job avulso que roda `prisma migrate deploy`. Rode antes de cada deploy.
 
 ```bash
+docker build -f apps/api/Dockerfile --target migrate -t hostly-api-migrate .
 docker build -f apps/api/Dockerfile --target prod -t hostly-api .
+
+docker run --rm -e DATABASE_URL=postgresql://... hostly-api-migrate
+docker run -e DATABASE_URL=postgresql://... -p 3333:3333 hostly-api
 ```
 
 ## Desenvolvimento local

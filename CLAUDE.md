@@ -39,9 +39,18 @@ src/
 - As rotas só validam entrada e saída com Zod (`fastify-type-provider-zod`) e chamam o service. A regra de negócio fica no service e o acesso a dados no repository.
 - Erros esperados: o service lança `NotFoundError`, `ConflictError` etc. e o error handler converte para `{ statusCode, code, message, details? }`. Nenhuma rota monta resposta de erro na mão.
 - Erro inesperado vira 500 genérico, e o original vai para o log com o `reqId`.
-- Toda rota, inclusive a 404, passa pelo rate limit. A exceção é `/health`, com `config: { rateLimit: false }`.
+- Toda rota, inclusive a 404, passa pelo rate limit. As exceções são `/health` (liveness, sempre 200 com o processo de pé, usado pelo `HEALTHCHECK`) e `/health/ready` (readiness: 200 ou 503 conforme o banco), com `config: { rateLimit: false }`. O 503 da readiness é o relatório de saúde, não um erro, e por isso não passa pelo error handler.
 - Os testes ficam ao lado do código (`*.test.ts`) e usam `app.inject()`. O env dos testes vem de `src/test/env.ts`.
 - Docs em `/docs` (Swagger UI) e `/docs/json` (OpenAPI).
+
+### Banco (Prisma 7 + Postgres)
+
+- O schema fica em `prisma/schema.prisma` e as migrations em `prisma/migrations`. O cliente é gerado em `src/generated/prisma` (no gitignore) por `pnpm db:generate`, que roda sozinho no `pnpm install`.
+- `app.db` é o Prisma Client (plugin `database`). Os testes injetam um banco com `buildApp(env, { db })`.
+- Ids UUID v7, dinheiro em centavos (`Int`), porcentagem em basis points (1000 = 10%), documento e telefone só com dígitos, e-mail em minúsculas.
+- Toda linha de domínio tem `userId`, e toda query filtra por ele. Reservas apontam para imóvel e intermediador por FK composta `(id, user_id)`, então o banco recusa uma reserva com imóvel ou intermediador de outro usuário.
+- As regras de integridade também ficam no banco, como CHECK constraints escritas à mão no SQL da migration (o Prisma não modela CHECK). Ao criar uma migration nova, use `--create-only` quando precisar acrescentar SQL.
+- O `.pnpmfile.cjs` tira o peer `prisma` do `@prisma/client`, para a CLI não ir para a imagem de produção. A CLI só existe na imagem `migrate`.
 
 ## Fluxo de trabalho
 

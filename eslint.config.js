@@ -6,7 +6,7 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig(
-  globalIgnores(['**/dist', '**/build', '**/coverage', '**/node_modules']),
+  globalIgnores(['**/dist', '**/build', '**/coverage', '**/node_modules', '**/src/generated']),
   {
     files: ['**/*.{js,mjs,cjs,ts,tsx}'],
     extends: [js.configs.recommended],
@@ -32,6 +32,13 @@ export default defineConfig(
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       // Fastify plugins and hooks are async by contract, even when they don't await.
       '@typescript-eslint/require-await': 'off',
+    },
+  },
+  {
+    // `expect(mock.method)` is the idiomatic way to assert on mocks.
+    files: ['**/*.test.{ts,tsx}', '**/test/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
     },
   },
   prettier,

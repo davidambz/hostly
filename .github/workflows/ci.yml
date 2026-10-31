@@ -49,48 +49,90 @@ jobs:
           --to ${{ github.event.pull_request.head.sha }}
 
   docker:
-    name: Docker images (${{ matrix.target }})
+    name: Docker images
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [dev, prod]
+    timeout-minutes: 20
+    env:
+      NETWORK: hostly-ci
     steps:
       - uses: actions/checkout@v7
 
       - uses: docker/setup-buildx-action@v4
 
-      - uses: docker/build-push-action@v7
+      - name: Build dev
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/api/Dockerfile
-          target: ${{ matrix.target }}
-          tags: hostly-api:${{ matrix.target }}
+          target: dev
+          tags: hostly-api:dev
           load: true
-          cache-from: type=gha,scope=api-${{ matrix.target }}
-          cache-to: type=gha,mode=max,scope=api-${{ matrix.target }}
+          cache-from: type=gha,scope=api
 
-      - name: Smoke test the container
+      - name: Build migrate
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          target: migrate
+          tags: hostly-api:migrate
+          load: true
+          cache-from: type=gha,scope=api
+
+      - name: Build prod
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          target: prod
+          tags: hostly-api:prod
+          load: true
+          cache-from: type=gha,scope=api
+          # One shared scope; the prod chain covers every stage except the tiny dev/migrate tails.
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Start Postgres
         run: |
-          docker run -d --name api -p 3333:3333 hostly-api:${{ matrix.target }}
+          docker network create "$NETWORK"
+          docker run -d --name postgres --network "$NETWORK" \
+            -e POSTGRES_USER=hostly -e POSTGRES_PASSWORD=hostly -e POSTGRES_DB=hostly \
+            --health-cmd 'pg_isready -U hostly' --health-interval 2s \
+            postgres:18-alpine
           for _ in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:3333/health; then
-              exit 0
-            fi
+            [ "$(docker inspect -f '{{.State.Health.Status}}' postgres)" = healthy ] && exit 0
             sleep 1
           done
-          docker logs api
           exit 1
 
-      - name: Wait for the HEALTHCHECK
-        if: matrix.target == 'prod'
+      - name: Run migrations with the migrate image
         run: |
+          docker run --rm --network "$NETWORK" \
+            -e DATABASE_URL=postgresql://hostly:hostly@postgres:5432/hostly \
+            hostly-api:migrate
+
+      - name: Smoke test the prod image
+        run: |
+          docker run -d --name api-prod --network "$NETWORK" -p 3333:3333 \
+            -e DATABASE_URL=postgresql://hostly:hostly@postgres:5432/hostly \
+            hostly-api:prod
           for _ in $(seq 1 30); do
-            status=$(docker inspect --format '{{.State.Health.Status}}' api)
-            [ "$status" = healthy ] && exit 0
+            if [ "$(docker inspect -f '{{.State.Health.Status}}' api-prod)" = healthy ]; then
+              curl -fsS http://127.0.0.1:3333/health && exit 0
+            fi
             sleep 2
           done
-          echo "container is $status"
-          docker logs api
+          docker logs api-prod
+          exit 1
+
+      - name: Smoke test the dev image
+        run: |
+          docker exec postgres psql -U hostly -c 'CREATE DATABASE hostly_dev'
+          docker run -d --name api-dev --network "$NETWORK" -p 3334:3333 \
+            -e DATABASE_URL=postgresql://hostly:hostly@postgres:5432/hostly_dev \
+            hostly-api:dev
+          for _ in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:3334/health && exit 0
+            sleep 1
+          done
+          docker logs api-dev
           exit 1

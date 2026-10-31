@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest'
 
 import { InvalidEnvError, loadEnv } from './env.js'
 
+const DATABASE_URL = 'postgresql://hostly:hostly@localhost:5432/hostly'
+const base = { DATABASE_URL }
+
 describe('loadEnv', () => {
   it('applies safe production defaults when nothing is set', () => {
-    expect(loadEnv({})).toEqual({
+    expect(loadEnv(base)).toEqual({
       NODE_ENV: 'production',
       HOST: '0.0.0.0',
       PORT: 3333,
+      DATABASE_URL,
       LOG_LEVEL: 'info',
       CORS_ORIGINS: ['http://localhost:5173'],
       RATE_LIMIT_MAX: 100,
@@ -18,6 +22,7 @@ describe('loadEnv', () => {
 
   it('treats empty strings as unset, like the keys in .env.example', () => {
     const env = loadEnv({
+      ...base,
       NODE_ENV: '',
       HOST: '',
       PORT: '',
@@ -28,11 +33,12 @@ describe('loadEnv', () => {
       DOCS_ENABLED: '',
     })
 
-    expect(env).toEqual(loadEnv({}))
+    expect(env).toEqual(loadEnv(base))
   })
 
   it('reads and coerces the values that are set', () => {
     const env = loadEnv({
+      ...base,
       NODE_ENV: 'development',
       HOST: '127.0.0.1',
       PORT: '8080',
@@ -47,6 +53,7 @@ describe('loadEnv', () => {
       NODE_ENV: 'development',
       HOST: '127.0.0.1',
       PORT: 8080,
+      DATABASE_URL,
       LOG_LEVEL: 'warn',
       CORS_ORIGINS: ['https://hostly.app'],
       RATE_LIMIT_MAX: 20,
@@ -56,12 +63,35 @@ describe('loadEnv', () => {
   })
 
   it('ignores unknown variables', () => {
-    expect(loadEnv({ SOMETHING_ELSE: 'x' })).toEqual(loadEnv({}))
+    expect(loadEnv({ ...base, SOMETHING_ELSE: 'x' })).toEqual(loadEnv(base))
+  })
+
+  describe('DATABASE_URL', () => {
+    it.each([
+      'postgresql://hostly:hostly@localhost:5432/hostly',
+      'postgres://user:p%40ss@db.internal:6543/app?sslmode=require',
+    ])('accepts %s', (url) => {
+      expect(loadEnv({ DATABASE_URL: url }).DATABASE_URL).toBe(url)
+    })
+
+    it.each([
+      ['missing', undefined],
+      ['empty, as in .env.example', ''],
+      ['not a URL', 'localhost:5432'],
+      ['another database', 'mysql://root@localhost:3306/hostly'],
+    ])('rejects a URL that is %s', (_case, url) => {
+      expect(() => loadEnv({ DATABASE_URL: url })).toThrow(
+        expect.objectContaining({
+          name: 'InvalidEnvError',
+          message: expect.stringContaining('DATABASE_URL') as string,
+        }),
+      )
+    })
   })
 
   describe('CORS_ORIGINS', () => {
     it('splits on commas and trims each origin', () => {
-      const env = loadEnv({ CORS_ORIGINS: 'https://hostly.app , http://localhost:5173' })
+      const env = loadEnv({ ...base, CORS_ORIGINS: 'https://hostly.app , http://localhost:5173' })
 
       expect(env.CORS_ORIGINS).toEqual(['https://hostly.app', 'http://localhost:5173'])
     })
@@ -75,7 +105,7 @@ describe('loadEnv', () => {
       'ftp://hostly.app',
       'hostly.app',
     ])('rejects %s, which a browser Origin header could never match', (value) => {
-      expect(() => loadEnv({ CORS_ORIGINS: value })).toThrow(InvalidEnvError)
+      expect(() => loadEnv({ ...base, CORS_ORIGINS: value })).toThrow(InvalidEnvError)
     })
   })
 
@@ -84,11 +114,11 @@ describe('loadEnv', () => {
       ['true', true],
       ['false', false],
     ])('reads %s as %o', (value, expected) => {
-      expect(loadEnv({ TRUST_PROXY: value }).TRUST_PROXY).toBe(expected)
+      expect(loadEnv({ ...base, TRUST_PROXY: value }).TRUST_PROXY).toBe(expected)
     })
 
     it.each(['yes', '1', 'TRUE'])('rejects %s', (value) => {
-      expect(() => loadEnv({ TRUST_PROXY: value })).toThrow(InvalidEnvError)
+      expect(() => loadEnv({ ...base, TRUST_PROXY: value })).toThrow(InvalidEnvError)
     })
   })
 
@@ -98,19 +128,23 @@ describe('loadEnv', () => {
       ['test', true],
       ['production', false],
     ])('defaults to the NODE_ENV (%s → %o)', (nodeEnv, expected) => {
-      expect(loadEnv({ NODE_ENV: nodeEnv }).DOCS_ENABLED).toBe(expected)
+      expect(loadEnv({ ...base, NODE_ENV: nodeEnv }).DOCS_ENABLED).toBe(expected)
     })
 
     it('can be turned on explicitly in production', () => {
-      expect(loadEnv({ NODE_ENV: 'production', DOCS_ENABLED: 'true' }).DOCS_ENABLED).toBe(true)
+      expect(loadEnv({ ...base, NODE_ENV: 'production', DOCS_ENABLED: 'true' }).DOCS_ENABLED).toBe(
+        true,
+      )
     })
 
     it('can be turned off explicitly in development', () => {
-      expect(loadEnv({ NODE_ENV: 'development', DOCS_ENABLED: 'false' }).DOCS_ENABLED).toBe(false)
+      expect(
+        loadEnv({ ...base, NODE_ENV: 'development', DOCS_ENABLED: 'false' }).DOCS_ENABLED,
+      ).toBe(false)
     })
 
     it('rejects anything that is not true or false', () => {
-      expect(() => loadEnv({ DOCS_ENABLED: '1' })).toThrow(InvalidEnvError)
+      expect(() => loadEnv({ ...base, DOCS_ENABLED: '1' })).toThrow(InvalidEnvError)
     })
   })
 
@@ -124,11 +158,11 @@ describe('loadEnv', () => {
     ['RATE_LIMIT_MAX', '0'],
     ['RATE_LIMIT_MAX', '-5'],
   ])('rejects %s=%s', (key, value) => {
-    expect(() => loadEnv({ [key]: value })).toThrow(InvalidEnvError)
+    expect(() => loadEnv({ ...base, [key]: value })).toThrow(InvalidEnvError)
   })
 
   it('names every invalid variable in the error message', () => {
-    expect(() => loadEnv({ PORT: 'abc', LOG_LEVEL: 'verbose' })).toThrow(
+    expect(() => loadEnv({ ...base, PORT: 'abc', LOG_LEVEL: 'verbose' })).toThrow(
       expect.objectContaining({
         message: expect.stringMatching(/PORT[\s\S]*LOG_LEVEL|LOG_LEVEL[\s\S]*PORT/) as string,
       }),
