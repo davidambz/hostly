@@ -46,6 +46,14 @@ src/
   - Cada feature cobre caminho feliz, validação, 401/403/404/409, isolamento entre usuários e casos de borda. A cobertura mínima é de 85%.
 - Docs em `/docs` (Swagger UI) e `/docs/json` (OpenAPI).
 
+### Autenticação
+
+- `POST /auth/login` devolve um access token JWT (HS256, `ACCESS_TOKEN_TTL_SECONDS`, padrão 15 min), enviado como `Authorization: Bearer`. O refresh token vai num cookie `hostly_refresh_token` (`httpOnly`, `SameSite=Strict`, `path=/auth`, `Secure` em produção).
+- Refresh token opaco, guardado só como SHA-256. Cada `POST /auth/refresh` gera um token novo na mesma família (rotação). Reapresentar um token `ROTATED` é tratado como vazamento: a família inteira é revogada (`REUSE_DETECTED`) e a resposta é 401 `REFRESH_TOKEN_REUSED`. Logout revoga a família com `LOGOUT`.
+- Rotas protegidas: `onRequest: [app.authenticate]`. O id do usuário fica em `request.user.sub`. Códigos de 401: `UNAUTHORIZED` (sem token), `TOKEN_EXPIRED` (o front deve chamar o refresh) e `INVALID_TOKEN`.
+- Login com e-mail desconhecido verifica um hash falso, para levar o mesmo tempo que uma senha errada. Os dois casos respondem `INVALID_CREDENTIALS`.
+- `JWT_SECRET` é obrigatório. O compose usa um segredo `dev-only-…`, que a API recusa com `NODE_ENV=production`.
+
 ### Banco (Prisma 7 + Postgres)
 
 - O schema fica em `prisma/schema.prisma` e as migrations em `prisma/migrations`. O cliente é gerado em `src/generated/prisma` (no gitignore) por `pnpm db:generate`, que roda sozinho no `pnpm install`.

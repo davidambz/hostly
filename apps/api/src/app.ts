@@ -10,6 +10,8 @@ import {
 import type { Env } from './config/env.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
 import { healthRoutes } from './modules/health/health.routes.js'
+import { usersRoutes } from './modules/users/users.routes.js'
+import auth from './plugins/auth.js'
 import database from './plugins/database.js'
 import errorHandler from './plugins/error-handler.js'
 import notFound from './plugins/not-found.js'
@@ -62,12 +64,23 @@ export async function buildApp(env: Env, options: BuildAppOptions = {}) {
   })
   await app.register(notFound)
   await app.register(database, { url: env.DATABASE_URL, client: options.db })
+  await app.register(auth, {
+    jwtSecret: env.JWT_SECRET,
+    accessTokenTtlSeconds: env.ACCESS_TOKEN_TTL_SECONDS,
+  })
   if (env.DOCS_ENABLED) {
     await app.register(swagger)
   }
 
   await app.register(healthRoutes)
-  await app.register(authRoutes, { prefix: '/auth', rateLimitMax: env.AUTH_RATE_LIMIT_MAX })
+  await app.register(authRoutes, {
+    prefix: '/auth',
+    rateLimitMax: env.AUTH_RATE_LIMIT_MAX,
+    accessTokenTtlSeconds: env.ACCESS_TOKEN_TTL_SECONDS,
+    refreshTokenTtlDays: env.REFRESH_TOKEN_TTL_DAYS,
+    cookieSecure: env.COOKIE_SECURE,
+  })
+  await app.register(usersRoutes)
 
   return app
 }

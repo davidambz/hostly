@@ -12,6 +12,11 @@ const docs: FastifyPluginAsync = async (app) => {
         description: 'Gestão de reservas para aluguel de temporada',
         version: '0.1.0',
       },
+      components: {
+        securitySchemes: {
+          bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        },
+      },
     },
     transform: jsonSchemaTransform,
     transformObject: jsonSchemaTransformObject,

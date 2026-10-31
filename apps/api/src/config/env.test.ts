@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { InvalidEnvError, loadEnv } from './env.js'
+import { DEV_JWT_SECRET_PREFIX, InvalidEnvError, loadEnv } from './env.js'
 
 const DATABASE_URL = 'postgresql://hostly:hostly@localhost:5432/hostly'
-const base = { DATABASE_URL }
+const JWT_SECRET = 'a-real-secret-that-is-at-least-32-characters'
+const base = { DATABASE_URL, JWT_SECRET }
 
 describe('loadEnv', () => {
   it('applies safe production defaults when nothing is set', () => {
@@ -18,6 +19,10 @@ describe('loadEnv', () => {
       AUTH_RATE_LIMIT_MAX: 10,
       TRUST_PROXY: false,
       DOCS_ENABLED: false,
+      JWT_SECRET,
+      ACCESS_TOKEN_TTL_SECONDS: 900,
+      REFRESH_TOKEN_TTL_DAYS: 30,
+      COOKIE_SECURE: true,
     })
   })
 
@@ -33,6 +38,9 @@ describe('loadEnv', () => {
       AUTH_RATE_LIMIT_MAX: '',
       TRUST_PROXY: '',
       DOCS_ENABLED: '',
+      ACCESS_TOKEN_TTL_SECONDS: '',
+      REFRESH_TOKEN_TTL_DAYS: '',
+      COOKIE_SECURE: '',
     })
 
     expect(env).toEqual(loadEnv(base))
@@ -50,6 +58,9 @@ describe('loadEnv', () => {
       AUTH_RATE_LIMIT_MAX: '5',
       TRUST_PROXY: 'true',
       DOCS_ENABLED: 'false',
+      ACCESS_TOKEN_TTL_SECONDS: '300',
+      REFRESH_TOKEN_TTL_DAYS: '7',
+      COOKIE_SECURE: 'true',
     })
 
     expect(env).toEqual({
@@ -63,6 +74,10 @@ describe('loadEnv', () => {
       AUTH_RATE_LIMIT_MAX: 5,
       TRUST_PROXY: true,
       DOCS_ENABLED: false,
+      JWT_SECRET,
+      ACCESS_TOKEN_TTL_SECONDS: 300,
+      REFRESH_TOKEN_TTL_DAYS: 7,
+      COOKIE_SECURE: true,
     })
   })
 
@@ -70,12 +85,56 @@ describe('loadEnv', () => {
     expect(loadEnv({ ...base, SOMETHING_ELSE: 'x' })).toEqual(loadEnv(base))
   })
 
+  describe('JWT_SECRET', () => {
+    it.each([
+      ['missing', undefined],
+      ['empty', ''],
+      ['shorter than 32 characters', 'a'.repeat(31)],
+    ])('is rejected when %s', (_case, secret) => {
+      expect(() => loadEnv({ DATABASE_URL, JWT_SECRET: secret })).toThrow(
+        expect.objectContaining({ message: expect.stringContaining('JWT_SECRET') as string }),
+      )
+    })
+
+    it('accepts the development secret outside production', () => {
+      const secret = `${DEV_JWT_SECRET_PREFIX}secret-long-enough-for-the-minimum`
+
+      expect(
+        loadEnv({ DATABASE_URL, JWT_SECRET: secret, NODE_ENV: 'development' }).JWT_SECRET,
+      ).toBe(secret)
+    })
+
+    it('refuses the development secret in production', () => {
+      const secret = `${DEV_JWT_SECRET_PREFIX}secret-long-enough-for-the-minimum`
+
+      expect(() => loadEnv({ DATABASE_URL, JWT_SECRET: secret, NODE_ENV: 'production' })).toThrow(
+        /development JWT secret must not be used in production/,
+      )
+    })
+  })
+
+  describe('COOKIE_SECURE', () => {
+    it.each([
+      ['development', false],
+      ['test', false],
+      ['production', true],
+    ])('defaults to the NODE_ENV (%s → %o)', (nodeEnv, expected) => {
+      expect(loadEnv({ ...base, NODE_ENV: nodeEnv }).COOKIE_SECURE).toBe(expected)
+    })
+
+    it('can be turned off explicitly, e.g. for production over plain HTTP behind a proxy', () => {
+      expect(
+        loadEnv({ ...base, NODE_ENV: 'production', COOKIE_SECURE: 'false' }).COOKIE_SECURE,
+      ).toBe(false)
+    })
+  })
+
   describe('DATABASE_URL', () => {
     it.each([
       'postgresql://hostly:hostly@localhost:5432/hostly',
       'postgres://user:p%40ss@db.internal:6543/app?sslmode=require',
     ])('accepts %s', (url) => {
-      expect(loadEnv({ DATABASE_URL: url }).DATABASE_URL).toBe(url)
+      expect(loadEnv({ ...base, DATABASE_URL: url }).DATABASE_URL).toBe(url)
     })
 
     it.each([
@@ -84,7 +143,7 @@ describe('loadEnv', () => {
       ['not a URL', 'localhost:5432'],
       ['another database', 'mysql://root@localhost:3306/hostly'],
     ])('rejects a URL that is %s', (_case, url) => {
-      expect(() => loadEnv({ DATABASE_URL: url })).toThrow(
+      expect(() => loadEnv({ JWT_SECRET, DATABASE_URL: url })).toThrow(
         expect.objectContaining({
           name: 'InvalidEnvError',
           message: expect.stringContaining('DATABASE_URL') as string,

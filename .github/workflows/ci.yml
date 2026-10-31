@@ -130,6 +130,7 @@ jobs:
         run: |
           docker run -d --name api-prod --network "$NETWORK" -p 3333:3333 \
             -e DATABASE_URL=postgresql://hostly:hostly@postgres:5432/hostly \
+            -e JWT_SECRET=ci-secret-that-is-at-least-32-characters-long \
             hostly-api:prod
           for _ in $(seq 1 30); do
             if [ "$(docker inspect -f '{{.State.Health.Status}}' api-prod)" = healthy ]; then
@@ -145,6 +146,7 @@ jobs:
           docker exec postgres psql -U hostly -c 'CREATE DATABASE hostly_dev'
           docker run -d --name api-dev --network "$NETWORK" -p 3334:3333 \
             -e DATABASE_URL=postgresql://hostly:hostly@postgres:5432/hostly_dev \
+            -e JWT_SECRET=dev-only-ci-secret-that-is-at-least-32-chars \
             hostly-api:dev
           for _ in $(seq 1 60); do
             curl -fsS http://127.0.0.1:3334/health && exit 0
