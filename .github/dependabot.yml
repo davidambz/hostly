@@ -24,3 +24,19 @@ updates:
       interval: monthly
     commit-message:
       prefix: ci
+
+  - package-ecosystem: docker
+    directory: /apps/api
+    target-branch: dev
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+
+  - package-ecosystem: docker-compose
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
