@@ -40,7 +40,10 @@ src/
 - Erros esperados: o service lança `NotFoundError`, `ConflictError` etc. e o error handler converte para `{ statusCode, code, message, details? }`. Nenhuma rota monta resposta de erro na mão.
 - Erro inesperado vira 500 genérico, e o original vai para o log com o `reqId`.
 - Toda rota, inclusive a 404, passa pelo rate limit. As exceções são `/health` (liveness, sempre 200 com o processo de pé, usado pelo `HEALTHCHECK`) e `/health/ready` (readiness: 200 ou 503 conforme o banco), com `config: { rateLimit: false }`. O 503 da readiness é o relatório de saúde, não um erro, e por isso não passa pelo error handler.
-- Os testes ficam ao lado do código (`*.test.ts`) e usam `app.inject()`. O env dos testes vem de `src/test/env.ts`.
+- Os testes ficam ao lado do código e usam `app.inject()`. O env dos testes vem de `src/test/env.ts`.
+  - `*.test.ts` (projeto `unit`): sem banco, com `fakeDatabase()` ou um repository fake.
+  - `*.int.test.ts` (projeto `integration`): Postgres de verdade em `TEST_DATABASE_URL`, cujo nome precisa terminar em `_test`. O banco é recriado e migrado a cada execução e as tabelas são esvaziadas antes de cada teste. Os arquivos rodam em série. Use `testDatabase()` e as factories de `src/test/factories.ts`, e `validCpf`/`validCnpj` de `src/test/documents.ts`.
+  - Cada feature cobre caminho feliz, validação, 401/403/404/409, isolamento entre usuários e casos de borda. A cobertura mínima é de 85%.
 - Docs em `/docs` (Swagger UI) e `/docs/json` (OpenAPI).
 
 ### Banco (Prisma 7 + Postgres)
