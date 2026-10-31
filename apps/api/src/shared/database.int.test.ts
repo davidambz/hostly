@@ -468,3 +468,26 @@ describe('refresh tokens', () => {
     expect(await db.refreshToken.count()).toBe(0)
   })
 })
+
+describe('alphanumeric CNPJ', () => {
+  it('is accepted for a company', async () => {
+    const user = await createUser(db)
+
+    await expect(
+      createBroker(db, { userId: user.id, type: 'COMPANY', document: '12ABC34501DE35' }),
+    ).resolves.toMatchObject({ document: '12ABC34501DE35' })
+  })
+
+  it.each([
+    ['for an individual', 'INDIVIDUAL', '12ABC34501DE35'],
+    ['in lowercase', 'COMPANY', '12abc34501de35'],
+    ['with letters in the check digits', 'COMPANY', '12ABC34501DEAB'],
+  ] as const)('is refused %s', async (_case, type, document) => {
+    const user = await createUser(db)
+
+    await expectViolation(
+      db.broker.create({ data: buildBroker({ userId: user.id, type, document }) }),
+      'brokers_document_format_check',
+    )
+  })
+})

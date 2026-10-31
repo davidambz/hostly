@@ -1,8 +1,7 @@
 import type { Prisma, Property } from '../../generated/prisma/client.js'
 import type { Database } from '../../shared/database.js'
-import { RowInUseError } from '../../shared/database-errors.js'
 import { type Page, toSkipTake } from '../../shared/pagination.js'
-import { isForeignKeyViolation } from '../../shared/prisma-errors.js'
+import { deleteOwnedRow, lockOwnedRow } from '../../shared/owned-rows.js'
 import { escapeLike } from '../../shared/search.js'
 import type { ListPropertiesQuery } from './properties.schemas.js'
 
@@ -51,10 +50,7 @@ export class PropertiesRepository {
     change: (current: Property) => Partial<PropertyData>,
   ): Promise<Property | null> {
     return this.db.$transaction(async (tx) => {
-      const [current] = await tx.$queryRaw<Property[]>`
-        SELECT id FROM properties WHERE id = ${id}::uuid AND user_id = ${userId}::uuid FOR UPDATE
-      `
-      if (!current) return null
+      if (!(await lockOwnedRow(tx, 'properties', id, userId))) return null
       const property = await tx.property.findUniqueOrThrow({ where: { id } })
       return tx.property.update({ where: { id }, data: change(property) })
     })
@@ -64,15 +60,7 @@ export class PropertiesRepository {
    * Returns false when the user has no such property; throws RowInUseError when it still
    * has bookings (the foreign key is the guard, so a booking created meanwhile counts).
    */
-  async delete(userId: string, id: string): Promise<boolean> {
-    try {
-      const { count } = await this.db.property.deleteMany({ where: { id, userId } })
-      return count === 1
-    } catch (error) {
-      if (isForeignKeyViolation(error)) {
-        throw new RowInUseError('bookings')
-      }
-      throw error
-    }
+  delete(userId: string, id: string): Promise<boolean> {
+    return deleteOwnedRow(() => this.db.property.deleteMany({ where: { id, userId } }), 'bookings')
   }
 }

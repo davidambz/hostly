@@ -88,7 +88,7 @@ model Broker {
   type          BrokerType
   name          String     @db.VarChar(255)
   email         String?    @db.VarChar(255)
-  /// CPF (11 digits) for INDIVIDUAL, CNPJ (14 digits) for COMPANY.
+  /// CPF (11 digits) for INDIVIDUAL, CNPJ (14 characters, may be alphanumeric) for COMPANY.
   document      String?    @db.VarChar(14)
   mobilePhone   String?    @map("mobile_phone") @db.VarChar(11)
   landlinePhone String?    @map("landline_phone") @db.VarChar(10)

@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
-import { validCpf } from '../../test/documents.js'
+import { validAlphanumericCnpj, validCnpj, validCpf } from '../../test/documents.js'
 import {
+  cnpjCheckDigits,
   cpfCheckDigits,
   isValidCep,
+  isValidCnpj,
   isValidCpf,
   isValidLandlinePhone,
   isValidMobilePhone,
   isValidPhone,
+  normalizeDocument,
   normalizePhone,
   onlyDigits,
 } from './brazil.js'
@@ -119,5 +122,50 @@ describe('isValidCep', () => {
 
   it.each(['00000000', '8805370', '880537000', '88053-70', ''])('rejects %s', (cep) => {
     expect(isValidCep(cep)).toBe(false)
+  })
+})
+
+describe('cnpjCheckDigits', () => {
+  it.each([
+    ['112223330001', '81'],
+    ['12ABC34501DE', '35'],
+  ])('%s → %s', (base, digits) => {
+    expect(cnpjCheckDigits(base)).toBe(digits)
+  })
+})
+
+describe('isValidCnpj', () => {
+  it.each(['11222333000181', '12ABC34501DE35'])('accepts %s', (cnpj) => {
+    expect(isValidCnpj(cnpj)).toBe(true)
+  })
+
+  it('accepts every generated test CNPJ, numeric and alphanumeric', () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      expect(isValidCnpj(validCnpj(seed))).toBe(true)
+      expect(isValidCnpj(validAlphanumericCnpj(seed))).toBe(true)
+    }
+  })
+
+  it.each([
+    ['a wrong check digit', '11222333000182'],
+    ['a wrong alphanumeric check digit', '12ABC34501DE36'],
+    ['letters in the check digits', '12ABC34501DE3A'],
+    ['lowercase letters', '12abc34501de35'],
+    ['a mask', '11.222.333/0001-81'],
+    ['13 characters', '1122233300018'],
+    ['all the same character', '11111111111111'],
+    ['empty', ''],
+  ])('rejects a CNPJ with %s', (_case, cnpj) => {
+    expect(isValidCnpj(cnpj)).toBe(false)
+  })
+})
+
+describe('normalizeDocument', () => {
+  it.each([
+    ['11.222.333/0001-81', '11222333000181'],
+    ['12.abc.345/01de-35', '12ABC34501DE35'],
+    [' 12 ABC 345 01DE 35 ', '12ABC34501DE35'],
+  ])('%s → %s', (input, output) => {
+    expect(normalizeDocument(input)).toBe(output)
   })
 })

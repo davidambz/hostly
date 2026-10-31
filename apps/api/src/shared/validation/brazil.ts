@@ -1,4 +1,8 @@
-/** Validators for Brazilian documents and phones. They take digits only; see `onlyDigits`. */
+/**
+ * Validators for Brazilian documents and phones. They take the normalized value: digits
+ * only for CPF, CEP and phones (`onlyDigits`), digits and uppercase letters for CNPJ, which
+ * can be alphanumeric (`normalizeDocument`).
+ */
 
 export function onlyDigits(value: string): string {
   return value.replace(/\D/g, '')
@@ -100,4 +104,39 @@ export type State = (typeof STATES)[number]
 /** A CEP: 8 digits, not all zeros. */
 export function isValidCep(cep: string): boolean {
   return /^\d{8}$/.test(cep) && cep !== '00000000'
+}
+
+/**
+ * The two check digits of a CNPJ whose first 12 characters are `base`. Works for the
+ * alphanumeric CNPJ (from July 2026): each character counts as its ASCII code minus 48,
+ * which keeps digits at their face value.
+ */
+export function cnpjCheckDigits(base: string): string {
+  const digit = (chars: string) => {
+    let sum = 0
+    for (let i = 0; i < chars.length; i++) {
+      const weight = ((chars.length - 1 - i) % 8) + 2
+      sum += (chars.charCodeAt(i) - 48) * weight
+    }
+    const rest = sum % 11
+    return String(rest < 2 ? 0 : 11 - rest)
+  }
+  const first = digit(base)
+  return first + digit(base + first)
+}
+
+/** A CNPJ, numeric or alphanumeric: 12 of [0-9A-Z], 2 check digits, not all the same. */
+export function isValidCnpj(cnpj: string): boolean {
+  if (!/^[0-9A-Z]{12}\d{2}$/.test(cnpj) || /^(.)\1{13}$/.test(cnpj)) {
+    return false
+  }
+  return cnpjCheckDigits(cnpj.slice(0, 12)) === cnpj.slice(12)
+}
+
+/**
+ * A CPF or CNPJ as typed: keeps letters and digits, uppercased. Never `onlyDigits` for a
+ * CNPJ, which would strip the letters of an alphanumeric one.
+ */
+export function normalizeDocument(value: string): string {
+  return value.toUpperCase().replace(/[^0-9A-Z]/g, '')
 }

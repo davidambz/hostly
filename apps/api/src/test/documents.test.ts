@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { validCnpj, validCpf } from './documents.js'
+import { validAlphanumericCnpj, validCnpj, validCpf } from './documents.js'
 
 describe('test document generators', () => {
   it('computes the CPF check digits (known answer: 529.982.247-25)', () => {
@@ -20,4 +20,20 @@ describe('test document generators', () => {
     expect(cpfs.every((cpf) => /^\d{11}$/.test(cpf))).toBe(true)
     expect(cnpjs.every((cnpj) => /^\d{14}$/.test(cnpj))).toBe(true)
   })
+})
+
+describe('validAlphanumericCnpj', () => {
+  it('gives distinct alphanumeric CNPJs with numeric check digits', () => {
+    const cnpjs = Array.from({ length: 200 }, (_, i) => validAlphanumericCnpj(i + 1))
+
+    expect(new Set(cnpjs).size).toBe(200)
+    expect(cnpjs.every((cnpj) => /^AB\d{10}\d{2}$/.test(cnpj))).toBe(true)
+  })
+})
+
+it('computes the alphanumeric CNPJ check digits (known answer: 12.ABC.345/01DE-35)', async () => {
+  const { cnpjCheckDigits } = await import('../shared/validation/brazil.js')
+
+  // Same algorithm, two implementations: they must agree on the official example.
+  expect(cnpjCheckDigits('12ABC34501DE')).toBe('35')
 })
