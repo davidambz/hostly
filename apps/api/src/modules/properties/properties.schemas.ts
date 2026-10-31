@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 import type { Property } from '../../generated/prisma/client.js'
 import { pageSchema, paginationQuerySchema } from '../../shared/pagination.js'
-import { cepSchema, optionalText, stateSchema } from '../../shared/validation/fields.js'
+import { cepSchema, nameSchema, optionalText, stateSchema } from '../../shared/validation/fields.js'
 
 export const propertyTypeSchema = z.enum(['HOUSE', 'APARTMENT'])
 
@@ -10,7 +10,7 @@ export const APARTMENT_FIELDS = ['building', 'block', 'unit'] as const
 
 /** Everything but the type: shared by create and update. */
 const propertyFields = {
-  name: z.string().trim().min(1, 'Required').max(255),
+  name: nameSchema,
   zipCode: cepSchema,
   state: stateSchema,
   city: optionalText(255),

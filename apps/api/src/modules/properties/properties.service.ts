@@ -36,25 +36,20 @@ export class PropertiesService {
    * a house (or a property becoming one) apartment fields is a 400.
    */
   async update(userId: string, id: string, input: UpdatePropertyInput): Promise<Property> {
-    const current = await this.get(userId, id)
-    const type = input.type ?? current.type
-    const changes = { ...input }
-
-    if (type === 'HOUSE') {
-      const sent = APARTMENT_FIELDS.filter((field) => changes[field])
+    const updated = await this.properties.update(userId, id, (current) => {
+      const type = input.type ?? current.type
+      if (type !== 'HOUSE') {
+        return input
+      }
+      const sent = APARTMENT_FIELDS.filter((field) => input[field])
       if (sent.length > 0) {
         throw new BadRequestError('Only apartments have these fields', {
           code: 'APARTMENT_FIELDS_ON_HOUSE',
           details: { fields: sent },
         })
       }
-      for (const field of APARTMENT_FIELDS) {
-        changes[field] = null
-      }
-    }
-
-    const updated = await this.properties.update(userId, id, changes)
-    // Deleted between the read above and this write.
+      return { ...input, building: null, block: null, unit: null }
+    })
     if (!updated) {
       throw notFound()
     }
@@ -62,10 +57,9 @@ export class PropertiesService {
   }
 
   async delete(userId: string, id: string): Promise<void> {
+    let deleted: boolean
     try {
-      if (!(await this.properties.delete(userId, id))) {
-        throw notFound()
-      }
+      deleted = await this.properties.delete(userId, id)
     } catch (error) {
       if (error instanceof RowInUseError) {
         throw new ConflictError('The property has bookings; delete them first', {
@@ -73,6 +67,9 @@ export class PropertiesService {
         })
       }
       throw error
+    }
+    if (!deleted) {
+      throw notFound()
     }
   }
 }

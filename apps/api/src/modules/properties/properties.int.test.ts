@@ -380,3 +380,31 @@ it('sorts accents and case the way people read them', async () => {
 
   expect(body.items.map((p) => p.name)).toEqual(['abc', 'Ápice', 'casa', 'Casa B', 'Sítio'])
 })
+
+it('answers 400 for a page beyond the limit instead of a huge offset', async () => {
+  const response = await request('GET', '/properties?page=9007199254740991')
+
+  expect(response.statusCode).toBe(400)
+})
+
+it('lists the valid UFs in the OpenAPI spec', async () => {
+  const spec = (await app.inject({ method: 'GET', url: '/docs/json' })).json<{
+    components: { schemas: Record<string, { properties: Record<string, unknown> }> }
+  }>()
+
+  expect(JSON.stringify(spec)).toContain('"SC"')
+})
+
+it('serializes concurrent updates: a house never ends up with apartment fields', async () => {
+  const created = (await request('POST', '/properties', apartment)).json<{ id: string }>()
+
+  const [toHouse, addBuilding] = await Promise.all([
+    request('PATCH', `/properties/${created.id}`, { type: 'HOUSE' }),
+    request('PATCH', `/properties/${created.id}`, { building: 'Outro' }),
+  ])
+
+  // Whichever wins, the other sees its result: no 500 from the CHECK constraint.
+  expect([toHouse.statusCode, addBuilding.statusCode]).not.toContain(500)
+  const stored = await db.property.findUniqueOrThrow({ where: { id: created.id } })
+  expect(stored.type === 'HOUSE' ? stored.building : 'ok').toBeOneOf([null, 'ok'])
+})

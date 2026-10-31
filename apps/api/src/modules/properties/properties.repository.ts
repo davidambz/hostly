@@ -39,10 +39,25 @@ export class PropertiesRepository {
     return this.db.property.create({ data: { ...data, userId } })
   }
 
-  /** Returns null when the user has no such property. */
-  async update(userId: string, id: string, data: Partial<PropertyData>): Promise<Property | null> {
-    const { count } = await this.db.property.updateMany({ where: { id, userId }, data })
-    return count === 0 ? null : this.find(userId, id)
+  /**
+   * Updates the property with the changes `change` derives from its current state, in one
+   * transaction with the row locked, so a concurrent update can't slip in between the
+   * read and the write. Returns null when the user has no such property; whatever
+   * `change` throws aborts the update.
+   */
+  async update(
+    userId: string,
+    id: string,
+    change: (current: Property) => Partial<PropertyData>,
+  ): Promise<Property | null> {
+    return this.db.$transaction(async (tx) => {
+      const [current] = await tx.$queryRaw<Property[]>`
+        SELECT id FROM properties WHERE id = ${id}::uuid AND user_id = ${userId}::uuid FOR UPDATE
+      `
+      if (!current) return null
+      const property = await tx.property.findUniqueOrThrow({ where: { id } })
+      return tx.property.update({ where: { id }, data: change(property) })
+    })
   }
 
   /**

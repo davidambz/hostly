@@ -26,13 +26,23 @@ const apartment: Property = {
 }
 
 function setup() {
-  const repository = {
+  const repository: {
+    list: ReturnType<typeof vi.fn>
+    find: ReturnType<typeof vi.fn>
+    create: ReturnType<typeof vi.fn>
+    current: Property | null
+    update: ReturnType<typeof vi.fn>
+    delete: ReturnType<typeof vi.fn>
+  } = {
     list: vi.fn(),
     find: vi.fn<() => Promise<Property | null>>().mockResolvedValue(apartment),
     create: vi.fn(),
-    update: vi.fn((_u: string, _id: string, data: object) =>
-      Promise.resolve({ ...apartment, ...data }),
-    ),
+    // Mirrors the real repository: hands the stored property to `change`.
+    current: apartment,
+    update: vi.fn((_u: string, _id: string, change: (current: Property) => Partial<Property>) => {
+      const current = repository.current
+      return Promise.resolve(current ? { ...current, ...change(current) } : null)
+    }),
     delete: vi.fn<() => Promise<boolean>>().mockResolvedValue(true),
   }
   const service = new PropertiesService(repository as unknown as PropertiesRepository)
@@ -52,30 +62,26 @@ describe('PropertiesService.get', () => {
 })
 
 describe('PropertiesService.update', () => {
+  const house = { ...apartment, type: 'HOUSE' as const, building: null, block: null, unit: null }
+
   it('passes the changes through for an apartment', async () => {
-    const { repository, service } = setup()
+    const { service } = setup()
 
-    await service.update('u1', 'p1', { unit: '1301' })
-
-    expect(repository.update).toHaveBeenCalledWith('u1', 'p1', { unit: '1301' })
+    await expect(service.update('u1', 'p1', { unit: '1301' })).resolves.toMatchObject({
+      unit: '1301',
+    })
   })
 
   it('clears the apartment fields when an apartment becomes a house', async () => {
-    const { repository, service } = setup()
+    const { service } = setup()
 
     const updated = await service.update('u1', 'p1', { type: 'HOUSE' })
 
-    expect(repository.update).toHaveBeenCalledWith('u1', 'p1', {
-      type: 'HOUSE',
-      building: null,
-      block: null,
-      unit: null,
-    })
-    expect(updated).toMatchObject({ type: 'HOUSE', building: null })
+    expect(updated).toMatchObject({ type: 'HOUSE', building: null, block: null, unit: null })
   })
 
   it('rejects apartment fields when the property becomes a house', async () => {
-    const { repository, service } = setup()
+    const { service } = setup()
 
     const error = await service
       .update('u1', 'p1', { type: 'HOUSE', block: 'C' })
@@ -86,49 +92,37 @@ describe('PropertiesService.update', () => {
       code: 'APARTMENT_FIELDS_ON_HOUSE',
       details: { fields: ['block'] },
     })
-    expect(repository.update).not.toHaveBeenCalled()
   })
 
   it('rejects apartment fields on a house that stays a house', async () => {
     const { repository, service } = setup()
-    repository.find.mockResolvedValue({
-      ...apartment,
-      type: 'HOUSE',
-      building: null,
-      block: null,
-      unit: null,
-    })
+    repository.current = house
 
     await expect(service.update('u1', 'p1', { unit: '1' })).rejects.toMatchObject({
       code: 'APARTMENT_FIELDS_ON_HOUSE',
     })
   })
 
+  it('decides from the type stored at write time, not an earlier read', async () => {
+    const { repository, service } = setup()
+    // Another request turned it into a house before this update got the lock.
+    repository.current = house
+
+    await expect(service.update('u1', 'p1', { building: 'X' })).rejects.toMatchObject({
+      code: 'APARTMENT_FIELDS_ON_HOUSE',
+    })
+  })
+
   it('accepts clearing apartment fields on a house', async () => {
     const { repository, service } = setup()
-    repository.find.mockResolvedValue({
-      ...apartment,
-      type: 'HOUSE',
-      building: null,
-      block: null,
-      unit: null,
-    })
+    repository.current = house
 
     await expect(service.update('u1', 'p1', { unit: null })).resolves.toBeDefined()
   })
 
   it('answers 404 when the property is missing', async () => {
     const { repository, service } = setup()
-    repository.find.mockResolvedValue(null)
-
-    await expect(service.update('u1', 'p1', { name: 'X' })).rejects.toMatchObject({
-      code: 'PROPERTY_NOT_FOUND',
-    })
-  })
-
-  it('answers 404 when the property disappears between the read and the write', async () => {
-    const { repository, service } = setup()
-    repository.update.mockResolvedValueOnce(null as unknown as Property)
+    repository.current = null
 
     await expect(service.update('u1', 'p1', { name: 'X' })).rejects.toMatchObject({
       code: 'PROPERTY_NOT_FOUND',

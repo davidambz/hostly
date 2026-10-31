@@ -64,13 +64,13 @@ export const cepSchema = z
   .transform(blankToNull)
   .refine((value) => value === null || isValidCep(value), { message: 'Invalid CEP' })
 
-/** A UF in any case, e.g. `sc`; yields `SC`. Blank means no value. */
+/**
+ * A UF in any case, e.g. `sc`; yields `SC`. Blank means no value. Normalized before the
+ * enum check, so the OpenAPI spec lists the valid UFs.
+ */
 export const stateSchema = z
-  .string()
-  .trim()
-  .toUpperCase()
-  .nullish()
-  .transform(blankToNull)
-  .refine((value) => value === null || (STATES as readonly string[]).includes(value), {
-    message: 'Invalid state (UF)',
-  })
+  .preprocess(
+    (value) => (typeof value === 'string' ? blankToNull(value.trim().toUpperCase()) : value),
+    z.enum(STATES, { error: 'Invalid state (UF)' }).nullish(),
+  )
+  .transform((value) => value ?? null)
