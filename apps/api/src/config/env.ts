@@ -35,6 +35,8 @@ const envSchema = z
         .pipe(z.array(origin)),
     ),
     RATE_LIMIT_MAX: optional(z.coerce.number().int().positive().default(100)),
+    /** Stricter per-minute limit for the auth routes (signup, login), against brute force. */
+    AUTH_RATE_LIMIT_MAX: optional(z.coerce.number().int().positive().default(10)),
     // Turn on behind a load balancer so rate limiting and logs see the client IP
     // (from x-forwarded-for) instead of the proxy's.
     TRUST_PROXY: optional(booleanString.default(false)),

@@ -50,7 +50,10 @@ async function buildTestApp() {
     throw new NotFoundError('Property not found')
   })
   instance.get('/errors/conflict', () => {
-    throw new ConflictError('Dates overlap', { bookingId: 'b1' })
+    throw new ConflictError('Dates overlap', {
+      code: 'BOOKING_OVERLAP',
+      details: { bookingId: 'b1' },
+    })
   })
   instance.get('/errors/unexpected', () => {
     throw new Error('database password is hunter2')
@@ -141,7 +144,7 @@ describe('error handler', () => {
       expect(response.statusCode).toBe(409)
       expect(response.json()).toEqual({
         statusCode: 409,
-        code: 'CONFLICT',
+        code: 'BOOKING_OVERLAP',
         message: 'Dates overlap',
         details: { bookingId: 'b1' },
       })
