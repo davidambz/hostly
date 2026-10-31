@@ -10,29 +10,34 @@ ENV PNPM_HOME=/pnpm \
 RUN corepack enable
 WORKDIR /repo
 
-# Only the manifests, so dependencies are cached until one of them changes.
-FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json apps/api/
+# Download every package in the lockfile into the store. Depends only on the
+# lockfile, so it stays cached until a dependency changes.
+FROM base AS fetch
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @hostly/api...
+    pnpm fetch
 
-# Development: the source is bind-mounted by docker compose and reloaded by tsx.
-FROM deps AS dev
-COPY tsconfig.base.json ./
-COPY apps/api apps/api
+FROM fetch AS source
+COPY . .
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --offline --frozen-lockfile --filter @hostly/api...
+
+# Development: docker compose bind-mounts apps/api/src and tsx reloads on change.
+FROM source AS dev
+RUN chown -R node:node /repo
+USER node
 WORKDIR /repo/apps/api
 EXPOSE 3333
 CMD ["pnpm", "dev"]
 
-FROM deps AS build
-COPY tsconfig.base.json ./
-COPY apps/api apps/api
-RUN pnpm --filter @hostly/api build \
+FROM source AS build
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm --filter @hostly/api build \
  && pnpm --filter @hostly/api deploy --prod --legacy /out
 
 FROM node:${NODE_VERSION}-alpine AS prod
 ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
     PORT=3333
 WORKDIR /app
 COPY --from=build --chown=node:node /out .
