@@ -101,3 +101,35 @@ export type State = (typeof STATES)[number]
 export function isValidCep(cep: string): boolean {
   return /^\d{8}$/.test(cep) && cep !== '00000000'
 }
+
+/**
+ * The two check digits of a CNPJ whose first 12 characters are `base`. Works for the
+ * alphanumeric CNPJ (from July 2026): each character counts as its ASCII code minus 48,
+ * which keeps digits at their face value.
+ */
+export function cnpjCheckDigits(base: string): string {
+  const digit = (chars: string) => {
+    let sum = 0
+    for (let i = 0; i < chars.length; i++) {
+      const weight = ((chars.length - 1 - i) % 8) + 2
+      sum += (chars.charCodeAt(i) - 48) * weight
+    }
+    const rest = sum % 11
+    return String(rest < 2 ? 0 : 11 - rest)
+  }
+  const first = digit(base)
+  return first + digit(base + first)
+}
+
+/** A CNPJ, numeric or alphanumeric: 12 of [0-9A-Z], 2 check digits, not all the same. */
+export function isValidCnpj(cnpj: string): boolean {
+  if (!/^[0-9A-Z]{12}\d{2}$/.test(cnpj) || /^(.)\1{13}$/.test(cnpj)) {
+    return false
+  }
+  return cnpjCheckDigits(cnpj.slice(0, 12)) === cnpj.slice(12)
+}
+
+/** CNPJ as typed: keeps letters and digits, uppercased. */
+export function normalizeCnpj(value: string): string {
+  return value.toUpperCase().replace(/[^0-9A-Z]/g, '')
+}

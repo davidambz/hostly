@@ -2,6 +2,7 @@ import type { Prisma, Property } from '../../generated/prisma/client.js'
 import type { Database } from '../../shared/database.js'
 import { RowInUseError } from '../../shared/database-errors.js'
 import { type Page, toSkipTake } from '../../shared/pagination.js'
+import { lockOwnedRow } from '../../shared/owned-rows.js'
 import { isForeignKeyViolation } from '../../shared/prisma-errors.js'
 import { escapeLike } from '../../shared/search.js'
 import type { ListPropertiesQuery } from './properties.schemas.js'
@@ -51,10 +52,7 @@ export class PropertiesRepository {
     change: (current: Property) => Partial<PropertyData>,
   ): Promise<Property | null> {
     return this.db.$transaction(async (tx) => {
-      const [current] = await tx.$queryRaw<Property[]>`
-        SELECT id FROM properties WHERE id = ${id}::uuid AND user_id = ${userId}::uuid FOR UPDATE
-      `
-      if (!current) return null
+      if (!(await lockOwnedRow(tx, 'properties', id, userId))) return null
       const property = await tx.property.findUniqueOrThrow({ where: { id } })
       return tx.property.update({ where: { id }, data: change(property) })
     })

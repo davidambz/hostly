@@ -3,7 +3,10 @@ import { z } from 'zod'
 import {
   isValidCep,
   isValidCpf,
+  isValidLandlinePhone,
+  isValidMobilePhone,
   isValidPhone,
+  normalizeCnpj,
   normalizePhone,
   onlyDigits,
   STATES,
@@ -74,3 +77,47 @@ export const stateSchema = z
     z.enum(STATES, { error: 'Invalid state (UF)' }).nullish(),
   )
   .transform((value) => value ?? null)
+
+/** An optional e-mail: trimmed and lowercased, blank means no value. */
+export const optionalEmailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .nullish()
+  .transform(blankToNull)
+  .pipe(z.email().max(255).nullable())
+
+function optionalPhoneSchema(isValid: (phone: string) => boolean, message: string) {
+  return z
+    .string()
+    .regex(/^[\d\s().+-]*$/, message)
+    .nullish()
+    .transform((value) =>
+      blankToNull(value === null || value === undefined ? null : normalizePhone(value)),
+    )
+    .refine((value) => value === null || isValid(value), { message })
+}
+
+/** Optional mobile number, DDD + 9 digits. */
+export const optionalMobilePhoneSchema = optionalPhoneSchema(
+  isValidMobilePhone,
+  'Invalid mobile phone number',
+)
+
+/** Optional landline number, DDD + 8 digits. */
+export const optionalLandlinePhoneSchema = optionalPhoneSchema(
+  isValidLandlinePhone,
+  'Invalid landline phone number',
+)
+
+/**
+ * A CPF or CNPJ as typed: keeps letters and digits, uppercased (the alphanumeric CNPJ has
+ * letters). Which of the two it must be depends on another field, so it is checked there.
+ */
+export const optionalDocumentSchema = z
+  .string()
+  .regex(/^[0-9A-Za-z.\-/\s]*$/, 'Invalid document')
+  .nullish()
+  .transform((value) =>
+    blankToNull(value === null || value === undefined ? null : normalizeCnpj(value)),
+  )

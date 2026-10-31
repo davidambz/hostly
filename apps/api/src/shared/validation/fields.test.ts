@@ -6,6 +6,10 @@ import {
   cpfSchema,
   emailSchema,
   nameSchema,
+  optionalDocumentSchema,
+  optionalEmailSchema,
+  optionalLandlinePhoneSchema,
+  optionalMobilePhoneSchema,
   optionalText,
   PASSWORD_MAX_LENGTH,
   passwordSchema,
@@ -144,5 +148,63 @@ describe('stateSchema', () => {
       expect(stateSchema.parse(uf.toLowerCase())).toBe(uf)
     }
     expect(STATES).toHaveLength(27)
+  })
+})
+
+describe('optionalEmailSchema', () => {
+  it.each([
+    [' Imob@Hostly.DEV ', 'imob@hostly.dev'],
+    ['', null],
+    [null, null],
+    [undefined, null],
+  ])('%j → %j', (input, output) => {
+    expect(optionalEmailSchema.parse(input)).toBe(output)
+  })
+
+  it('rejects an invalid e-mail', () => {
+    expect(optionalEmailSchema.safeParse('imob@').success).toBe(false)
+  })
+})
+
+describe('optional phones', () => {
+  it.each([
+    ['(48) 99999-0000', '48999990000'],
+    ['+55 48 99999-0000', '48999990000'],
+    ['', null],
+    [null, null],
+  ])('mobile %j → %j', (input, output) => {
+    expect(optionalMobilePhoneSchema.parse(input)).toBe(output)
+  })
+
+  it.each([
+    ['(48) 3333-4444', '4833334444'],
+    ['', null],
+  ])('landline %j → %j', (input, output) => {
+    expect(optionalLandlinePhoneSchema.parse(input)).toBe(output)
+  })
+
+  it('does not take a landline as a mobile or the other way around', () => {
+    expect(optionalMobilePhoneSchema.safeParse('4833334444').success).toBe(false)
+    expect(optionalLandlinePhoneSchema.safeParse('48999990000').success).toBe(false)
+  })
+
+  it('rejects garbage', () => {
+    expect(optionalMobilePhoneSchema.safeParse('tel 48999990000').success).toBe(false)
+  })
+})
+
+describe('optionalDocumentSchema', () => {
+  it.each([
+    ['529.982.247-25', '52998224725'],
+    ['11.222.333/0001-81', '11222333000181'],
+    ['12.abc.345/01de-35', '12ABC34501DE35'],
+    ['', null],
+    [null, null],
+  ])('%j → %j', (input, output) => {
+    expect(optionalDocumentSchema.parse(input)).toBe(output)
+  })
+
+  it('rejects characters that are not part of a mask', () => {
+    expect(optionalDocumentSchema.safeParse('529_982_247_25').success).toBe(false)
   })
 })
