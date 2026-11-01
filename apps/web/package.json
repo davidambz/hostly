@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "api:types": "openapi-typescript ../api/openapi.json -o src/lib/api/schema.d.ts && prettier --write src/lib/api/schema.d.ts"
+    "api:types": "openapi-typescript ../api/openapi.json -o src/lib/api/schema.d.ts && prettier --write src/lib/api/schema.d.ts",
+    "ui:add": "node scripts/shadcn-add.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.0",

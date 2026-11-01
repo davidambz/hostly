@@ -51,10 +51,15 @@ export default defineConfig(
     },
   },
   {
-    // shadcn/ui components are vendored as generated; they export helpers next to components.
-    files: ['apps/web/src/components/ui/**'],
+    // shadcn/ui code is vendored as its CLI generates it (`pnpm ui:add`), so it is not held
+    // to our stylistic rules; keeping it as generated makes upgrades a plain re-add.
+    files: ['apps/web/src/components/ui/**', 'apps/web/src/hooks/use-mobile.ts'],
     rules: {
       'react-refresh/only-export-components': 'off',
+      '@typescript-eslint/consistent-type-definitions': 'off',
+      '@typescript-eslint/no-confusing-void-expression': 'off',
+      'react-hooks/purity': 'off',
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
   {

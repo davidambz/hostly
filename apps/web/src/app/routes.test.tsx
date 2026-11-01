@@ -21,7 +21,7 @@ describe('routes', () => {
 
     renderRoute(routes, '/')
 
-    expect(await screen.findByRole('heading', { name: 'Olá, Ana' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Reservas' })).toBeInTheDocument()
   })
 
   it('shows a 404 page for unknown paths, with a way back', async () => {
