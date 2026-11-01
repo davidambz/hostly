@@ -1,0 +1,362 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-01T00:00:00Z",
+  "title": "Design System: Hostly",
+  "extensions": {
+    "colorMeta": {
+      "prussian": {
+        "role": "neutral",
+        "displayName": "Prussian",
+        "canonical": "#13293d",
+        "tonalRamp": [
+          "oklch(15% 0.03 245)",
+          "oklch(27% 0.05 245)",
+          "oklch(38% 0.06 245)",
+          "oklch(50% 0.06 245)",
+          "oklch(62% 0.05 245)",
+          "oklch(74% 0.04 245)",
+          "oklch(85% 0.025 245)",
+          "oklch(95% 0.01 245)"
+        ]
+      },
+      "sapphire": {
+        "role": "primary",
+        "displayName": "Sapphire",
+        "canonical": "#006494",
+        "tonalRamp": [
+          "oklch(15% 0.04 240)",
+          "oklch(27% 0.08 240)",
+          "oklch(38% 0.1 240)",
+          "oklch(47% 0.12 240)",
+          "oklch(60% 0.12 240)",
+          "oklch(72% 0.09 240)",
+          "oklch(84% 0.05 240)",
+          "oklch(95% 0.02 240)"
+        ]
+      },
+      "celadon": {
+        "role": "tertiary",
+        "displayName": "Celadon",
+        "canonical": "#247ba0",
+        "tonalRamp": [
+          "oklch(15% 0.03 232)",
+          "oklch(27% 0.06 232)",
+          "oklch(40% 0.08 232)",
+          "oklch(54% 0.1 232)",
+          "oklch(64% 0.09 232)",
+          "oklch(74% 0.07 232)",
+          "oklch(85% 0.04 232)",
+          "oklch(95% 0.015 232)"
+        ]
+      },
+      "carolina": {
+        "role": "primary",
+        "displayName": "Carolina",
+        "canonical": "#1b98e0",
+        "tonalRamp": [
+          "oklch(15% 0.04 240)",
+          "oklch(27% 0.08 240)",
+          "oklch(40% 0.12 240)",
+          "oklch(52% 0.14 240)",
+          "oklch(64% 0.15 240)",
+          "oklch(74% 0.11 240)",
+          "oklch(85% 0.06 240)",
+          "oklch(95% 0.02 240)"
+        ]
+      },
+      "azure": {
+        "role": "secondary",
+        "displayName": "Azure",
+        "canonical": "#e8f1f2",
+        "tonalRamp": [
+          "oklch(15% 0.01 205)",
+          "oklch(27% 0.015 205)",
+          "oklch(40% 0.02 205)",
+          "oklch(52% 0.02 205)",
+          "oklch(64% 0.02 205)",
+          "oklch(76% 0.015 205)",
+          "oklch(87% 0.012 205)",
+          "oklch(95% 0.01 205)"
+        ]
+      },
+      "background": { "role": "neutral", "displayName": "Paper", "canonical": "#f7fafb" },
+      "foreground": { "role": "neutral", "displayName": "Prussian Ink", "canonical": "#13293d" },
+      "card": { "role": "neutral", "displayName": "White", "canonical": "#ffffff" },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Slate Blue",
+        "canonical": "#4a6378"
+      },
+      "border": { "role": "neutral", "displayName": "Mist Line", "canonical": "#d2e1e5" },
+      "input": { "role": "neutral", "displayName": "Mist Field", "canonical": "#c4d7dc" },
+      "destructive": { "role": "error", "displayName": "Destructive", "canonical": "#c53030" },
+      "success": { "role": "success", "displayName": "Success", "canonical": "#1f8a5b" },
+      "background-dark": { "role": "neutral", "displayName": "Night", "canonical": "#0b1a27" },
+      "foreground-dark": { "role": "neutral", "displayName": "Azure Ink", "canonical": "#e8f1f2" },
+      "card-dark": { "role": "neutral", "displayName": "Prussian Surface", "canonical": "#13293d" },
+      "muted-dark": { "role": "neutral", "displayName": "Muted Night", "canonical": "#18324a" },
+      "muted-foreground-dark": { "role": "neutral", "displayName": "Fog", "canonical": "#9db6c4" },
+      "accent-dark": { "role": "neutral", "displayName": "Harbor", "canonical": "#1d3a52" },
+      "border-dark": { "role": "neutral", "displayName": "Night Line", "canonical": "#24425a" },
+      "input-dark": { "role": "neutral", "displayName": "Night Field", "canonical": "#2b4d68" },
+      "destructive-dark": {
+        "role": "error",
+        "displayName": "Destructive (dark)",
+        "canonical": "#f56565"
+      },
+      "success-dark": {
+        "role": "success",
+        "displayName": "Success (dark)",
+        "canonical": "#48bb78"
+      },
+      "sidebar-dark": { "role": "neutral", "displayName": "Deep Night", "canonical": "#08131d" },
+      "band": { "role": "neutral", "displayName": "Prussian Band", "canonical": "#13293d" },
+      "band-foreground": { "role": "neutral", "displayName": "Band Text", "canonical": "#e8f1f2" },
+      "band-accent": { "role": "neutral", "displayName": "Harbor", "canonical": "#1d3a52" },
+      "band-border": { "role": "neutral", "displayName": "Band Line", "canonical": "#2e5170" },
+      "property-1": {
+        "role": "property",
+        "displayName": "Property Blue",
+        "canonical": "#0369a1",
+        "tonalRamp": ["#0369a1", "#38bdf8"]
+      },
+      "property-2": {
+        "role": "property",
+        "displayName": "Property Green",
+        "canonical": "#047857",
+        "tonalRamp": ["#047857", "#34d399"]
+      },
+      "property-3": {
+        "role": "property",
+        "displayName": "Property Amber",
+        "canonical": "#fbbf24",
+        "tonalRamp": ["#fbbf24", "#fcd34d"]
+      },
+      "property-4": {
+        "role": "property",
+        "displayName": "Property Rose",
+        "canonical": "#be123c",
+        "tonalRamp": ["#be123c", "#fb7185"]
+      },
+      "property-5": {
+        "role": "property",
+        "displayName": "Property Violet",
+        "canonical": "#6d28d9",
+        "tonalRamp": ["#6d28d9", "#a78bfa"]
+      },
+      "property-6": {
+        "role": "property",
+        "displayName": "Property Teal",
+        "canonical": "#0f766e",
+        "tonalRamp": ["#0f766e", "#2dd4bf"]
+      },
+      "property-7": {
+        "role": "property",
+        "displayName": "Property Orange",
+        "canonical": "#f97316",
+        "tonalRamp": ["#f97316", "#fb923c"]
+      },
+      "property-8": {
+        "role": "property",
+        "displayName": "Property Indigo",
+        "canonical": "#4338ca",
+        "tonalRamp": ["#4338ca", "#818cf8"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Landing hero headline only; 2.25rem, 3rem from sm, 3.75rem from lg."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings on public pages and the auth panel."
+      },
+      "title": { "displayName": "Title", "purpose": "App page title and auth form title." },
+      "title-sm": {
+        "displayName": "Title small",
+        "purpose": "Calendar month heading, empty-state titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "The app's working size: tables, forms, descriptions."
+      },
+      "body-lg": { "displayName": "Body large", "purpose": "Lead paragraph on public pages." },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Stay bars, row metadata, weekday headers, badges."
+      }
+    },
+    "shadows": [
+      {
+        "name": "hairline-lift",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "purpose": "Outline buttons and inputs (shadow-xs)."
+      },
+      {
+        "name": "stay-lift",
+        "value": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        "purpose": "Calendar stay bars over the day grid (shadow-sm)."
+      },
+      {
+        "name": "product-frame",
+        "value": "0 30px 60px -24px var(--frame-shadow)",
+        "purpose": "The landing screenshot frame overlapping the Prussian band; nowhere else."
+      }
+    ],
+    "motion": [
+      {
+        "name": "tab-capture-in",
+        "value": "fade-in + zoom-in from 0.985, 500ms ease-out, motion-safe only",
+        "purpose": "Swapping the landing screenshot when a tab changes."
+      },
+      {
+        "name": "nav-progress",
+        "value": "progress 1s ease-in-out infinite",
+        "purpose": "2px top bar while the next route loads."
+      },
+      {
+        "name": "color-transition",
+        "value": "transition-colors (150ms default)",
+        "purpose": "Hover fills on buttons, rows and tabs."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action on paper surfaces; Sapphire in light, Carolina in dark.",
+      "html": "<button class=\"ds-btn-primary\">Nova reserva</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 8px 16px; border: 0; border-radius: calc(var(--radius, 10px) - 2px); background: var(--primary, #006494); color: var(--primary-foreground, #fff); font: 500 14px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background 150ms, box-shadow 150ms; } .ds-btn-primary:hover { background: color-mix(in srgb, var(--primary, #006494) 90%, transparent); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring, #1b98e0) 50%, transparent); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary actions next to a primary, or alone in a row.",
+      "html": "<button class=\"ds-btn-outline\">Ver a tela</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; height: 36px; padding: 8px 16px; border: 1px solid var(--border, #d2e1e5); border-radius: calc(var(--radius, 10px) - 2px); background: var(--background, #f7fafb); color: var(--foreground, #13293d); font: 500 14px/1 ui-sans-serif, system-ui, sans-serif; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); cursor: pointer; transition: background 150ms, color 150ms; } .ds-btn-outline:hover { background: var(--accent, #e8f1f2); color: var(--accent-foreground, #006494); } .ds-btn-outline:focus-visible { outline: none; border-color: var(--ring, #1b98e0); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring, #1b98e0) 50%, transparent); }"
+    },
+    {
+      "name": "Band Buttons",
+      "kind": "button",
+      "refersTo": "button-band-primary",
+      "description": "Primary and ghost actions on the Prussian band, identical in both themes.",
+      "html": "<div class=\"ds-band-row\"><button class=\"ds-btn-band\">Criar conta</button><button class=\"ds-btn-band-ghost\">Entrar</button></div>",
+      "css": ".ds-band-row { display: flex; gap: 12px; padding: 24px; background: var(--band, #13293d); } .ds-btn-band, .ds-btn-band-ghost { height: 40px; padding: 0 24px; border-radius: calc(var(--radius, 10px) - 2px); font: 500 14px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background 150ms; } .ds-btn-band { border: 0; background: var(--sidebar-primary, #1b98e0); color: var(--sidebar-primary-foreground, #fff); } .ds-btn-band:hover { background: color-mix(in srgb, var(--sidebar-primary, #1b98e0) 90%, transparent); } .ds-btn-band-ghost { border: 1px solid var(--band-border, #2e5170); background: transparent; color: var(--band-foreground, #e8f1f2); } .ds-btn-band-ghost:hover { background: var(--band-accent, #1d3a52); } .ds-btn-band:focus-visible, .ds-btn-band-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--sidebar-ring, #1b98e0); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "All form fields; hairline stroke, Carolina focus ring.",
+      "html": "<input class=\"ds-input\" placeholder=\"Nome do hóspede\" />",
+      "css": ".ds-input { height: 36px; width: 260px; padding: 4px 12px; border: 1px solid var(--input, #c4d7dc); border-radius: calc(var(--radius, 10px) - 2px); background: transparent; color: var(--foreground, #13293d); font: 400 14px/1.4 ui-sans-serif, system-ui, sans-serif; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); transition: box-shadow 150ms, border-color 150ms; } .ds-input::placeholder { color: var(--muted-foreground, #4a6378); } .ds-input:focus-visible { outline: none; border-color: var(--ring, #1b98e0); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring, #1b98e0) 50%, transparent); }"
+    },
+    {
+      "name": "Secondary Badge",
+      "kind": "chip",
+      "refersTo": "badge-secondary",
+      "description": "Type labels and the paid-off state in tables.",
+      "html": "<span class=\"ds-badge\">Quitado</span>",
+      "css": ".ds-badge { display: inline-flex; padding: 2px 8px; border-radius: 9999px; background: var(--secondary, #e8f1f2); color: var(--secondary-foreground, #13293d); font: 500 12px/1.33 ui-sans-serif, system-ui, sans-serif; }"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "The app's Prussian sidebar with the brand tile and section links.",
+      "html": "<nav class=\"ds-side\"><div class=\"ds-side-brand\"><span class=\"ds-side-tile\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 2v4\"/><path d=\"M16 2v4\"/><rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/><path d=\"M3 10h18\"/></svg></span>Hostly</div><a class=\"ds-side-item is-active\" href=\"#\">Reservas</a><a class=\"ds-side-item\" href=\"#\">Imóveis</a><a class=\"ds-side-item\" href=\"#\">Intermediadores</a></nav>",
+      "css": ".ds-side { display: flex; flex-direction: column; gap: 4px; width: 220px; padding: 8px; background: var(--sidebar, #13293d); color: var(--sidebar-foreground, #e8f1f2); font: 400 14px/1.4 ui-sans-serif, system-ui, sans-serif; } .ds-side-brand { display: flex; align-items: center; gap: 8px; padding: 8px; font-weight: 600; font-size: 16px; } .ds-side-tile { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius, 10px); background: var(--sidebar-primary, #1b98e0); color: var(--sidebar-primary-foreground, #fff); } .ds-side-item { padding: 8px; border-radius: calc(var(--radius, 10px) - 2px); color: inherit; text-decoration: none; transition: background 150ms; } .ds-side-item:hover, .ds-side-item.is-active { background: var(--sidebar-accent, #1d3a52); color: var(--sidebar-accent-foreground, #fff); } .ds-side-item.is-active { font-weight: 500; } .ds-side-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--sidebar-ring, #1b98e0); }"
+    },
+    {
+      "name": "Bordered Table",
+      "kind": "custom",
+      "refersTo": "table-head",
+      "description": "Lists of bookings, properties and brokers: one bordered region, hairline rows, tabular money.",
+      "html": "<div class=\"ds-table-wrap\"><table class=\"ds-table\"><thead><tr><th>Hóspede</th><th class=\"num\">Total</th></tr></thead><tbody><tr><td>Ana Souza<small>Casa da praia · 4 noites</small></td><td class=\"num\">R$ 2.400,00</td></tr><tr><td>Bruno Lima<small>Apto centro · 2 noites</small></td><td class=\"num\">R$ 760,00</td></tr></tbody></table></div>",
+      "css": ".ds-table-wrap { width: 420px; border: 1px solid var(--border, #d2e1e5); border-radius: var(--radius, 10px); overflow: hidden; } .ds-table { width: 100%; border-collapse: collapse; font: 400 14px/1.4 ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #13293d); } .ds-table th { height: 40px; padding: 0 8px; text-align: left; font-weight: 500; border-bottom: 1px solid var(--border, #d2e1e5); } .ds-table td { padding: 8px; border-bottom: 1px solid var(--border, #d2e1e5); } .ds-table tr:last-child td { border-bottom: 0; } .ds-table tbody tr:hover { background: color-mix(in srgb, var(--muted, #e8f1f2) 50%, transparent); } .ds-table td small { display: block; font-size: 12px; color: var(--muted-foreground, #4a6378); } .ds-table .num { text-align: right; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Calendar Stay Bars",
+      "kind": "custom",
+      "refersTo": "stay-bar",
+      "description": "Signature: stays as property-colored bars across the month grid; a bar continuing past a row loses that side's radius.",
+      "html": "<div class=\"ds-cal\"><div class=\"ds-cal-row\"><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><button class=\"ds-stay p1\" style=\"left:calc(14.28% + 2px);width:calc(42.85% - 4px)\">Ana Souza</button><button class=\"ds-stay p3 cont\" style=\"left:calc(71.4% + 2px);width:calc(28.6% - 2px)\">Bruno Lima</button></div></div>",
+      "css": ".ds-cal { width: 420px; border: 1px solid var(--border, #d2e1e5); border-radius: var(--radius, 10px); overflow: hidden; font: 400 12px/1 ui-sans-serif, system-ui, sans-serif; } .ds-cal-row { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); min-height: 64px; } .ds-cal-row span { padding: 6px; border-right: 1px solid var(--border, #d2e1e5); color: var(--foreground, #13293d); } .ds-cal-row span:last-of-type { border-right: 0; } .ds-stay { position: absolute; top: 28px; height: 20px; padding: 0 8px; border: 0; border-radius: calc(var(--radius, 10px) - 2px); font: 500 12px/20px ui-sans-serif, system-ui, sans-serif; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); cursor: pointer; } .ds-stay.cont { border-top-right-radius: 0; border-bottom-right-radius: 0; } .ds-stay.p1 { background: var(--property-1, #0369a1); color: var(--property-1-foreground, #fff); } .ds-stay.p3 { background: var(--property-3, #fbbf24); color: var(--property-3-foreground, #451a03); } .ds-stay:hover { filter: opacity(0.85); } .ds-stay:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring, #1b98e0); }"
+    },
+    {
+      "name": "Screenshot Tour Tab",
+      "kind": "custom",
+      "refersTo": "button-band-ghost-hover",
+      "description": "Landing: a row of identical channels on the band; the active one gets full opacity and a Carolina ring.",
+      "html": "<div class=\"ds-tour\"><button class=\"ds-tab is-active\"><span class=\"ds-thumb\"></span>Calendário</button><button class=\"ds-tab\"><span class=\"ds-thumb\"></span>Lista</button><button class=\"ds-tab\"><span class=\"ds-thumb\"></span>Imóveis</button></div>",
+      "css": ".ds-tour { display: grid; grid-template-columns: repeat(3, 120px); gap: 12px; padding: 16px; background: var(--band, #13293d); } .ds-tab { display: flex; flex-direction: column; gap: 8px; padding: 6px; border: 0; border-radius: var(--radius, 10px); background: transparent; color: color-mix(in srgb, var(--band-foreground, #e8f1f2) 70%, transparent); font: 500 14px/1.2 ui-sans-serif, system-ui, sans-serif; text-align: left; cursor: pointer; transition: color 150ms; } .ds-thumb { display: block; aspect-ratio: 16/10; border-radius: calc(var(--radius, 10px) - 2px); background: var(--background, #f7fafb); opacity: 0.6; box-shadow: 0 0 0 1px var(--band-border, #2e5170); transition: opacity 150ms, box-shadow 150ms; } .ds-tab:hover { color: var(--band-foreground, #e8f1f2); } .ds-tab:hover .ds-thumb { opacity: 0.8; } .ds-tab.is-active { color: var(--band-foreground, #e8f1f2); } .ds-tab.is-active .ds-thumb { opacity: 1; box-shadow: 0 0 0 2px var(--sidebar-primary, #1b98e0); } .ds-tab:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--sidebar-ring, #1b98e0); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Season Ledger",
+    "overview": "Hostly is a working ledger for a rental season: dates in rows and columns, money in tabular figures, every property told apart by one color. The surface is quiet and blue. A deep Prussian field carries the brand (the app sidebar, the auth panel, the public band) and everything that holds data sits on pale Azure-tinted paper in light mode or deep navy in dark mode, divided by thin lines rather than lifted into boxes.\n\nDensity is that of a tool, not a brochure: 14px body text in the app, 36px controls, rows divided by 1px borders. The only saturated color outside the blue family is the eight-step property palette on the bookings calendar, and it exists to answer one question: which property is this stay in. The public landing page is the same world turned outward, opening on the Prussian band and showing the app's real screens instead of describing them.\n\nBoth themes are first-class. Every token has a light and a dark value except the band, which is deliberately the same Prussian in both.",
+    "keyCharacteristics": [
+      "One brand blue family (Prussian, Sapphire, Celadon, Carolina, Azure); every other neutral is a tint or shade of it.",
+      "Lists, tables and the calendar; no cards.",
+      "Flat surfaces separated by hairline borders; shadows are small and functional.",
+      "One type family, the system sans stack; hierarchy by weight 600, size and tight tracking.",
+      "Property colors as the single vivid accent, used only to identify a property."
+    ],
+    "rules": [
+      {
+        "name": "The Prussian Field Rule",
+        "body": "The brand lives in one dark field: the sidebar, the auth panel, the public band. On that field, text is Azure and the action is Carolina. The band (`--band` family) stays Prussian in both themes; it is the one surface that does not flip.",
+        "section": "colors"
+      },
+      {
+        "name": "The Property Color Rule",
+        "body": "Property colors identify a property (stay bars, list dots) and do nothing else. Never use them for status, decoration, or emphasis.",
+        "section": "colors"
+      },
+      {
+        "name": "The Theme Token Rule",
+        "body": "Colors come from theme classes (`bg-primary`, `text-muted-foreground`, `bg-band`), never loose hex values, and every combination must work in light and dark.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Money Rule",
+        "body": "Every money and count column uses tabular figures (`tabular-nums`), right-aligned in tables.",
+        "section": "typography"
+      },
+      {
+        "name": "The Weight-Not-Face Rule",
+        "body": "Hierarchy comes from size, weight 600 and tracking within the one system family; never introduce a display face.",
+        "section": "typography"
+      },
+      {
+        "name": "The Line-Before-Shadow Rule",
+        "body": "Group with a border or a divider first. A shadow appears only where an element floats over another (stay bars over the grid, the product frame over the band, popovers and sheets).",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do take every color from a theme token and check it in both light and dark.",
+      "Do put the brand on the Prussian field and use Carolina as the action on it.",
+      "Do group data with a single bordered region and hairline dividers.",
+      "Do use tabular figures for money, right-aligned in tables.",
+      "Do keep property colors for identifying properties, with their paired foreground for text.",
+      "Do gate motion behind `prefers-reduced-motion`."
+    ],
+    "donts": [
+      "Don't use cards: no grids of boxed tiles for features, records or stats; use lists, tables and the calendar.",
+      "Don't write loose hex or rgb values in components.",
+      "Don't load a web font or introduce a second family.",
+      "Don't let the band change with the theme; it stays Prussian in both.",
+      "Don't reach for a shadow where a border would separate the content."
+    ]
+  }
+}
