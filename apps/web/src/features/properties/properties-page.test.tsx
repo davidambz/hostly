@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { routes } from '@/app/routes'
 import { VIACEP_URL } from '@/lib/viacep'
+import { nth } from '@/test/nth'
 import { renderRoute } from '@/test/render'
 import { apiError, loggedInHandlers, server, url } from '@/test/server'
 
@@ -50,13 +51,6 @@ function serveProperties(items: Property[], total = items.length) {
     }),
   )
   return queries
-}
-
-/** The `index`th item, failing the test when there is none. */
-function nth<T>(items: T[], index: number): T {
-  const item = items[index]
-  if (item === undefined) throw new Error(`no item at ${index}`)
-  return item
 }
 
 async function openPage(path = '/imoveis') {

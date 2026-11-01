@@ -5,6 +5,7 @@ import { ApiError, errorField } from './errors'
 /** Portuguese messages for the API codes a form can run into. */
 const MESSAGES: Record<string, string> = {
   INVALID_CREDENTIALS: 'E-mail ou senha incorretos.',
+  INVALID_DOCUMENT: 'Documento inválido para o tipo escolhido.',
   EMAIL_TAKEN: 'Este e-mail já tem uma conta.',
   CPF_TAKEN: 'Este CPF já tem uma conta.',
   TOO_MANY_REQUESTS: 'Muitas tentativas. Espere um minuto e tente de novo.',

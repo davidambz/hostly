@@ -1,6 +1,8 @@
 import { useCallback } from 'react'
 import { useSearchParams } from 'react-router'
 
+import { SEARCH_MAX_LENGTH } from '@/components/search-input'
+
 /** The API's highest page; anything past it is a broken link anyway. */
 const MAX_PAGE = 100_000
 
@@ -30,6 +32,21 @@ export function useSearchParamState() {
     [setParams],
   )
 
+  const setSearch = useCallback(
+    (value: string) => {
+      set('q', value)
+    },
+    [set],
+  )
+  const setPage = useCallback(
+    (value: number) => {
+      set('page', value)
+    },
+    [set],
+  )
+
   const page = Math.min(MAX_PAGE, Math.max(1, Number.parseInt(params.get('page') ?? '1', 10) || 1))
-  return { params, page, set }
+  /** `?q=`, cut to what the API accepts. */
+  const search = (params.get('q') ?? '').trim().slice(0, SEARCH_MAX_LENGTH)
+  return { params, page, search, set, setSearch, setPage }
 }

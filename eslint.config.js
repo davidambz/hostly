@@ -14,6 +14,8 @@ export default defineConfig(
     '**/coverage',
     '**/node_modules',
     '**/src/generated',
+    // Tooling installed into the repo (Impeccable's skill scripts), not our code.
+    '.claude',
     'apps/web/src/lib/api/schema.d.ts',
   ]),
   {

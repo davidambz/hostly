@@ -1,12 +1,11 @@
 import { CalendarDays, Home, MoreHorizontal, Pencil, Plus, SearchX, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageHeader } from '@/components/page-header'
 import { PaginationBar } from '@/components/pagination-bar'
-import { SEARCH_MAX_LENGTH, SearchInput } from '@/components/search-input'
+import { SearchInput } from '@/components/search-input'
 import { EmptyState, ErrorState, LoadingState } from '@/components/states'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,6 +24,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useClampedPage } from '@/hooks/use-clamped-page'
+import { useOverlay } from '@/hooks/use-overlay'
 import { useSearchParamState } from '@/hooks/use-search-param-state'
 import { ApiError } from '@/lib/api/errors'
 import { errorMessage } from '@/lib/api/form-errors'
@@ -38,15 +39,6 @@ import {
 } from './api'
 import { apartmentLine, placeLine, streetLine } from './property-format'
 import { PropertySheet } from './property-sheet'
-
-/**
- * What a panel or dialog shows. It keeps its property after closing, so the content doesn't
- * change while it animates out.
- */
-interface Overlay {
-  open: boolean
-  property?: Property
-}
 
 function PropertyName({ property }: { property: Property }) {
   const apartment = apartmentLine(property)
@@ -62,29 +54,21 @@ function PropertyName({ property }: { property: Property }) {
 }
 
 export function PropertiesPage() {
-  const { params, page, set } = useSearchParamState()
-  const search = (params.get('q') ?? '').trim().slice(0, SEARCH_MAX_LENGTH)
+  const { page, search, setSearch, setPage } = useSearchParamState()
   const properties = useProperties({ search, page })
   const remove = useDeleteProperty()
-  const [editing, setEditing] = useState<Overlay>({ open: false })
-  const [deleting, setDeleting] = useState<Overlay>({ open: false })
-  const lastPage = Math.max(1, Math.ceil((properties.data?.total ?? 0) / PAGE_SIZE))
-  const pastTheEnd = properties.data?.items.length === 0 && page > lastPage
-
-  // A deletion or an old link can leave the page past the last one: go to the last one.
-  useEffect(() => {
-    if (pastTheEnd) set('page', lastPage)
-  }, [pastTheEnd, lastPage, set])
-
-  const onSearch = useCallback(
-    (value: string) => {
-      set('q', value)
-    },
-    [set],
-  )
+  const editing = useOverlay<Property>()
+  const deleting = useOverlay<Property>()
+  const pastTheEnd = useClampedPage({
+    page,
+    pageSize: PAGE_SIZE,
+    total: properties.data?.total,
+    empty: properties.data?.items.length === 0,
+    goTo: setPage,
+  })
 
   const confirmDelete = async () => {
-    const property = deleting.property
+    const property = deleting.item
     if (!property) return
     try {
       await remove.mutateAsync(property.id)
@@ -96,14 +80,14 @@ export function PropertiesPage() {
           : errorMessage(error),
       )
     } finally {
-      setDeleting({ open: false, property })
+      deleting.setOpen(false)
     }
   }
 
   const newButton = (
     <Button
       onClick={() => {
-        setEditing({ open: true })
+        editing.show()
       }}
     >
       <Plus aria-hidden />
@@ -126,7 +110,7 @@ export function PropertiesPage() {
           label="Buscar imóvel"
           placeholder="Buscar pelo nome"
           value={search}
-          onSearch={onSearch}
+          onSearch={setSearch}
         />
       )}
 
@@ -190,7 +174,7 @@ export function PropertiesPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onSelect={() => {
-                              setEditing({ open: true, property })
+                              editing.show(property)
                             }}
                           >
                             <Pencil className="size-4" />
@@ -206,7 +190,7 @@ export function PropertiesPage() {
                           <DropdownMenuItem
                             variant="destructive"
                             onSelect={() => {
-                              setDeleting({ open: true, property })
+                              deleting.show(property)
                             }}
                           >
                             <Trash2 className="size-4" />
@@ -224,28 +208,18 @@ export function PropertiesPage() {
             page={page}
             pageSize={PAGE_SIZE}
             total={properties.data.total}
-            onPageChange={(next) => {
-              set('page', next)
-            }}
+            onPageChange={setPage}
           />
         </>
       )}
 
-      <PropertySheet
-        open={editing.open}
-        property={editing.property}
-        onOpenChange={(open) => {
-          setEditing((current) => ({ ...current, open }))
-        }}
-      />
+      <PropertySheet open={editing.open} property={editing.item} onOpenChange={editing.setOpen} />
 
       <ConfirmDialog
         open={deleting.open}
-        onOpenChange={(open) => {
-          setDeleting((current) => ({ ...current, open }))
-        }}
+        onOpenChange={deleting.setOpen}
         title="Excluir imóvel?"
-        description={`"${deleting.property?.name ?? ''}" será excluído. Isso não pode ser desfeito.`}
+        description={`"${deleting.item?.name ?? ''}" será excluído. Isso não pode ser desfeito.`}
         confirmLabel="Excluir"
         pending={remove.isPending}
         onConfirm={() => void confirmDelete()}
