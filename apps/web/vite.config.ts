@@ -14,11 +14,13 @@ export default defineConfig({
       output: {
         // Libraries change far less often than the app, so they get their own chunks, which
         // stay cached across deploys; split by family so none of them grows too large.
+        // Only dependency-free packages go in 'react', so no chunk imports one that
+        // imports it back (react-router, with its own dependencies, stays in vendor).
         codeSplitting: {
           groups: [
             {
               name: 'react',
-              test: /node_modules[\\/](react|react-dom|react-router|scheduler)[\\/]/,
+              test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
               priority: 3,
             },
             {

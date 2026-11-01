@@ -5,14 +5,18 @@ import { RequireAuth, RequireGuest } from '@/features/auth/guards'
 import { NotFoundPage } from '@/pages/not-found-page'
 import { RouteErrorPage } from '@/pages/route-error-page'
 
+import { AppLoading, RootLayout } from './root-layout'
+
 import type { RouteHandle } from './navigation'
 
 const handle = (title: string): RouteHandle => ({ title })
 
 export const routes: RouteObject[] = [
   {
-    // One error screen for the whole app: anything thrown while rendering or lazy-loading.
+    element: <RootLayout />,
+    // A full-screen error for anything outside the app layout (which has its own, below).
     errorElement: <RouteErrorPage />,
+    hydrateFallbackElement: <AppLoading />,
     children: [
       {
         element: <RequireGuest />,

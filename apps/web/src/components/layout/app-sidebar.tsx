@@ -1,7 +1,7 @@
 import { CalendarDays } from 'lucide-react'
-import { NavLink, useLocation } from 'react-router'
+import { Link, NavLink, useMatch } from 'react-router'
 
-import { NAV_ITEMS } from '@/app/navigation'
+import { NAV_ITEMS, type NavItem } from '@/app/navigation'
 import {
   Sidebar,
   SidebarContent,
@@ -18,9 +18,33 @@ import {
 
 import { UserMenu } from './user-menu'
 
-export function AppSidebar() {
-  const { pathname } = useLocation()
+/** Closes the mobile drawer once something in it is picked. */
+function useCloseOnMobile() {
   const { isMobile, setOpenMobile } = useSidebar()
+  return () => {
+    if (isMobile) setOpenMobile(false)
+  }
+}
+
+function NavEntry({ title, to, icon: Icon }: NavItem) {
+  // The section stays highlighted on its sub-pages too (e.g. /imoveis/123).
+  const active = useMatch({ path: to, end: false }) !== null
+  const close = useCloseOnMobile()
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={active} tooltip={title}>
+        <NavLink to={to} end={false} onClick={close}>
+          <Icon aria-hidden />
+          <span>{title}</span>
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
+export function AppSidebar() {
+  const close = useCloseOnMobile()
 
   return (
     <Sidebar collapsible="icon">
@@ -28,12 +52,13 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="Hostly">
-              <NavLink to="/reservas">
+              {/* A plain Link: the brand is not a section, so it is never "current". */}
+              <Link to="/reservas" onClick={close} aria-label="Hostly, ir para o início">
                 <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
                   <CalendarDays className="size-4" aria-hidden />
                 </span>
                 <span className="text-base font-semibold">Hostly</span>
-              </NavLink>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -43,26 +68,9 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <nav aria-label="Principal">
               <SidebarMenu>
-                {NAV_ITEMS.map(({ title, to, icon: Icon }) => {
-                  const active = pathname === to || pathname.startsWith(`${to}/`)
-                  return (
-                    <SidebarMenuItem key={to}>
-                      <SidebarMenuButton asChild isActive={active} tooltip={title}>
-                        <NavLink
-                          to={to}
-                          aria-current={active ? 'page' : undefined}
-                          onClick={() => {
-                            // The mobile drawer closes once a section is picked.
-                            if (isMobile) setOpenMobile(false)
-                          }}
-                        >
-                          <Icon aria-hidden />
-                          <span>{title}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
-                })}
+                {NAV_ITEMS.map((item) => (
+                  <NavEntry key={item.to} {...item} />
+                ))}
               </SidebarMenu>
             </nav>
           </SidebarGroupContent>
