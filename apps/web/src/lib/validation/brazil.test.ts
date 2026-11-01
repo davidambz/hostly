@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { isValidCpf, isValidPhone, maskCpf, maskPhone, onlyDigits } from './brazil'
+import {
+  isValidCep,
+  isValidCpf,
+  isValidPhone,
+  maskCep,
+  maskCpf,
+  maskPhone,
+  onlyDigits,
+} from './brazil'
 
 describe('maskCpf', () => {
   it.each([
@@ -74,4 +82,26 @@ describe('isValidPhone', () => {
 
 it('onlyDigits strips everything else', () => {
   expect(onlyDigits('(48) 9.9-a')).toBe('4899')
+})
+
+describe('CEP', () => {
+  it.each([
+    ['', ''],
+    ['880', '880'],
+    ['88053', '88053'],
+    ['880537', '88053-7'],
+    ['88053700', '88053-700'],
+    ['88053-7009', '88053-700'],
+  ])('maskCep %j → %j', (input, output) => {
+    expect(maskCep(input)).toBe(output)
+  })
+
+  it.each([
+    ['88053-700', true],
+    ['88053700', true],
+    ['00000-000', false],
+    ['8805370', false],
+  ])('isValidCep %s → %o', (cep, valid) => {
+    expect(isValidCep(cep)).toBe(valid)
+  })
 })

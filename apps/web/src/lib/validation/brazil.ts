@@ -68,3 +68,46 @@ export function isValidPhone(value: string): boolean {
   const phone = normalizePhone(value)
   return /^\d{2}(?:9\d{8}|[2-5]\d{7})$/.test(phone) && AREA_CODES.has(Number(phone.slice(0, 2)))
 }
+
+/** `88053700` → `88053-700`, also while typing. */
+export function maskCep(value: string): string {
+  const d = onlyDigits(value).slice(0, 8)
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+}
+
+/** A CEP: 8 digits, not all zeros. */
+export function isValidCep(value: string): boolean {
+  const cep = onlyDigits(value)
+  return cep.length === 8 && cep !== '00000000'
+}
+
+/** The 26 states and the Federal District. */
+export const STATES = [
+  'AC',
+  'AL',
+  'AP',
+  'AM',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MT',
+  'MS',
+  'MG',
+  'PA',
+  'PB',
+  'PR',
+  'PE',
+  'PI',
+  'RJ',
+  'RN',
+  'RS',
+  'RO',
+  'RR',
+  'SC',
+  'SP',
+  'SE',
+  'TO',
+] as const
