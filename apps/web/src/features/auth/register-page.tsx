@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2 } from 'lucide-react'
-import { type ChangeEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 
 import { FormError } from '@/components/form/form-error'
+import { withMask } from '@/components/form/mask'
 import { PasswordField } from '@/components/form/password-field'
 import { TextField } from '@/components/form/text-field'
 import { Button } from '@/components/ui/button'
@@ -34,18 +34,6 @@ export function RegisterPage() {
     defaultValues: { name: '', email: '', cpf: '', phone: '', password: '', confirmPassword: '' },
   })
   const { errors, isSubmitting } = form.formState
-
-  /** Registers a field whose value is reformatted with `mask` as the user types. */
-  const masked = (name: 'cpf' | 'phone', mask: (value: string) => string) => {
-    const field = form.register(name)
-    return {
-      ...field,
-      onChange: (event: ChangeEvent<HTMLInputElement>) => {
-        event.target.value = mask(event.target.value)
-        return field.onChange(event)
-      },
-    }
-  }
 
   const onSubmit = form.handleSubmit(async ({ confirmPassword: _confirm, ...values }) => {
     try {
@@ -100,7 +88,7 @@ export function RegisterPage() {
             inputMode="numeric"
             placeholder="000.000.000-00"
             error={errors.cpf?.message}
-            {...masked('cpf', maskCpf)}
+            {...withMask(form.register('cpf'), maskCpf)}
           />
           <TextField
             label="Telefone"
@@ -109,7 +97,7 @@ export function RegisterPage() {
             autoComplete="tel-national"
             placeholder="(00) 00000-0000"
             error={errors.phone?.message}
-            {...masked('phone', maskPhone)}
+            {...withMask(form.register('phone'), maskPhone)}
           />
         </div>
         <PasswordField

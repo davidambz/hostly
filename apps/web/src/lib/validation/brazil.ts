@@ -63,10 +63,70 @@ export function isValidCpf(value: string): boolean {
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10])
 }
 
-/** DDD in use + a mobile (9 + 8 digits) or a landline (2–5 + 7 digits). */
-export function isValidPhone(value: string): boolean {
+const hasAreaCode = (phone: string) => AREA_CODES.has(Number(phone.slice(0, 2)))
+
+/** A mobile number: DDD in use + 9 + 8 digits. */
+export function isValidMobilePhone(value: string): boolean {
   const phone = normalizePhone(value)
-  return /^\d{2}(?:9\d{8}|[2-5]\d{7})$/.test(phone) && AREA_CODES.has(Number(phone.slice(0, 2)))
+  return /^\d{2}9\d{8}$/.test(phone) && hasAreaCode(phone)
+}
+
+/** A landline: DDD in use + a number starting with 2 to 5 + 7 digits. */
+export function isValidLandlinePhone(value: string): boolean {
+  const phone = normalizePhone(value)
+  return /^\d{2}[2-5]\d{7}$/.test(phone) && hasAreaCode(phone)
+}
+
+/** A mobile or a landline. */
+export function isValidPhone(value: string): boolean {
+  return isValidMobilePhone(value) || isValidLandlinePhone(value)
+}
+
+/**
+ * A CPF or CNPJ as typed: letters and digits, uppercased. Never `onlyDigits` for a CNPJ,
+ * which would strip the letters of an alphanumeric one.
+ */
+export function normalizeDocument(value: string): string {
+  return value.toUpperCase().replace(/[^0-9A-Z]/g, '')
+}
+
+/**
+ * `12ABC34501DE35` → `12.ABC.345/01DE-35`, also while typing. The first 12 characters can be
+ * letters (alphanumeric CNPJ, from July 2026); the 2 check digits are always digits.
+ */
+export function maskCnpj(value: string): string {
+  const raw = normalizeDocument(value)
+  const base = raw.slice(0, 12)
+  const check = onlyDigits(raw.slice(12)).slice(0, 2)
+  const parts = [base.slice(0, 2), base.slice(2, 5), base.slice(5, 8), base.slice(8, 12)]
+  let masked = parts[0] ?? ''
+  if (parts[1]) masked += `.${parts[1]}`
+  if (parts[2]) masked += `.${parts[2]}`
+  if (parts[3]) masked += `/${parts[3]}`
+  if (check) masked += `-${check}`
+  return masked
+}
+
+/** The two check digits of a CNPJ whose first 12 characters are `base` (same as the API). */
+export function cnpjCheckDigits(base: string): string {
+  const digit = (chars: string) => {
+    let sum = 0
+    for (let i = 0; i < chars.length; i++) {
+      const weight = ((chars.length - 1 - i) % 8) + 2
+      sum += (chars.charCodeAt(i) - 48) * weight
+    }
+    const rest = sum % 11
+    return String(rest < 2 ? 0 : 11 - rest)
+  }
+  const first = digit(base)
+  return first + digit(base + first)
+}
+
+/** A CNPJ, numeric or alphanumeric: 12 of [0-9A-Z], 2 check digits, not all the same. */
+export function isValidCnpj(value: string): boolean {
+  const cnpj = normalizeDocument(value)
+  if (!/^[0-9A-Z]{12}\d{2}$/.test(cnpj) || /^(.)\1{13}$/.test(cnpj)) return false
+  return cnpjCheckDigits(cnpj.slice(0, 12)) === cnpj.slice(12)
 }
 
 /** `88053700` → `88053-700`, also while typing. */

@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  cnpjCheckDigits,
   isValidCep,
+  isValidCnpj,
   isValidCpf,
+  isValidLandlinePhone,
+  isValidMobilePhone,
   isValidPhone,
   maskCep,
+  maskCnpj,
   maskCpf,
   maskPhone,
+  normalizeDocument,
   onlyDigits,
 } from './brazil'
 
@@ -103,5 +109,61 @@ describe('CEP', () => {
     ['8805370', false],
   ])('isValidCep %s → %o', (cep, valid) => {
     expect(isValidCep(cep)).toBe(valid)
+  })
+})
+
+describe('phone kinds', () => {
+  it.each([
+    ['(48) 99999-0000', true, false],
+    ['+55 48 99999-0000', true, false],
+    ['(48) 3333-4444', false, true],
+    ['(20) 99999-0000', false, false],
+    ['(48) 8999-0000', false, false],
+  ])('%s → mobile %o, landline %o', (phone, mobile, landline) => {
+    expect(isValidMobilePhone(phone)).toBe(mobile)
+    expect(isValidLandlinePhone(phone)).toBe(landline)
+    expect(isValidPhone(phone)).toBe(mobile || landline)
+  })
+})
+
+describe('CNPJ', () => {
+  it.each([
+    ['', ''],
+    ['11', '11'],
+    ['112', '11.2'],
+    ['11222333', '11.222.333'],
+    ['112223330001', '11.222.333/0001'],
+    ['11222333000181', '11.222.333/0001-81'],
+    ['11.222.333/0001-81999', '11.222.333/0001-81'],
+    ['12abc34501de35', '12.ABC.345/01DE-35'],
+    // the check digits are digits only
+    ['12ABC34501DEXY', '12.ABC.345/01DE'],
+  ])('maskCnpj %j → %j', (input, output) => {
+    expect(maskCnpj(input)).toBe(output)
+  })
+
+  it('normalizes a typed document to letters and digits, uppercased', () => {
+    expect(normalizeDocument('12.abc.345/01de-35')).toBe('12ABC34501DE35')
+  })
+
+  it.each(['11.222.333/0001-81', '11222333000181', '12.ABC.345/01DE-35', '12abc34501de35'])(
+    'accepts %s',
+    (cnpj) => {
+      expect(isValidCnpj(cnpj)).toBe(true)
+    },
+  )
+
+  it.each([
+    ['a wrong check digit', '11222333000182'],
+    ['all the same', '11111111111111'],
+    ['letters in the check digits', '12ABC34501DEAB'],
+    ['too short', '1122233300018'],
+  ])('rejects %s', (_case, cnpj) => {
+    expect(isValidCnpj(cnpj)).toBe(false)
+  })
+
+  it('matches the API check digits', () => {
+    expect(cnpjCheckDigits('112223330001')).toBe('81')
+    expect(cnpjCheckDigits('12ABC34501DE')).toBe('35')
   })
 })

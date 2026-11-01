@@ -14,6 +14,8 @@ export default defineConfig(
     '**/coverage',
     '**/node_modules',
     '**/src/generated',
+    // Tooling installed into the repo (Impeccable's skill scripts), not our code.
+    '.claude',
     'apps/web/src/lib/api/schema.d.ts',
   ]),
   {
@@ -60,6 +62,7 @@ export default defineConfig(
       '@typescript-eslint/no-confusing-void-expression': 'off',
       'react-hooks/purity': 'off',
       'react-hooks/set-state-in-effect': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
     },
   },
   {

@@ -4,6 +4,7 @@ import { type ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 
 import { FormError } from '@/components/form/form-error'
+import { applyMask } from '@/components/form/mask'
 import { SelectField } from '@/components/form/select-field'
 import { TextField } from '@/components/form/text-field'
 import { Button } from '@/components/ui/button'
@@ -92,6 +93,9 @@ export function PropertyForm({
     }
   }
 
+  // The CEP last looked up: typing past its end leaves the same CEP, which must not be
+  // looked up (and overwrite the address) again.
+  const [lastCep, setLastCep] = useState(defaultValues.zipCode)
   const zipCode = form.register('zipCode')
 
   const submit = form.handleSubmit(async (values) => {
@@ -152,12 +156,11 @@ export function PropertyForm({
             }
             {...zipCode}
             onChange={(event: ChangeEvent<HTMLInputElement>) => {
-              const previous = form.getValues('zipCode')
-              const masked = maskCep(event.target.value)
-              if (event.target.value !== masked) event.target.value = masked
+              const cep = applyMask(event.target, maskCep)
               void zipCode.onChange(event)
-              // Typing past the end leaves the same CEP: don't look it up (and overwrite) again.
-              if (masked !== previous) void searchCep(masked)
+              if (cep === lastCep) return
+              setLastCep(cep)
+              void searchCep(cep)
             }}
           />
           <TextField label="Rua" error={errors.street?.message} {...form.register('street')} />
