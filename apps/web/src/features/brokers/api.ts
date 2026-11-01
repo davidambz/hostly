@@ -52,18 +52,21 @@ export function useBrokers(query: BrokerListQuery) {
   })
 }
 
-function useInvalidateBrokers() {
+/**
+ * Refreshes the lists after a change. Bookings show broker names, so an update or a
+ * deletion makes them stale too; a creation can't.
+ */
+function useInvalidateBrokers({ bookings }: { bookings: boolean }) {
   const queryClient = useQueryClient()
-  // Bookings show broker names, so they go stale too.
   return () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: brokerKeys.all }),
-      queryClient.invalidateQueries({ queryKey: ['bookings'] }),
+      bookings && queryClient.invalidateQueries({ queryKey: ['bookings'] }),
     ])
 }
 
 export function useCreateBroker() {
-  const invalidate = useInvalidateBrokers()
+  const invalidate = useInvalidateBrokers({ bookings: false })
   return useMutation({
     mutationFn: async (input: BrokerInput) => unwrap(await api.POST('/brokers', { body: input })),
     onSuccess: invalidate,
@@ -71,7 +74,7 @@ export function useCreateBroker() {
 }
 
 export function useUpdateBroker() {
-  const invalidate = useInvalidateBrokers()
+  const invalidate = useInvalidateBrokers({ bookings: true })
   return useMutation({
     mutationFn: async ({ id, input }: { id: string; input: BrokerInput }) =>
       unwrap(await api.PATCH('/brokers/{id}', { params: { path: { id } }, body: input })),
@@ -80,7 +83,7 @@ export function useUpdateBroker() {
 }
 
 export function useDeleteBroker() {
-  const invalidate = useInvalidateBrokers()
+  const invalidate = useInvalidateBrokers({ bookings: true })
   return useMutation({
     mutationFn: async (id: string) =>
       unwrap(await api.DELETE('/brokers/{id}', { params: { path: { id } } })),

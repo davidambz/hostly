@@ -121,6 +121,29 @@ describe('brokers list', () => {
     expect(nth(queries, 0).get('search')).toBe('joão')
   })
 
+  it('keeps the search box while clearing a search that found nothing', async () => {
+    serveBrokers([], 0)
+    const { user } = await openPage('/intermediadores?q=zzz')
+    await screen.findByText('Nada encontrado')
+
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      http.get(url('/brokers'), async () => {
+        await gate
+        return HttpResponse.json({ items: [person], total: 1, page: 1, pageSize: 20 })
+      }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Limpar busca' }))
+
+    expect(screen.getByRole('searchbox')).toBeInTheDocument()
+    expect(screen.queryByText('Nenhum intermediador ainda')).not.toBeInTheDocument()
+    release()
+    expect(await screen.findByText('Maria Corretora')).toBeInTheDocument()
+  })
+
   it('reads the page from the URL and pages', async () => {
     const queries = serveBrokers([person], 45)
     const { user, router } = await openPage('/intermediadores?page=2')
@@ -227,6 +250,35 @@ describe('creating a broker', () => {
     await user.click(within(sheet).getByRole('radio', { name: 'Pessoa física' }))
 
     expect(within(sheet).getByLabelText('CPF')).toHaveValue('112.223.330-00')
+  })
+
+  it('keeps an alphanumeric CNPJ through a switch to person and back', async () => {
+    serveBrokers([])
+    const { user } = await openPage()
+
+    const sheet = await openNew(user)
+    await user.click(within(sheet).getByRole('radio', { name: 'Pessoa jurídica' }))
+    await user.type(within(sheet).getByLabelText('CNPJ'), '12abc34501de35')
+    await user.click(within(sheet).getByRole('radio', { name: 'Pessoa física' }))
+    await user.click(within(sheet).getByRole('radio', { name: 'Pessoa jurídica' }))
+
+    expect(within(sheet).getByLabelText('CNPJ')).toHaveValue('12.ABC.345/01DE-35')
+  })
+
+  it('checks the document again after the type changes', async () => {
+    serveBrokers([])
+    const { user } = await openPage()
+
+    const sheet = await openNew(user)
+    await user.type(within(sheet).getByLabelText('Nome'), 'Litoral')
+    await user.type(within(sheet).getByLabelText('CPF'), '11111111111')
+    await user.click(within(sheet).getByRole('button', { name: 'Cadastrar intermediador' }))
+    expect(await within(sheet).findByText('CPF inválido.')).toBeInTheDocument()
+
+    await user.click(within(sheet).getByRole('radio', { name: 'Pessoa jurídica' }))
+
+    expect(await within(sheet).findByText('CNPJ inválido.')).toBeInTheDocument()
+    expect(within(sheet).queryByText('CPF inválido.')).not.toBeInTheDocument()
   })
 
   it('checks the document against the type before sending', async () => {

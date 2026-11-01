@@ -47,18 +47,21 @@ export function useProperties(query: PropertyListQuery) {
   })
 }
 
-function useInvalidateProperties() {
+/**
+ * Refreshes the lists after a change. Bookings show property names, so an update or a
+ * deletion makes them stale too; a creation can't.
+ */
+function useInvalidateProperties({ bookings }: { bookings: boolean }) {
   const queryClient = useQueryClient()
-  // Bookings show property names, so they go stale too.
   return () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: propertyKeys.all }),
-      queryClient.invalidateQueries({ queryKey: ['bookings'] }),
+      bookings && queryClient.invalidateQueries({ queryKey: ['bookings'] }),
     ])
 }
 
 export function useCreateProperty() {
-  const invalidate = useInvalidateProperties()
+  const invalidate = useInvalidateProperties({ bookings: false })
   return useMutation({
     mutationFn: async (input: PropertyInput) =>
       unwrap(await api.POST('/properties', { body: input })),
@@ -67,7 +70,7 @@ export function useCreateProperty() {
 }
 
 export function useUpdateProperty() {
-  const invalidate = useInvalidateProperties()
+  const invalidate = useInvalidateProperties({ bookings: true })
   return useMutation({
     mutationFn: async ({ id, input }: { id: string; input: PropertyInput }) =>
       unwrap(await api.PATCH('/properties/{id}', { params: { path: { id } }, body: input })),
@@ -76,7 +79,7 @@ export function useUpdateProperty() {
 }
 
 export function useDeleteProperty() {
-  const invalidate = useInvalidateProperties()
+  const invalidate = useInvalidateProperties({ bookings: true })
   return useMutation({
     mutationFn: async (id: string) =>
       unwrap(await api.DELETE('/properties/{id}', { params: { path: { id } } })),

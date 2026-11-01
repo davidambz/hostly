@@ -95,7 +95,8 @@ export function PropertiesPage() {
     </Button>
   )
 
-  const nothingYet = properties.data?.total === 0 && search === ''
+  // Not from the previous search's data, which shows while the next one loads.
+  const nothingYet = properties.data?.total === 0 && search === '' && !properties.isPlaceholderData
 
   return (
     <>

@@ -1,15 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2 } from 'lucide-react'
-import { type ChangeEvent, useId } from 'react'
+import { useId, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 
 import { FormError } from '@/components/form/form-error'
+import { withMask } from '@/components/form/mask'
 import { TextField } from '@/components/form/text-field'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { applyApiError } from '@/lib/api/form-errors'
-import { maskPhone } from '@/lib/validation/brazil'
+import { maskPhone, normalizeDocument } from '@/lib/validation/brazil'
 
 import { BROKER_TYPE_LABELS, type BrokerInput, type BrokerType } from './api'
 import {
@@ -36,18 +37,6 @@ const DOCUMENT_FIELD: Record<BrokerType, { label: string; placeholder: string; h
   },
 }
 
-/** Keeps the mask applied while typing, without moving the caret when nothing changes. */
-function masked(
-  mask: (value: string) => string,
-  onChange: (event: ChangeEvent<HTMLInputElement>) => unknown,
-) {
-  return (event: ChangeEvent<HTMLInputElement>) => {
-    const value = mask(event.target.value)
-    if (event.target.value !== value) event.target.value = value
-    void onChange(event)
-  }
-}
-
 export function BrokerForm({
   defaultValues,
   submitLabel,
@@ -68,9 +57,18 @@ export function BrokerForm({
   const typeLabelId = useId()
   const documentField = DOCUMENT_FIELD[type]
 
-  const document = form.register('document')
-  const mobilePhone = form.register('mobilePhone')
-  const landlinePhone = form.register('landlinePhone')
+  // What was typed in the document, unmasked: switching the type re-masks this, so a
+  // CNPJ survives a click on "Pessoa física" and back.
+  const [typedDocument, setTypedDocument] = useState(() =>
+    normalizeDocument(defaultValues.document),
+  )
+  const document = withMask(
+    form.register('document'),
+    (value) => maskDocument(type, value),
+    (value) => {
+      setTypedDocument(normalizeDocument(value))
+    },
+  )
 
   const submit = form.handleSubmit(async (values) => {
     try {
@@ -96,8 +94,9 @@ export function BrokerForm({
               onValueChange={(value: BrokerType) => {
                 field.onChange(value)
                 // Same characters, the other mask; check it again if it was already checked.
-                form.setValue('document', maskDocument(value, form.getValues('document')))
-                if (form.formState.errors.document) void form.trigger('document')
+                form.setValue('document', maskDocument(value, typedDocument), {
+                  shouldValidate: form.getFieldState('document').invalid,
+                })
               }}
               className="flex gap-6"
             >
@@ -127,7 +126,6 @@ export function BrokerForm({
         autoCapitalize="characters"
         error={errors.document?.message}
         {...document}
-        onChange={masked((value) => maskDocument(type, value), document.onChange)}
       />
 
       <TextField
@@ -145,16 +143,14 @@ export function BrokerForm({
           type="tel"
           placeholder="(48) 99999-0000"
           error={errors.mobilePhone?.message}
-          {...mobilePhone}
-          onChange={masked(maskPhone, mobilePhone.onChange)}
+          {...withMask(form.register('mobilePhone'), maskPhone)}
         />
         <TextField
           label="Telefone fixo"
           type="tel"
           placeholder="(48) 3333-4444"
           error={errors.landlinePhone?.message}
-          {...landlinePhone}
-          onChange={masked(maskPhone, landlinePhone.onChange)}
+          {...withMask(form.register('landlinePhone'), maskPhone)}
         />
       </div>
 

@@ -23,14 +23,12 @@ export const brokerFormSchema = z
   .object({
     type: z.enum(['INDIVIDUAL', 'COMPANY']),
     name: z.string().trim().min(1, 'Informe o nome.').max(255, 'Nome longo demais.'),
-    email: z.union([
-      z.literal(''),
-      z
-        .string()
-        .trim()
-        .toLowerCase()
-        .pipe(z.email('E-mail inválido.').max(255, 'E-mail longo demais.')),
-    ]),
+    // Blank (even just spaces) means no e-mail, as the API takes it.
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .pipe(z.union([z.literal(''), z.email('E-mail inválido.').max(255, 'E-mail longo demais.')])),
     document: z.string().trim(),
     mobilePhone: z
       .string()

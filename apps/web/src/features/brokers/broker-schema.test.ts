@@ -30,6 +30,13 @@ describe('brokerFormSchema', () => {
     expect(parse({}).success).toBe(true)
   })
 
+  it('takes an e-mail of only spaces as no e-mail', () => {
+    const result = parse({ email: '   ' })
+
+    expect(result.success).toBe(true)
+    expect(result.data?.email).toBe('')
+  })
+
   it.each([
     ['a CPF for a person', 'INDIVIDUAL', '529.982.247-25'],
     ['a numeric CNPJ for a company', 'COMPANY', '11.222.333/0001-81'],

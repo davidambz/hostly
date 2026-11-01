@@ -82,7 +82,8 @@ export function BrokersPage() {
     </Button>
   )
 
-  const nothingYet = brokers.data?.total === 0 && search === ''
+  // Not from the previous search's data, which shows while the next one loads.
+  const nothingYet = brokers.data?.total === 0 && search === '' && !brokers.isPlaceholderData
 
   return (
     <>
