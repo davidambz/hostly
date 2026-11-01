@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { routes } from '@/app/routes'
+import { routes } from '@/test/app-routes'
 import { VIACEP_URL } from '@/lib/viacep'
 import { nth } from '@/test/nth'
 import { renderRoute } from '@/test/render'

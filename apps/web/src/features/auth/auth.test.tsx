@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 
-import { routes } from '@/app/routes'
+import { routes } from '@/test/app-routes'
 import { getAccessToken, setAccessToken } from '@/lib/api/session'
 import { renderRoute } from '@/test/render'
 import { apiError, loggedInHandlers, server, testUser, url } from '@/test/server'
