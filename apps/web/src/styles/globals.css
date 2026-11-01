@@ -39,6 +39,8 @@
   --band-foreground: #e8f1f2;
   --band-accent: #1d3a52;
   --band-border: #2e5170;
+  /* Depth under the screenshot frame on public pages. */
+  --frame-shadow: rgb(8 19 29 / 0.5);
 
   --sidebar: #13293d;
   --sidebar-foreground: #e8f1f2;
@@ -101,6 +103,7 @@
   --band-foreground: #e8f1f2;
   --band-accent: #1d3a52;
   --band-border: #2e5170;
+  --frame-shadow: rgb(0 0 0 / 0.6);
 
   --sidebar: #08131d;
   --sidebar-foreground: #e8f1f2;

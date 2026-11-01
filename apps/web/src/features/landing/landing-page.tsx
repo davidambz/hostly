@@ -158,7 +158,7 @@ export function LandingPage() {
                 className="focus-visible:ring-ring rounded-xl outline-none focus-visible:ring-2"
               >
                 <figure>
-                  <div className="border-border bg-card overflow-hidden rounded-xl border shadow-[0_30px_60px_-24px_rgb(8_19_29/0.5)]">
+                  <div className="border-border bg-card overflow-hidden rounded-xl border shadow-[0_30px_60px_-24px_var(--frame-shadow)]">
                     <picture>
                       <source media="(min-width: 640px)" srcSet={item.image[resolvedTheme]} />
                       <img
