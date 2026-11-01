@@ -8,7 +8,7 @@ import { loggedInHandlers, server, url } from '@/test/server'
 
 import { RESUME_RETRY_DELAYS_MS } from '@/features/auth/auth-context'
 
-import { routes } from './routes'
+import { routes } from '@/test/app-routes'
 
 describe('routes', () => {
   it('shows the home page to an anonymous visitor at /', async () => {
