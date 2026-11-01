@@ -185,6 +185,13 @@ describe('GET /properties', () => {
   })
 })
 
+it('answers the collection with or without a trailing slash', async () => {
+  await createProperty(db, { userId: owner.id })
+
+  expect((await request('GET', '/properties/')).json()).toMatchObject({ total: 1 })
+  expect((await request('POST', '/properties/', house)).statusCode).toBe(201)
+})
+
 describe('GET /properties/:id', () => {
   it('answers my property', async () => {
     const property = await createProperty(db, { userId: owner.id, name: 'Casa' })

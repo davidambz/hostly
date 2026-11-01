@@ -44,6 +44,8 @@ export async function buildApp(env: Env, options: BuildAppOptions = {}) {
   const app = Fastify({
     logger: loggerOptions(env),
     trustProxy: env.TRUST_PROXY,
+    // /properties and /properties/ are the same route.
+    routerOptions: { ignoreTrailingSlash: true },
     // Reuse the caller's request id (e.g. from a proxy) only when it is safe to log.
     genReqId: (request) => {
       const incoming = request.headers[REQUEST_ID_HEADER]

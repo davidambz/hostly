@@ -17,6 +17,14 @@ async function errorCode(response: Response): Promise<string | undefined> {
   }
 }
 
+/** The refresh couldn't be done right now (429, 5xx, a garbled answer): try again later. */
+export class RefreshUnavailableError extends Error {
+  constructor(readonly status: number) {
+    super(`Session refresh unavailable (status ${status})`)
+    this.name = 'RefreshUnavailableError'
+  }
+}
+
 function postRefresh() {
   return fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' })
 }
@@ -28,11 +36,23 @@ async function doRefresh(): Promise<string | null> {
     await new Promise((resolve) => setTimeout(resolve, ROTATED_RETRY_DELAY_MS))
     response = await postRefresh()
   }
-  if (!response.ok) {
+  // Only a 401 means the session is gone; anything else is worth another try later.
+  if (response.status === 401) {
     setAccessToken(null)
     return null
   }
-  const { accessToken } = (await response.json()) as { accessToken: string }
+  if (!response.ok) {
+    throw new RefreshUnavailableError(response.status)
+  }
+  let accessToken: unknown
+  try {
+    accessToken = ((await response.json()) as { accessToken?: unknown }).accessToken
+  } catch {
+    throw new RefreshUnavailableError(response.status)
+  }
+  if (typeof accessToken !== 'string') {
+    throw new RefreshUnavailableError(response.status)
+  }
   setAccessToken(accessToken)
   return accessToken
 }
@@ -40,9 +60,10 @@ async function doRefresh(): Promise<string | null> {
 let inFlight: Promise<string | null> | null = null
 
 /**
- * Gets a new access token from the refresh cookie, or null (and logs out) if the session
- * is gone. Concurrent callers share one request: rotating the cookie twice at once would
- * look like token theft to the API.
+ * Gets a new access token from the refresh cookie. Resolves null (and logs out) when the
+ * session is gone; rejects with RefreshUnavailableError when it just couldn't be done now,
+ * keeping the session. Concurrent callers share one request: rotating the cookie twice at
+ * once would look like token theft to the API.
  */
 export function refreshSession(): Promise<string | null> {
   inFlight ??= doRefresh().finally(() => {
@@ -60,16 +81,40 @@ function withToken(request: Request, token: string | null): Request {
 }
 
 /**
- * fetch for the API client: sends the access token, and when it has expired, refreshes
- * the session once and replays the request.
+ * Whether a 401 can be fixed with a fresh access token: the one sent expired, or none was
+ * sent at all (after a reload the token is gone, but the refresh cookie may still be good).
+ */
+function isRecoverable(code: string | undefined, sentToken: string | null) {
+  return code === 'TOKEN_EXPIRED' || (code === 'UNAUTHORIZED' && sentToken === null)
+}
+
+/**
+ * fetch for the API client: sends the access token and, when a 401 can be fixed with a
+ * new one, gets it (once, shared) and replays the request.
  */
 export async function authFetch(request: Request): Promise<Response> {
+  const sentToken = getAccessToken()
   // The original is kept unread so the body can be sent again on retry.
-  const response = await fetch(withToken(request.clone(), getAccessToken()))
-  if (response.status !== 401 || (await errorCode(response)) !== 'TOKEN_EXPIRED') {
+  const response = await fetch(withToken(request.clone(), sentToken))
+  if (response.status !== 401 || !isRecoverable(await errorCode(response), sentToken)) {
     return response
   }
-  const token = await refreshSession()
+
+  // Someone else already refreshed while this request was out: just use their token.
+  const current = getAccessToken()
+  if (current !== null && current !== sentToken) {
+    return fetch(withToken(request, current))
+  }
+
+  let token: string | null
+  try {
+    token = await refreshSession()
+  } catch (error) {
+    if (error instanceof RefreshUnavailableError) {
+      return response
+    }
+    throw error
+  }
   return token ? fetch(withToken(request, token)) : response
 }
 

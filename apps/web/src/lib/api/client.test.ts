@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { api, API_URL, refreshSession } from './client'
+import { api, API_URL, refreshSession, RefreshUnavailableError } from './client'
 import { ApiError, unwrap } from './errors'
 import { getAccessToken, onAccessTokenChange, setAccessToken } from './session'
 
@@ -158,6 +158,88 @@ describe('api client', () => {
     )
 
     expect((await api.GET('/me')).response.status).toBe(401)
+    expect(calls.count).toBe(0)
+  })
+})
+
+describe('after a reload (no token in memory)', () => {
+  it('gets a token from the refresh cookie and replays the request', async () => {
+    const calls = { count: 0 }
+    server.use(
+      refreshGiving('new', calls),
+      http.get(`${API_URL}/me`, ({ request }) =>
+        request.headers.get('authorization') === 'Bearer new'
+          ? HttpResponse.json(me)
+          : HttpResponse.json(
+              { statusCode: 401, code: 'UNAUTHORIZED', message: '' },
+              { status: 401 },
+            ),
+      ),
+    )
+
+    expect(unwrap(await api.GET('/me'))).toEqual(me)
+    expect(calls.count).toBe(1)
+  })
+
+  it('does not refresh an UNAUTHORIZED that came back for a token it did send', async () => {
+    setAccessToken('present')
+    const calls = { count: 0 }
+    server.use(
+      refreshGiving('new', calls),
+      http.get(`${API_URL}/me`, () =>
+        HttpResponse.json({ statusCode: 401, code: 'UNAUTHORIZED', message: '' }, { status: 401 }),
+      ),
+    )
+
+    expect((await api.GET('/me')).response.status).toBe(401)
+    expect(calls.count).toBe(0)
+  })
+})
+
+describe('refresh failures that are not the end of the session', () => {
+  beforeEach(() => {
+    setAccessToken('old')
+  })
+
+  it.each([
+    ['rate limited', () => HttpResponse.json({ code: 'TOO_MANY_REQUESTS' }, { status: 429 })],
+    ['a server error', () => HttpResponse.json({ code: 'INTERNAL_SERVER_ERROR' }, { status: 503 })],
+    ['a 200 that is not JSON', () => new HttpResponse('<html>proxy</html>', { status: 200 })],
+    ['a 200 without a token', () => HttpResponse.json({ nope: true })],
+  ])(
+    'keeps the session when the refresh is %s, returning the original 401',
+    async (_case, reply) => {
+      server.use(meAccepting('never'), http.post(`${API_URL}/auth/refresh`, reply))
+
+      const result = await api.GET('/me')
+
+      expect(result.response.status).toBe(401)
+      expect(getAccessToken()).toBe('old')
+    },
+  )
+
+  it('rejects refreshSession with RefreshUnavailableError, so callers can tell', async () => {
+    server.use(http.post(`${API_URL}/auth/refresh`, () => new HttpResponse(null, { status: 502 })))
+
+    await expect(refreshSession()).rejects.toBeInstanceOf(RefreshUnavailableError)
+  })
+})
+
+describe('a request that expires after someone else refreshed', () => {
+  it('replays with the newer token instead of refreshing again', async () => {
+    setAccessToken('old')
+    const calls = { count: 0 }
+    server.use(
+      refreshGiving('unexpected', calls),
+      http.get(`${API_URL}/me`, async ({ request }) => {
+        if (request.headers.get('authorization') === 'Bearer new') return HttpResponse.json(me)
+        // While this request was out, another one refreshed the session.
+        setAccessToken('new')
+        return expired()
+      }),
+    )
+
+    expect(unwrap(await api.GET('/me'))).toEqual(me)
     expect(calls.count).toBe(0)
   })
 })

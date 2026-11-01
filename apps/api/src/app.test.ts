@@ -91,6 +91,19 @@ describe('request id', () => {
   })
 })
 
+describe('trailing slash', () => {
+  it('treats a route with and without a trailing slash as the same', async () => {
+    const api = await start()
+
+    const [bare, slashed] = await Promise.all([
+      api.inject({ method: 'GET', url: '/health' }),
+      api.inject({ method: 'GET', url: '/health/' }),
+    ])
+
+    expect([bare.statusCode, slashed.statusCode]).toEqual([200, 200])
+  })
+})
+
 describe('unknown routes', () => {
   it.each(['GET', 'POST', 'PATCH', 'DELETE'] as const)(
     'answers 404 for %s on an unknown route',
