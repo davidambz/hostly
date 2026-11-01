@@ -3,3 +3,5 @@ pnpm-lock.yaml
 **/build
 **/coverage
 **/src/generated
+apps/web/src/lib/api/schema.d.ts
+apps/api/openapi.json

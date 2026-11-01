@@ -16,12 +16,13 @@ docker compose up
 
 | Serviço  | Endereço                                       |
 | -------- | ---------------------------------------------- |
+| Web      | http://localhost:5173                          |
 | API      | http://localhost:3333 (docs em `/docs`)        |
 | Postgres | `localhost:5432`, usuário/senha/banco `hostly` |
 
 A API tem `/health` (liveness) e `/health/ready` (checa o banco).
 
-Os valores vazios nos `.env` usam os padrões acima. O `DATABASE_URL` da API no compose é montado a partir de `POSTGRES_*`, então a senha não pode ter caracteres reservados de URL (`@ : / # ?`). O `apps/api/src` é montado no container e recarrega sozinho a cada alteração. Ao subir, o container gera o Prisma Client e aplica as migrations pendentes. As portas ficam presas ao `127.0.0.1`. Para mudar a porta da API no host, use `API_PORT` no `.env` da raiz.
+Os valores vazios nos `.env` usam os padrões acima. O front (`apps/web/src`) também recarrega sozinho. O `DATABASE_URL` da API no compose é montado a partir de `POSTGRES_*`, então a senha não pode ter caracteres reservados de URL (`@ : / # ?`). O `apps/api/src` é montado no container e recarrega sozinho a cada alteração. Ao subir, o container gera o Prisma Client e aplica as migrations pendentes. As portas ficam presas ao `127.0.0.1`. Para mudar a porta da API no host, use `API_PORT` no `.env` da raiz.
 
 | Comando                                                 | O que faz                                                                            |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -34,6 +35,12 @@ Os valores vazios nos `.env` usam os padrões acima. O `DATABASE_URL` da API no 
 | `docker compose down -v`                                | para tudo e apaga o banco                                                            |
 
 ### Imagens de produção
+
+O Dockerfile do front tem o alvo `prod`: o build estático servido por nginx sem root, na porta 8080, com `/healthz`. A URL da API entra no build (`--build-arg VITE_API_URL=…`).
+
+```bash
+docker build -f apps/web/Dockerfile --target prod --build-arg VITE_API_URL=https://api.exemplo.com -t hostly-web .
+```
 
 O Dockerfile da API tem dois alvos de produção, os dois multi-stage, com usuário não-root:
 

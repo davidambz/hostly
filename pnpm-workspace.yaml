@@ -6,3 +6,8 @@ onlyBuiltDependencies:
   - '@prisma/engines'
   - esbuild
   - prisma
+
+peerDependencyRules:
+  allowedVersions:
+    # Works with TypeScript 6; its peer range just hasn't caught up yet.
+    openapi-typescript>typescript: '6'

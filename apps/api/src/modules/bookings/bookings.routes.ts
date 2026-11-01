@@ -34,7 +34,8 @@ export const bookingsRoutes: FastifyPluginAsyncZod = async (app) => {
   app.addHook('onRequest', app.authenticate)
 
   app.get(
-    '/',
+    // '', not '/': the route is the prefix itself (/x), without a trailing slash.
+    '',
     {
       schema: {
         tags,
@@ -110,7 +111,8 @@ export const bookingsRoutes: FastifyPluginAsyncZod = async (app) => {
     '`details` names the booking in the way. The check-out day is free for a check-in.'
 
   app.post(
-    '/',
+    // '', not '/': the route is the prefix itself (/x), without a trailing slash.
+    '',
     {
       schema: {
         tags,
