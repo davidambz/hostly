@@ -99,9 +99,15 @@ export function BookingsCalendar({
       setSelection(null)
       onSelectDays(from, addDaysISO(to, 1))
     }
+    // A cancelled gesture (the page scrolled under a finger) picks nothing.
+    const cancel = () => {
+      setSelection(null)
+    }
     window.addEventListener('pointerup', finish)
+    window.addEventListener('pointercancel', cancel)
     return () => {
       window.removeEventListener('pointerup', finish)
+      window.removeEventListener('pointercancel', cancel)
     }
   }, [selection, onSelectDays])
 

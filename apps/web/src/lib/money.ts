@@ -35,8 +35,9 @@ export function bpsToPercent(bps: number): string {
 /** A percent as typed (`10,5`) → basis points (`1050`), or null when it is blank. */
 export function percentToBps(value: string): number | null {
   const trimmed = value.trim()
-  if (trimmed === '') return null
-  return Math.round(Number(trimmed.replace(',', '.')) * 100)
+  const percent = Number(trimmed.replace(',', '.'))
+  if (trimmed === '' || !Number.isFinite(percent)) return null
+  return Math.round(percent * 100)
 }
 
 /** Keeps a percent typeable: digits and one comma, at most 3 + 2 digits. */

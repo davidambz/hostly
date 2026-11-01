@@ -61,12 +61,6 @@ describe('bookingFormSchema', () => {
       'brokerCommissionBps',
       'No máximo 100%.',
     ],
-    [
-      'an amount above R$ 10 million',
-      { cleaningFee: 'R$ 10.000.000,01' },
-      'cleaningFee',
-      'No máximo R$ 10.000.000,00.',
-    ],
   ])('rejects %s', (_case, values, path, message) => {
     expect(firstIssue(values)).toMatchObject({ path: [path], message })
   })

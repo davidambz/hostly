@@ -46,7 +46,7 @@ const API_FIELD_MESSAGES = {
 function overlapMessage(details: unknown): string {
   const stay = details as { checkIn?: unknown; checkOut?: unknown } | null | undefined
   if (typeof stay?.checkIn === 'string' && typeof stay.checkOut === 'string') {
-    return `O imóvel já está reservado de ${formatShortDate(stay.checkIn)} a ${formatShortDate(stay.checkOut)}.`
+    return `Já há uma reserva neste imóvel com entrada em ${formatShortDate(stay.checkIn)} e saída em ${formatShortDate(stay.checkOut)}.`
   }
   return 'O imóvel já está reservado em algumas dessas noites.'
 }

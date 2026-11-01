@@ -181,13 +181,13 @@ describe('calendar', () => {
     const bar = await screen.findByRole('button', {
       name: 'Rafael Mendes, Casa da Praia, 10 – 13 nov 2026',
     })
-    expect(bar).toHaveClass('bg-sky-600')
+    expect(bar).toHaveClass('bg-property-1')
     // Nov 20–24 crosses a week: a bar in each
     const pedroBars = screen.getAllByRole('button', {
       name: 'Pedro Alves, Apê Centro, 20 – 24 nov 2026',
     })
     expect(pedroBars).toHaveLength(2)
-    expect(nth(pedroBars, 0)).toHaveClass('bg-emerald-600', 'rounded-r-none')
+    expect(nth(pedroBars, 0)).toHaveClass('bg-property-2', 'rounded-r-none')
     expect(nth(pedroBars, 1)).toHaveClass('rounded-l-none')
     // the whole grid: Nov 1 (a Sunday) to Dec 5, one request
     expect(Object.fromEntries(nth(calendarQueries, 0))).toEqual({
@@ -280,6 +280,31 @@ describe('calendar', () => {
     expect(calendarQueries.every((query) => !query.has('propertyId'))).toBe(true)
   })
 
+  it('knows every property, past the first page of 100', async () => {
+    const many = Array.from({ length: 150 }, (_, index) => ({
+      id: `018f0000-0000-7000-8000-${String(index).padStart(12, '0')}`,
+      name: `Imóvel ${String(index).padStart(3, '0')}`,
+    }))
+    serve({ bookings: [] })
+    server.use(
+      http.get(url('/properties'), ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get('page'))
+        return HttpResponse.json({
+          items: many.slice((page - 1) * 100, page * 100).map(property),
+          total: many.length,
+          page,
+          pageSize: 100,
+        })
+      }),
+    )
+    const last = nth(many, 149)
+    await openPage(`/reservas?data=2026-11-15&imovel=${last.id}`)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Imóvel')).toHaveValue(last.id)
+    })
+  })
+
   it('shows an error and retries', async () => {
     serve()
     server.use(http.get(url('/bookings/calendar'), () => apiError(400, 'VALIDATION_ERROR')))
@@ -348,6 +373,18 @@ describe('picking days on the calendar', () => {
     expect(
       within(await screen.findByRole('dialog')).getByRole('button', { name: /^Datas/ }),
     ).toHaveTextContent('16 – 19 nov 2026')
+  })
+
+  it('picks nothing when the gesture is cancelled (a scroll on a phone)', async () => {
+    serve()
+    const { user } = await openPage()
+
+    await user.pointer({ keys: '[MouseLeft>]', target: await day('16 de novembro de 2026') })
+    window.dispatchEvent(new Event('pointercancel'))
+    await user.pointer({ keys: '[/MouseLeft]' })
+    await user.click(screen.getByRole('radio', { name: 'Semana' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('works from the keyboard', async () => {
@@ -501,7 +538,9 @@ describe('creating a booking', () => {
 
     expect(
       await within(sheet).findByRole('button', { name: /^Datas/ }),
-    ).toHaveAccessibleDescription('O imóvel já está reservado de 10/11 a 13/11.')
+    ).toHaveAccessibleDescription(
+      'Já há uma reserva neste imóvel com entrada em 10/11 e saída em 13/11.',
+    )
   })
 
   it('puts a rule the API enforces on its field', async () => {

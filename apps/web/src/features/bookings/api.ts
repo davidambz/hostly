@@ -84,7 +84,8 @@ export function useQuote(input: QuoteInput | null) {
     queryKey: ['quote', input],
     queryFn: async () => {
       if (input === null) throw new Error('Nothing to quote')
-      return unwrap(await api.POST('/bookings/quote', { body: input }))
+      // Kept with its input: while the next quote loads, this one is shown whole.
+      return { input, financials: unwrap(await api.POST('/bookings/quote', { body: input })) }
     },
     enabled: input !== null,
     placeholderData: keepPreviousData,

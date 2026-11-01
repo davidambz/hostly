@@ -59,6 +59,8 @@ describe('percent', () => {
     expect(percentToBps('10,5')).toBe(1050)
     expect(percentToBps('0,01')).toBe(1)
     expect(percentToBps(' ')).toBeNull()
+    // a comma alone (the mask allows it while typing) is no number
+    expect(percentToBps(',')).toBeNull()
     expect(bpsToPercent(1050)).toBe('10,5')
     expect(bpsToPercent(1000)).toBe('10')
     expect(formatPercent(1250)).toBe('12,5%')

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { bpsToPercent, formatBRL, MAX_CENTS, parseMoney, percentToBps } from '@/lib/money'
+import { bpsToPercent, formatBRL, parseMoney, percentToBps } from '@/lib/money'
 
 import type { Booking, BookingInput, QuoteInput } from './api'
 import { nightsBetween } from './dates'
@@ -29,12 +29,6 @@ export const bookingFormSchema = z
     const issue = (path: keyof typeof values, message: string) => {
       ctx.addIssue({ code: 'custom', path: [path], message })
     }
-    for (const field of ['nightlyRate', 'cleaningFee', 'discount', 'amountPaid'] as const) {
-      if ((parseMoney(values[field]) ?? 0) > MAX_CENTS) {
-        issue(field, `No máximo ${formatBRL(MAX_CENTS)}.`)
-      }
-    }
-
     const commission = percentToBps(values.brokerCommissionBps) ?? 0
     if (commission > 10_000) issue('brokerCommissionBps', 'No máximo 100%.')
 

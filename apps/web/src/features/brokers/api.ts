@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { fetchAllPages } from '@/lib/api/all-pages'
 import { api } from '@/lib/api/client'
 import { unwrap } from '@/lib/api/errors'
 import type { components, paths } from '@/lib/api/schema'
@@ -91,15 +92,13 @@ export function useDeleteBroker() {
   })
 }
 
-/** The API's largest page: enough for every broker of a host in one go. */
-const ALL = 100
-
 /** Every broker, by name, for pickers. */
 export function useAllBrokers() {
   return useQuery({
     queryKey: [...brokerKeys.all, 'all'],
-    queryFn: async () =>
-      unwrap(await api.GET('/brokers', { params: { query: { page: 1, pageSize: ALL } } })),
-    select: (page) => page.items,
+    queryFn: () =>
+      fetchAllPages(async (page, pageSize) =>
+        unwrap(await api.GET('/brokers', { params: { query: { page, pageSize } } })),
+      ),
   })
 }

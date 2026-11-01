@@ -102,35 +102,22 @@ export function BookingsPage() {
     </Button>
   )
 
-  if (properties.isPending) {
-    return (
-      <>
-        <PageHeader title="Reservas" description="Quem fica em cada imóvel, e quando." />
-        <LoadingState />
-      </>
-    )
-  }
-  if (properties.isError) {
-    return (
-      <>
-        <PageHeader title="Reservas" description="Quem fica em cada imóvel, e quando." />
-        <ErrorState
-          message={errorMessage(properties.error)}
-          onRetry={() => void properties.refetch()}
-        />
-      </>
-    )
-  }
-
   return (
     <>
       <PageHeader
         title="Reservas"
         description="Quem fica em cada imóvel, e quando."
-        actions={newButton}
+        actions={properties.isSuccess ? newButton : undefined}
       />
 
-      {properties.data.length === 0 ? (
+      {properties.isPending ? (
+        <LoadingState />
+      ) : properties.isError ? (
+        <ErrorState
+          message={errorMessage(properties.error)}
+          onRetry={() => void properties.refetch()}
+        />
+      ) : properties.data.length === 0 ? (
         <EmptyState
           icon={Home}
           title="Cadastre um imóvel primeiro"

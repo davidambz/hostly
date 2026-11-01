@@ -1,17 +1,43 @@
 /**
- * Colors that tell properties apart on the calendar, readable with white or dark text in
- * both themes. Assigned by the property's place in the (name-sorted) list, so a property
- * keeps its color between visits.
+ * Colors that tell properties apart on the calendar: the `--property-N` theme tokens (see
+ * globals.css), each with a light and a dark version and readable text on it. Assigned by
+ * the property's place in the (name-sorted) list, so a property keeps its color.
+ *
+ * Whole class names, so Tailwind finds them in the source.
  */
 const COLORS = [
-  { bar: 'bg-sky-600 text-white hover:bg-sky-700', dot: 'bg-sky-600' },
-  { bar: 'bg-emerald-600 text-white hover:bg-emerald-700', dot: 'bg-emerald-600' },
-  { bar: 'bg-amber-400 text-amber-950 hover:bg-amber-500', dot: 'bg-amber-400' },
-  { bar: 'bg-rose-600 text-white hover:bg-rose-700', dot: 'bg-rose-600' },
-  { bar: 'bg-violet-600 text-white hover:bg-violet-700', dot: 'bg-violet-600' },
-  { bar: 'bg-teal-600 text-white hover:bg-teal-700', dot: 'bg-teal-600' },
-  { bar: 'bg-orange-500 text-orange-950 hover:bg-orange-600', dot: 'bg-orange-500' },
-  { bar: 'bg-indigo-600 text-white hover:bg-indigo-700', dot: 'bg-indigo-600' },
+  {
+    bar: 'bg-property-1 text-property-1-foreground hover:bg-property-1/85',
+    dot: 'bg-property-1',
+  },
+  {
+    bar: 'bg-property-2 text-property-2-foreground hover:bg-property-2/85',
+    dot: 'bg-property-2',
+  },
+  {
+    bar: 'bg-property-3 text-property-3-foreground hover:bg-property-3/85',
+    dot: 'bg-property-3',
+  },
+  {
+    bar: 'bg-property-4 text-property-4-foreground hover:bg-property-4/85',
+    dot: 'bg-property-4',
+  },
+  {
+    bar: 'bg-property-5 text-property-5-foreground hover:bg-property-5/85',
+    dot: 'bg-property-5',
+  },
+  {
+    bar: 'bg-property-6 text-property-6-foreground hover:bg-property-6/85',
+    dot: 'bg-property-6',
+  },
+  {
+    bar: 'bg-property-7 text-property-7-foreground hover:bg-property-7/85',
+    dot: 'bg-property-7',
+  },
+  {
+    bar: 'bg-property-8 text-property-8-foreground hover:bg-property-8/85',
+    dot: 'bg-property-8',
+  },
 ] as const
 
 export type PropertyColor = (typeof COLORS)[number]

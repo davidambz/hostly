@@ -1,3 +1,5 @@
+import { addDaysISO } from './dates'
+
 /** The part of a stay that falls in one week row of the calendar. */
 export interface Segment<T> {
   item: T
@@ -38,7 +40,7 @@ export function layoutWeek<T extends Stay>(days: string[], stays: T[]): Segment<
         span: endIndex - startIndex + 1,
         lane: 0,
         continuesBefore: stay.checkIn < first,
-        continuesAfter: stay.checkOut > addOne(last),
+        continuesAfter: stay.checkOut > addDaysISO(last, 1),
       }
     })
     .sort((a, b) => a.start - b.start || b.span - a.span)
@@ -51,13 +53,6 @@ export function layoutWeek<T extends Stay>(days: string[], stays: T[]): Segment<
     segment.lane = lane
   }
   return segments
-}
-
-/** The day after a `YYYY-MM-DD` date, compared as text (the format sorts like dates). */
-function addOne(date: string): string {
-  const next = new Date(`${date}T00:00:00Z`)
-  next.setUTCDate(next.getUTCDate() + 1)
-  return next.toISOString().slice(0, 10)
 }
 
 /** How many stays cover each day of the week (for the "+N" of a full day). */
