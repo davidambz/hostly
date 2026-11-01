@@ -17,7 +17,7 @@ describe('session', () => {
 
     renderRoute(routes, '/')
 
-    expect(await screen.findByRole('heading', { name: 'Olá, Ana' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Reservas' })).toBeInTheDocument()
     expect(getAccessToken()).toBe('token')
   })
 
@@ -36,7 +36,7 @@ describe('session', () => {
     renderRoute(routes, '/')
     await vi.advanceTimersByTimeAsync(RESUME_RETRY_DELAYS_MS[0] ?? 0)
 
-    expect(await screen.findByRole('heading', { name: 'Olá, Ana' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Reservas' })).toBeInTheDocument()
     expect(attempts).toBe(2)
     vi.useRealTimers()
   })
@@ -65,7 +65,7 @@ describe('session', () => {
     up = true
     await user.click(screen.getByRole('button', { name: 'Tentar de novo' }))
 
-    expect(await screen.findByRole('heading', { name: 'Olá, Ana' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Reservas' })).toBeInTheDocument()
     vi.useRealTimers()
   })
 
@@ -89,7 +89,8 @@ describe('session', () => {
     )
     const { router } = renderRoute(routes, '/')
 
-    await user.click(await screen.findByRole('button', { name: 'Sair' }))
+    await user.click(await screen.findByRole('button', { name: 'Conta de Ana Souza' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Sair' }))
 
     expect(await screen.findByRole('heading', { name: 'Entrar' })).toBeInTheDocument()
     expect(revoked).toBe(true)
@@ -105,7 +106,8 @@ describe('session', () => {
     )
     renderRoute(routes, '/')
 
-    await user.click(await screen.findByRole('button', { name: 'Sair' }))
+    await user.click(await screen.findByRole('button', { name: 'Conta de Ana Souza' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Sair' }))
 
     expect(await screen.findByRole('heading', { name: 'Entrar' })).toBeInTheDocument()
   })
@@ -113,7 +115,7 @@ describe('session', () => {
   it('goes back to the login when the session ends on its own', async () => {
     server.use(...loggedInHandlers)
     renderRoute(routes, '/')
-    await screen.findByRole('heading', { name: 'Olá, Ana' })
+    await screen.findByRole('heading', { name: 'Reservas' })
 
     act(() => {
       setAccessToken(null)
@@ -233,7 +235,7 @@ describe('login', () => {
     const { router } = renderRoute(routes, '/login')
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/')
+      expect(router.state.location.pathname).toBe('/reservas')
     })
   })
 })
@@ -289,7 +291,7 @@ describe('signup', () => {
     await fillSignup()
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/')
+      expect(router.state.location.pathname).toBe('/reservas')
     })
     expect(sent).toEqual({
       name: 'Ana Souza',

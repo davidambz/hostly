@@ -12,8 +12,30 @@ export default defineConfig({
   build: {
     rolldownOptions: {
       output: {
-        // Libraries change far less often than the app: a separate chunk stays cached.
-        codeSplitting: { groups: [{ name: 'vendor', test: /node_modules/ }] },
+        // Libraries change far less often than the app, so they get their own chunks, which
+        // stay cached across deploys; split by family so none of them grows too large.
+        // Only dependency-free packages go in 'react', so no chunk imports one that
+        // imports it back (react-router, with its own dependencies, stays in vendor).
+        codeSplitting: {
+          groups: [
+            {
+              name: 'react',
+              test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+              priority: 3,
+            },
+            {
+              name: 'radix',
+              test: /node_modules[\\/](radix-ui|@radix-ui|@floating-ui)[\\/]/,
+              priority: 2,
+            },
+            {
+              name: 'forms',
+              test: /node_modules[\\/](zod|react-hook-form|@hookform)[\\/]/,
+              priority: 2,
+            },
+            { name: 'vendor', test: /node_modules/, priority: 1 },
+          ],
+        },
       },
     },
   },
@@ -41,6 +63,7 @@ export default defineConfig({
         'src/lib/api/schema.d.ts',
         'src/components/ui/**',
         'src/vite-env.d.ts',
+        'src/lib/browser.ts',
       ],
       reporter: ['text', 'html', 'lcov'],
       thresholds: { lines: 85, functions: 85, branches: 85, statements: 85 },
