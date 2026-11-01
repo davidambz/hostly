@@ -2,7 +2,13 @@ import { fileURLToPath } from 'node:url'
 
 import { defineConfig } from 'vitest/config'
 
+// Workspace packages straight from their source, so an edit there shows up without a build.
+// The rest are Vite's defaults for the server (`defaultServerConditions`).
+const conditions = ['@hostly/source', 'module', 'node', 'development|production']
+
 export default defineConfig({
+  resolve: { conditions },
+  ssr: { resolve: { conditions, externalConditions: conditions } },
   test: {
     // Inside the app instead of the workspace root's node_modules, which the dev
     // container's node user can't write to.

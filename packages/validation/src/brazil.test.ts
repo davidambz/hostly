@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { validAlphanumericCnpj, validCnpj, validCpf } from '../../test/documents.js'
 import {
   cnpjCheckDigits,
   cpfCheckDigits,
@@ -12,8 +11,13 @@ import {
   isValidPhone,
   normalizeDocument,
   normalizePhone,
+  maskCep,
+  maskCnpj,
+  maskCpf,
+  maskPhone,
   onlyDigits,
 } from './brazil.js'
+import { validAlphanumericCnpj, validCnpj, validCpf } from './testing.js'
 
 describe('onlyDigits', () => {
   it.each([
@@ -167,5 +171,76 @@ describe('normalizeDocument', () => {
     [' 12 ABC 345 01DE 35 ', '12ABC34501DE35'],
   ])('%s → %s', (input, output) => {
     expect(normalizeDocument(input)).toBe(output)
+  })
+})
+
+describe('maskCpf', () => {
+  it.each([
+    ['', ''],
+    ['5', '5'],
+    ['529', '529'],
+    ['5299', '529.9'],
+    ['529982', '529.982'],
+    ['5299822', '529.982.2'],
+    ['529982247', '529.982.247'],
+    ['5299822472', '529.982.247-2'],
+    ['52998224725', '529.982.247-25'],
+    ['529982247250000', '529.982.247-25'],
+    ['529.982.247-25', '529.982.247-25'],
+    ['abc529', '529'],
+  ])('%j → %j', (input, output) => {
+    expect(maskCpf(input)).toBe(output)
+  })
+})
+
+describe('maskPhone', () => {
+  it.each([
+    ['', ''],
+    ['4', '(4'],
+    ['48', '(48'],
+    ['489', '(48) 9'],
+    ['483333', '(48) 3333'],
+    ['4833334', '(48) 3333-4'],
+    ['4833334444', '(48) 3333-4444'],
+    ['48999990000', '(48) 99999-0000'],
+    ['4899999000099', '(48) 99999-0000'],
+    ['+55 48 99999-0000', '(48) 99999-0000'],
+    ['048 3333-4444', '(48) 3333-4444'],
+  ])('%j → %j', (input, output) => {
+    expect(maskPhone(input)).toBe(output)
+  })
+})
+
+describe('maskCep', () => {
+  it.each([
+    ['', ''],
+    ['880', '880'],
+    ['88053', '88053'],
+    ['880537', '88053-7'],
+    ['88053700', '88053-700'],
+    ['88053-7009', '88053-700'],
+  ])('%j → %j', (input, output) => {
+    expect(maskCep(input)).toBe(output)
+  })
+})
+
+describe('maskCnpj', () => {
+  it.each([
+    ['', ''],
+    ['11', '11'],
+    ['112', '11.2'],
+    ['11222333', '11.222.333'],
+    ['112223330001', '11.222.333/0001'],
+    ['11222333000181', '11.222.333/0001-81'],
+    ['11.222.333/0001-81999', '11.222.333/0001-81'],
+    ['12abc34501de35', '12.ABC.345/01DE-35'],
+    // the check digits are digits only
+    ['12ABC34501DEXY', '12.ABC.345/01DE'],
+  ])('%j → %j', (input, output) => {
+    expect(maskCnpj(input)).toBe(output)
+  })
+
+  it('gives a CNPJ that is valid once normalized', () => {
+    expect(isValidCnpj(normalizeDocument(maskCnpj('12abc34501de35')))).toBe(true)
   })
 })

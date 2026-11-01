@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { isValidCep, maskCep, onlyDigits, STATES } from '@/lib/validation/brazil'
+import { isValidCep, maskCep, onlyDigits, STATES } from '@hostly/validation'
 
 import type { Property, PropertyInput } from './api'
 
@@ -10,7 +10,9 @@ const optional = (max: number, label: string) =>
 export const propertyFormSchema = z.object({
   name: z.string().trim().min(1, 'Dê um nome ao imóvel.').max(255, 'Nome longo demais.'),
   type: z.enum(['HOUSE', 'APARTMENT']),
-  zipCode: z.string().refine((value) => value === '' || isValidCep(value), 'CEP inválido.'),
+  zipCode: z
+    .string()
+    .refine((value) => value === '' || isValidCep(onlyDigits(value)), 'CEP inválido.'),
   state: z.union([z.literal(''), z.enum(STATES)]),
   city: optional(255, 'Cidade'),
   neighborhood: optional(255, 'Bairro'),

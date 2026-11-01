@@ -2,12 +2,15 @@ import { fileURLToPath } from 'node:url'
 
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { defaultClientConditions } from 'vite'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    // Workspace packages straight from their source, so an edit there shows up without a build.
+    conditions: ['@hostly/source', ...defaultClientConditions],
   },
   build: {
     rolldownOptions: {
@@ -52,7 +55,6 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    // Room for the first load of a lazy page (see src/test/setup.ts).
     testTimeout: 15_000,
     deps: {
       // Pre-bundled once instead of loaded as hundreds of modules in every worker, which
