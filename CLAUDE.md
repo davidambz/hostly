@@ -64,6 +64,25 @@ src/
 - As regras de integridade também ficam no banco, como CHECK constraints escritas à mão no SQL da migration (o Prisma não modela CHECK). Ao criar uma migration nova, use `--create-only` quando precisar acrescentar SQL.
 - O `.pnpmfile.cjs` tira o peer `prisma` do `@prisma/client`, para a CLI não ir para a imagem de produção. A CLI só existe na imagem `migrate`.
 
+## Web (`apps/web`)
+
+```
+src/
+  app/          # providers e rotas
+  pages/        # uma página por rota
+  components/   # ui/ (shadcn, gerados) e componentes do app (theme/, …)
+  lib/api/      # cliente da API: client.ts, errors.ts, session.ts, schema.d.ts (gerado)
+  lib/          # query client, utils
+  styles/       # globals.css: tokens da paleta (claro e escuro)
+  test/         # setup e helpers (renderRoute, renderWithProviders)
+```
+
+- **Paleta**: Prussian `#13293D`, Sapphire `#006494`, Celadon `#247BA0`, Carolina `#1B98E0` e Azure `#E8F1F2`, como tokens em `globals.css`. Use as classes do tema (`bg-primary`, `text-muted-foreground`…), nunca cores soltas. Tudo tem que funcionar no claro e no escuro (`ThemeProvider` + script no `index.html` que evita o flash).
+- **Sem cards**: listas e tabelas. As reservas também têm a visão de calendário.
+- **Contrato da API**: `apps/api/openapi.json` é gerado (`pnpm --filter @hostly/api openapi:export`) e os tipos do front saem dele (`pnpm --filter @hostly/web api:types`). Os dois arquivos são versionados, e o CI falha se estiverem desatualizados.
+- **Chamadas**: `api.GET('/rota')` (openapi-fetch, tipado) + `unwrap()`, que lança `ApiError` (`status`, `code`, `details`). O access token fica só em memória (`session.ts`); o `authFetch` faz o refresh no `TOKEN_EXPIRED` (um só, compartilhado) e repete a requisição.
+- Testes: Vitest + Testing Library + MSW (`*.test.tsx` ao lado do código). Os componentes de `components/ui` (shadcn) ficam fora da cobertura.
+
 ## Fluxo de trabalho
 
 - Tudo começa por uma issue. A branch sai da `dev` atualizada e se chama `feat/<n>-slug` (ou `fix/`, `chore/`, `docs/`, `test/`, `ci/`). O PR vai para `dev`.

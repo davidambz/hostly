@@ -25,7 +25,8 @@ export const propertiesRoutes: FastifyPluginAsyncZod = async (app) => {
   app.addHook('onRequest', app.authenticate)
 
   app.get(
-    '/',
+    // '', not '/': the route is the prefix itself (/x), without a trailing slash.
+    '',
     {
       schema: {
         tags,
@@ -55,7 +56,8 @@ export const propertiesRoutes: FastifyPluginAsyncZod = async (app) => {
   )
 
   app.post(
-    '/',
+    // '', not '/': the route is the prefix itself (/x), without a trailing slash.
+    '',
     {
       schema: {
         tags,

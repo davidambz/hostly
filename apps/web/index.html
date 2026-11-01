@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#13293D" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Hostly</title>
+    <script>
+      // Applies the saved theme before the first paint, so dark mode never flashes white.
+      try {
+        const saved = localStorage.getItem('hostly-theme')
+        // Anything but an explicit light or dark (missing, "system", garbage) follows the
+        // system, exactly as ThemeProvider reads it.
+        const dark =
+          saved === 'dark' ||
+          (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.classList.toggle('dark', dark)
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

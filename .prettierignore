@@ -3,3 +3,4 @@ pnpm-lock.yaml
 **/build
 **/coverage
 **/src/generated
+apps/api/openapi.json

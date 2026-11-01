@@ -57,6 +57,12 @@ jobs:
 
       - run: pnpm build
 
+      - name: Check the API contract and the web types are up to date
+        run: |
+          pnpm --filter @hostly/api openapi:export
+          pnpm --filter @hostly/web api:types
+          git diff --exit-code -- apps/api/openapi.json apps/web/src/lib/api/schema.d.ts
+
       - name: Check commit messages
         if: github.event_name == 'pull_request'
         run: >
@@ -106,6 +112,44 @@ jobs:
           cache-from: type=gha,scope=api
           # One shared scope; the prod chain covers every stage except the tiny dev/migrate tails.
           cache-to: type=gha,mode=max,scope=api
+
+      - name: Build web dev
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          target: dev
+          tags: hostly-web:dev
+          load: true
+          cache-from: type=gha,scope=web
+
+      - name: Build web prod
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          target: prod
+          tags: hostly-web:prod
+          load: true
+          cache-from: type=gha,scope=web
+          # One shared scope; the prod chain covers every stage except the tiny dev tail.
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Smoke test the web images
+        run: |
+          docker run -d --name web-prod -p 8080:8080 hostly-web:prod
+          docker run -d --name web-dev -p 5173:5173 hostly-web:dev
+          for _ in $(seq 1 30); do
+            if [ "$(docker inspect -f '{{.State.Health.Status}}' web-prod)" = healthy ] \
+              && curl -fsS http://127.0.0.1:8080/some/client/route | grep -q '<div id="root">' \
+              && curl -fsS http://127.0.0.1:5173/ | grep -q '<div id="root">'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs web-prod
+          docker logs web-dev
+          exit 1
 
       - name: Start Postgres
         run: |
