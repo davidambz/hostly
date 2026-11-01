@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { applyApiError } from '@/lib/api/form-errors'
-import { maskPhone, normalizeDocument } from '@/lib/validation/brazil'
+import { maskPhone, normalizeDocument } from '@hostly/validation'
 
 import { BROKER_TYPE_LABELS, type BrokerInput, type BrokerType } from './api'
 import {

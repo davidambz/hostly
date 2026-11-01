@@ -1,4 +1,4 @@
-import { maskPhone } from '@/lib/validation/brazil'
+import { maskPhone } from '@hostly/validation'
 
 import type { Broker } from './api'
 import { maskDocument } from './broker-schema'

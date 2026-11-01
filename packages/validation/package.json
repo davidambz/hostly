@@ -1,0 +1,32 @@
+{
+  "name": "@hostly/validation",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Brazilian document, phone and CEP rules shared by the API and the web app.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@hostly/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "@hostly/source": "./src/testing.ts",
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.5",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}

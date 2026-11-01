@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { applyApiError } from '@/lib/api/form-errors'
-import { isValidCep, maskCep, STATES } from '@/lib/validation/brazil'
+import { isValidCep, maskCep, onlyDigits, STATES } from '@hostly/validation'
 import { lookupCep } from '@/lib/viacep'
 
 import { PROPERTY_TYPE_LABELS, type PropertyInput } from './api'
@@ -64,7 +64,7 @@ export function PropertyForm({
   /** Fills the address from ViaCEP once a complete CEP is typed. */
   const searchCep = async (cep: string) => {
     lookup.current?.abort()
-    if (!isValidCep(cep)) {
+    if (!isValidCep(onlyDigits(cep))) {
       setCepStatus('idle')
       return
     }

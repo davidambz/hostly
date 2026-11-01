@@ -2,7 +2,7 @@ import type { Broker, BrokerType } from '../../generated/prisma/client.js'
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js'
 import { deleteOrFail } from '../../shared/owned-rows.js'
 import type { Page } from '../../shared/pagination.js'
-import { isValidCnpj, isValidCpf } from '../../shared/validation/brazil.js'
+import { isValidCnpj, isValidCpf } from '@hostly/validation'
 import type { BrokersRepository } from './brokers.repository.js'
 import type { CreateBrokerInput, ListBrokersQuery, UpdateBrokerInput } from './brokers.schemas.js'
 

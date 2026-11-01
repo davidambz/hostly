@@ -10,7 +10,7 @@ import {
   maskPhone,
   normalizeDocument,
   normalizePhone,
-} from '@/lib/validation/brazil'
+} from '@hostly/validation'
 
 import type { Broker, BrokerInput, BrokerType } from './api'
 
@@ -33,18 +33,24 @@ export const brokerFormSchema = z
     mobilePhone: z
       .string()
       .trim()
-      .refine((value) => value === '' || isValidMobilePhone(value), 'Celular inválido.'),
+      .refine(
+        (value) => value === '' || isValidMobilePhone(normalizePhone(value)),
+        'Celular inválido.',
+      ),
     landlinePhone: z
       .string()
       .trim()
-      .refine((value) => value === '' || isValidLandlinePhone(value), 'Telefone fixo inválido.'),
+      .refine(
+        (value) => value === '' || isValidLandlinePhone(normalizePhone(value)),
+        'Telefone fixo inválido.',
+      ),
   })
   .superRefine(({ type, document }, ctx) => {
     if (document === '') return
-    if (type === 'INDIVIDUAL' && !isValidCpf(document)) {
+    if (type === 'INDIVIDUAL' && !isValidCpf(normalizeDocument(document))) {
       ctx.addIssue({ code: 'custom', path: ['document'], message: 'CPF inválido.' })
     }
-    if (type === 'COMPANY' && !isValidCnpj(document)) {
+    if (type === 'COMPANY' && !isValidCnpj(normalizeDocument(document))) {
       ctx.addIssue({ code: 'custom', path: ['document'], message: 'CNPJ inválido.' })
     }
   })

@@ -17,6 +17,8 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    "customConditions": ["@hostly/source"]
   }
 }

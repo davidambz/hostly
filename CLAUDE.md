@@ -8,7 +8,8 @@ Gestão de reservas para aluguel de temporada. Reescrita do projeto `suasreserva
 apps/
   api/   # API REST (Fastify + Prisma + Zod)
   web/   # SPA (React + Vite + shadcn/ui + TanStack Query)
-packages/  # código compartilhado entre os apps
+packages/
+  validation/  # @hostly/validation: CPF, CNPJ, telefone e CEP (validadores e máscaras)
 ```
 
 Monorepo com pnpm workspaces (Node 24, pnpm via corepack). TypeScript `strict` em tudo, com a config base em `tsconfig.base.json`. ESLint (flat config, type-checked) e Prettier ficam na raiz.
@@ -42,7 +43,7 @@ src/
 - Toda rota, inclusive a 404, passa pelo rate limit. As exceções são `/health` (liveness, sempre 200 com o processo de pé, usado pelo `HEALTHCHECK`) e `/health/ready` (readiness: 200 ou 503 conforme o banco), com `config: { rateLimit: false }`. O 503 da readiness é o relatório de saúde, não um erro, e por isso não passa pelo error handler.
 - Os testes ficam ao lado do código e usam `app.inject()`. O env dos testes vem de `src/test/env.ts`.
   - `*.test.ts` (projeto `unit`): sem banco, com `fakeDatabase()` ou um repository fake.
-  - `*.int.test.ts` (projeto `integration`): Postgres de verdade em `TEST_DATABASE_URL`, cujo nome precisa terminar em `_test`. O banco é recriado e migrado a cada execução e as tabelas são esvaziadas antes de cada teste. Os arquivos rodam em série. Use `testDatabase()` e as factories de `src/test/factories.ts`, e `validCpf`/`validCnpj` de `src/test/documents.ts`.
+  - `*.int.test.ts` (projeto `integration`): Postgres de verdade em `TEST_DATABASE_URL`, cujo nome precisa terminar em `_test`. O banco é recriado e migrado a cada execução e as tabelas são esvaziadas antes de cada teste. Os arquivos rodam em série. Use `testDatabase()` e as factories de `src/test/factories.ts`, e `validCpf`/`validCnpj` de `src/test/documents.ts` (que reexporta `@hostly/validation/testing`).
   - Cada feature cobre caminho feliz, validação, 401/403/404/409, isolamento entre usuários e casos de borda. A cobertura mínima é de 85%.
 - Docs em `/docs` (Swagger UI) e `/docs/json` (OpenAPI).
 
@@ -82,6 +83,11 @@ src/
 - **Contrato da API**: `apps/api/openapi.json` é gerado (`pnpm --filter @hostly/api openapi:export`) e os tipos do front saem dele (`pnpm --filter @hostly/web api:types`). Os dois arquivos são versionados, e o CI falha se estiverem desatualizados.
 - **Chamadas**: `api.GET('/rota')` (openapi-fetch, tipado) + `unwrap()`, que lança `ApiError` (`status`, `code`, `details`). O access token fica só em memória (`session.ts`); o `authFetch` faz o refresh no `TOKEN_EXPIRED` (um só, compartilhado) e repete a requisição.
 - Testes: Vitest + Testing Library + MSW (`*.test.tsx` ao lado do código). Os componentes de `components/ui` (shadcn) ficam fora da cobertura.
+
+## Pacote compartilhado (`packages/validation`)
+
+- `@hostly/validation` tem as regras brasileiras usadas pela API e pelo front. Os validadores (`isValid…`) recebem o valor já normalizado (`onlyDigits`, `normalizePhone`, `normalizeDocument`); as máscaras (`mask…`) aceitam qualquer texto digitado. Nunca duplique essas regras num app.
+- O `exports` tem a condição `@hostly/source`, que aponta para o `src`: TypeScript (`customConditions` no `tsconfig.base.json`), tsx (`--conditions`), Vite e Vitest leem o fonte direto, sem build. Só o build de produção da API usa o `dist/` (`tsc`, no gitignore), compilado por `pnpm build` e pelo Dockerfile. Um app novo que consuma o pacote precisa da mesma condição.
 
 ## Fluxo de trabalho
 

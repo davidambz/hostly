@@ -1,4 +1,4 @@
-import { onlyDigits } from '@/lib/validation/brazil'
+import { onlyDigits } from '@hostly/validation'
 
 /** The API's highest amount: R$ 10 million, in cents. */
 export const MAX_CENTS = 1_000_000_000
