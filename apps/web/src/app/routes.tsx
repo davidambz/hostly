@@ -2,8 +2,6 @@ import { Navigate, type RouteObject } from 'react-router'
 
 import { AppLayout } from '@/components/layout/app-layout'
 import { RequireAuth, RequireGuest } from '@/features/auth/guards'
-import { LoginPage } from '@/features/auth/login-page'
-import { RegisterPage } from '@/features/auth/register-page'
 import { NotFoundPage } from '@/pages/not-found-page'
 
 import type { RouteHandle } from './navigation'
@@ -14,8 +12,18 @@ export const routes: RouteObject[] = [
   {
     element: <RequireGuest />,
     children: [
-      { path: '/login', element: <LoginPage />, handle: handle('Entrar') },
-      { path: '/cadastro', element: <RegisterPage />, handle: handle('Criar conta') },
+      {
+        path: '/login',
+        handle: handle('Entrar'),
+        lazy: async () => ({ Component: (await import('@/features/auth/login-page')).LoginPage }),
+      },
+      {
+        path: '/cadastro',
+        handle: handle('Criar conta'),
+        lazy: async () => ({
+          Component: (await import('@/features/auth/register-page')).RegisterPage,
+        }),
+      },
     ],
   },
   {

@@ -12,8 +12,28 @@ export default defineConfig({
   build: {
     rolldownOptions: {
       output: {
-        // Libraries change far less often than the app: a separate chunk stays cached.
-        codeSplitting: { groups: [{ name: 'vendor', test: /node_modules/ }] },
+        // Libraries change far less often than the app, so they get their own chunks, which
+        // stay cached across deploys; split by family so none of them grows too large.
+        codeSplitting: {
+          groups: [
+            {
+              name: 'react',
+              test: /node_modules[\\/](react|react-dom|react-router|scheduler)[\\/]/,
+              priority: 3,
+            },
+            {
+              name: 'radix',
+              test: /node_modules[\\/](radix-ui|@radix-ui|@floating-ui)[\\/]/,
+              priority: 2,
+            },
+            {
+              name: 'forms',
+              test: /node_modules[\\/](zod|react-hook-form|@hookform)[\\/]/,
+              priority: 2,
+            },
+            { name: 'vendor', test: /node_modules/, priority: 1 },
+          ],
+        },
       },
     },
   },
