@@ -1,11 +1,33 @@
 /**
  * Brazilian document and phone helpers for forms: masks for display while typing, and
- * the same checks the API runs, so most mistakes show up before the request. The API
- * stays the authority; these only spare the user a round trip.
+ * the same rules the API applies (see apps/api/src/shared/validation/brazil.ts), so most
+ * mistakes show up before the request. The API stays the authority.
  */
 
 export function onlyDigits(value: string): string {
   return value.replace(/\D/g, '')
+}
+
+/** Every area code (DDD) in use, from Anatel's numbering plan. Same list as the API. */
+const AREA_CODES = new Set([
+  11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 24, 27, 28, 31, 32, 33, 34, 35, 37, 38, 41, 42, 43,
+  44, 45, 46, 47, 48, 49, 51, 53, 54, 55, 61, 62, 63, 64, 65, 66, 67, 68, 69, 71, 73, 74, 75, 77,
+  79, 81, 82, 83, 84, 85, 86, 87, 88, 89, 91, 92, 93, 94, 95, 96, 97, 98, 99,
+])
+
+/**
+ * Digits of a phone as people type or paste it: drops the country code (+55) or the
+ * long-distance 0, like the API does.
+ */
+export function normalizePhone(value: string): string {
+  const digits = onlyDigits(value)
+  if (digits.startsWith('0') && (digits.length === 11 || digits.length === 12)) {
+    return digits.slice(1)
+  }
+  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+    return digits.slice(2)
+  }
+  return digits
 }
 
 /** `52998224725` → `529.982.247-25`, also while typing. */
@@ -17,9 +39,9 @@ export function maskCpf(value: string): string {
     .replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2')
 }
 
-/** `48999990000` → `(48) 99999-0000`; `4833334444` → `(48) 3333-4444`. */
+/** `48999990000` → `(48) 99999-0000`; `4833334444` → `(48) 3333-4444`; `+55 …` is dropped. */
 export function maskPhone(value: string): string {
-  const d = onlyDigits(value).slice(0, 11)
+  const d = normalizePhone(value).slice(0, 11)
   if (d.length <= 2) return d.length ? `(${d}` : ''
   const area = d.slice(0, 2)
   const rest = d.slice(2)
@@ -41,7 +63,8 @@ export function isValidCpf(value: string): boolean {
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10])
 }
 
-/** DDD + number: 10 digits for a landline (2–5 after the DDD) or 11 for a mobile (9). */
+/** DDD in use + a mobile (9 + 8 digits) or a landline (2–5 + 7 digits). */
 export function isValidPhone(value: string): boolean {
-  return /^[1-9]\d(?:9\d{8}|[2-5]\d{7})$/.test(onlyDigits(value))
+  const phone = normalizePhone(value)
+  return /^\d{2}(?:9\d{8}|[2-5]\d{7})$/.test(phone) && AREA_CODES.has(Number(phone.slice(0, 2)))
 }

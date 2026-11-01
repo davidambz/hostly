@@ -32,6 +32,8 @@ describe('maskPhone', () => {
     ['4833334444', '(48) 3333-4444'],
     ['48999990000', '(48) 99999-0000'],
     ['4899999000099', '(48) 99999-0000'],
+    ['+55 48 99999-0000', '(48) 99999-0000'],
+    ['048 3333-4444', '(48) 3333-4444'],
   ])('%j → %j', (input, output) => {
     expect(maskPhone(input)).toBe(output)
   })
@@ -48,16 +50,26 @@ describe('isValidCpf', () => {
 })
 
 describe('isValidPhone', () => {
-  it.each(['(48) 99999-0000', '(48) 3333-4444', '11987654321'])('accepts %s', (phone) => {
+  it.each([
+    '(48) 99999-0000',
+    '(48) 3333-4444',
+    '11987654321',
+    '+55 48 99999-0000',
+    '048 3333-4444',
+  ])('accepts %s', (phone) => {
     expect(isValidPhone(phone)).toBe(true)
   })
 
-  it.each(['(48) 8999-00000', '(48) 9333-4444', '(08) 99999-0000', '9999-0000'])(
-    'rejects %s',
-    (phone) => {
-      expect(isValidPhone(phone)).toBe(false)
-    },
-  )
+  it.each([
+    '(48) 8999-00000',
+    '(48) 9333-4444',
+    '(08) 99999-0000',
+    '9999-0000',
+    '(20) 99999-0000',
+    '(23) 3333-4444',
+  ])('rejects %s', (phone) => {
+    expect(isValidPhone(phone)).toBe(false)
+  })
 })
 
 it('onlyDigits strips everything else', () => {

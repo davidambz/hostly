@@ -32,6 +32,9 @@ describe('routes', () => {
 
     await user.click(screen.getByRole('link', { name: 'Voltar ao início' }))
 
-    expect(router.state.location.pathname).not.toBe('/nada/aqui')
+    // An anonymous visitor lands on /, which sends them to the login.
+    await screen.findByRole('heading', { name: 'Entrar' })
+    expect(router.state.location.pathname).toBe('/login')
+    expect(router.state.location.search).toBe('?redirect=%2F')
   })
 })

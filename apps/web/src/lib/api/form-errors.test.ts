@@ -4,9 +4,9 @@ import { ApiError } from './errors'
 import { applyApiError, errorMessage } from './form-errors'
 
 describe('applyApiError', () => {
-  const fields = ['email', 'phone'] as const
+  const fields = { email: 'E-mail inválido.', phone: 'Telefone inválido.' }
 
-  it('puts each known validation issue on its field', () => {
+  it('puts each known validation issue on its field, in Portuguese', () => {
     const setError = vi.fn()
     const error = new ApiError(400, {
       code: 'VALIDATION_ERROR',
@@ -18,8 +18,11 @@ describe('applyApiError', () => {
 
     applyApiError(error, setError, fields)
 
-    expect(setError).toHaveBeenCalledWith('email', { type: 'server', message: 'bad email' })
-    expect(setError).toHaveBeenCalledWith('phone', { type: 'server', message: 'bad phone' })
+    expect(setError).toHaveBeenCalledWith('email', { type: 'server', message: 'E-mail inválido.' })
+    expect(setError).toHaveBeenCalledWith('phone', {
+      type: 'server',
+      message: 'Telefone inválido.',
+    })
     expect(setError).not.toHaveBeenCalledWith('root', expect.anything())
   })
 
@@ -36,7 +39,10 @@ describe('applyApiError', () => {
       fields,
     )
 
-    expect(setError).toHaveBeenCalledWith('root', { type: 'server', message: 'Bad' })
+    expect(setError).toHaveBeenCalledWith('root', {
+      type: 'server',
+      message: 'Não foi possível concluir. Confira os dados e tente de novo.',
+    })
   })
 
   it('puts a domain error naming a field on that field, in Portuguese', () => {
@@ -66,10 +72,25 @@ describe('applyApiError', () => {
   })
 })
 
+it('uses a generic Portuguese message for a field without one', () => {
+  const setError = vi.fn()
+
+  applyApiError(
+    new ApiError(400, { code: 'VALIDATION_ERROR', details: [{ path: 'email', message: 'x' }] }),
+    setError,
+    { email: undefined },
+  )
+
+  expect(setError).toHaveBeenCalledWith('email', { type: 'server', message: 'Valor inválido.' })
+})
+
 describe('errorMessage', () => {
   it.each([
     [new ApiError(401, { code: 'INVALID_CREDENTIALS' }), 'E-mail ou senha incorretos.'],
-    [new ApiError(404, { code: 'X', message: 'Not here' }), 'Not here'],
+    [
+      new ApiError(404, { code: 'X', message: 'Not here' }),
+      'Não foi possível concluir. Confira os dados e tente de novo.',
+    ],
     [new ApiError(502, undefined), 'Algo deu errado. Tente de novo em instantes.'],
     [new Error('boom'), 'Algo deu errado. Tente de novo em instantes.'],
   ])('%o → %s', (error, message) => {

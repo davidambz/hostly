@@ -26,7 +26,8 @@ export function TextField({
   const inputId = id ?? generatedId
   const errorId = `${inputId}-error`
   const hintId = `${inputId}-hint`
-  const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ')
+  const showHint = Boolean(hint) && !error
+  const describedBy = [error ? errorId : null, showHint ? hintId : null].filter(Boolean).join(' ')
 
   return (
     <div className={cn('grid gap-2', className)}>
@@ -43,7 +44,7 @@ export function TextField({
           <div className="absolute inset-y-0 right-0 flex items-center pr-1">{trailing}</div>
         )}
       </div>
-      {hint && !error && (
+      {showHint && (
         <p id={hintId} className="text-muted-foreground text-xs">
           {hint}
         </p>

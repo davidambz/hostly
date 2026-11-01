@@ -16,9 +16,11 @@ import { type LoginValues, loginSchema } from './schemas'
 export function LoginPage() {
   const { login } = useAuth()
   const [params] = useSearchParams()
+  const accountCreated = params.has('created')
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    // After a signup whose automatic login failed, the e-mail comes along.
+    defaultValues: { email: params.get('email') ?? '', password: '' },
   })
   const { errors, isSubmitting } = form.formState
 
@@ -27,11 +29,17 @@ export function LoginPage() {
       // RequireGuest sends the user on once the session is up.
       await login(values)
     } catch (error) {
-      applyApiError(error, form.setError, ['email', 'password'])
+      applyApiError(error, form.setError, {
+        email: 'E-mail inválido.',
+        password: 'Senha inválida.',
+      })
     }
   })
 
-  const signupLink = params.has('redirect') ? `/cadastro?${params.toString()}` : '/cadastro'
+  const redirect = params.get('redirect')
+  const signupLink = redirect
+    ? `/cadastro?${new URLSearchParams({ redirect }).toString()}`
+    : '/cadastro'
 
   return (
     <AuthLayout
@@ -49,18 +57,24 @@ export function LoginPage() {
       }
     >
       <form noValidate onSubmit={(event) => void onSubmit(event)} className="grid gap-4">
+        {accountCreated && !errors.root && (
+          <p role="status" className="bg-success/10 text-success rounded-md px-3 py-2 text-sm">
+            Conta criada! Entre com seu e-mail e senha para continuar.
+          </p>
+        )}
         <FormError message={errors.root?.message} />
         <TextField
           label="E-mail"
           type="email"
           autoComplete="email"
-          autoFocus
+          autoFocus={!accountCreated}
           error={errors.email?.message}
           {...form.register('email')}
         />
         <PasswordField
           label="Senha"
           autoComplete="current-password"
+          autoFocus={accountCreated}
           error={errors.password?.message}
           {...form.register('password')}
         />

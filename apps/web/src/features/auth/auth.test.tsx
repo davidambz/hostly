@@ -8,6 +8,7 @@ import { getAccessToken, setAccessToken } from '@/lib/api/session'
 import { renderRoute } from '@/test/render'
 import { apiError, loggedInHandlers, server, testUser, url } from '@/test/server'
 
+import { RESUME_RETRY_DELAYS_MS } from './auth-context'
 import { safeRedirect } from './redirect'
 
 describe('session', () => {
@@ -20,13 +21,52 @@ describe('session', () => {
     expect(getAccessToken()).toBe('token')
   })
 
-  it('starts logged out when the API cannot be reached', async () => {
-    server.use(http.post(url('/auth/refresh'), () => HttpResponse.error()))
+  it('keeps a session through a brief API hiccup instead of logging out', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let attempts = 0
+    server.use(
+      http.post(url('/auth/refresh'), () =>
+        ++attempts === 1
+          ? apiError(429, 'TOO_MANY_REQUESTS')
+          : HttpResponse.json({ accessToken: 'token', tokenType: 'Bearer', expiresIn: 900 }),
+      ),
+      http.get(url('/me'), () => HttpResponse.json(testUser)),
+    )
 
+    renderRoute(routes, '/')
+    await vi.advanceTimersByTimeAsync(RESUME_RETRY_DELAYS_MS[0] ?? 0)
+
+    expect(await screen.findByRole('heading', { name: 'Olá, Ana' })).toBeInTheDocument()
+    expect(attempts).toBe(2)
+    vi.useRealTimers()
+  })
+
+  it('says the server is unreachable after a few tries, and resumes on demand', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) })
+    let up = false
+    server.use(
+      http.post(url('/auth/refresh'), () =>
+        up
+          ? HttpResponse.json({ accessToken: 'token', tokenType: 'Bearer', expiresIn: 900 })
+          : HttpResponse.error(),
+      ),
+      http.get(url('/me'), () => HttpResponse.json(testUser)),
+    )
     const { router } = renderRoute(routes, '/')
 
-    expect(await screen.findByRole('heading', { name: 'Entrar' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/login')
+    for (const delay of RESUME_RETRY_DELAYS_MS) await vi.advanceTimersByTimeAsync(delay)
+
+    expect(
+      await screen.findByRole('heading', { name: 'Não foi possível conectar' }),
+    ).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/')
+
+    up = true
+    await user.click(screen.getByRole('button', { name: 'Tentar de novo' }))
+
+    expect(await screen.findByRole('heading', { name: 'Olá, Ana' })).toBeInTheDocument()
+    vi.useRealTimers()
   })
 
   it('shows a spinner while resuming', () => {
@@ -291,7 +331,22 @@ describe('signup', () => {
     })
   })
 
-  it('puts API validation messages on their fields', async () => {
+  it('sends the user to the login when the account was created but the automatic login failed', async () => {
+    server.use(
+      http.post(url('/auth/register'), () => HttpResponse.json(testUser, { status: 201 })),
+      http.post(url('/auth/login'), () => apiError(429, 'TOO_MANY_REQUESTS')),
+    )
+    const { router } = renderRoute(routes, '/cadastro?redirect=%2Freservas')
+
+    await fillSignup()
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Conta criada!')
+    expect(router.state.location.pathname).toBe('/login')
+    expect(screen.getByLabelText('E-mail')).toHaveValue('ana@hostly.dev')
+    expect(new URLSearchParams(router.state.location.search).get('redirect')).toBe('/reservas')
+  })
+
+  it('puts API validation messages on their fields, in Portuguese', async () => {
     server.use(
       http.post(url('/auth/register'), () =>
         apiError(400, 'VALIDATION_ERROR', [
@@ -304,7 +359,9 @@ describe('signup', () => {
     await fillSignup()
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Telefone')).toHaveAccessibleDescription('Invalid phone number')
+      expect(screen.getByLabelText('Telefone')).toHaveAccessibleDescription(
+        'Telefone inválido. Use DDD + número.',
+      )
     })
   })
 })
@@ -317,6 +374,9 @@ describe('safeRedirect', () => {
     ['https://evil.com', '/'],
     ['//evil.com', '/'],
     ['reservas', '/'],
+    ['/\\evil.com', '/'],
+    ['/\t/evil.com', '/'],
+    ['/reservas#hoje', '/reservas#hoje'],
   ])('%j → %j', (target, expected) => {
     expect(safeRedirect(target)).toBe(expected)
   })

@@ -1,5 +1,7 @@
-import { Loader2 } from 'lucide-react'
+import { Loader2, WifiOff } from 'lucide-react'
 import { Navigate, Outlet, useLocation, useSearchParams } from 'react-router'
+
+import { Button } from '@/components/ui/button'
 
 import { useAuth } from './auth-context'
 import { safeRedirect } from './redirect'
@@ -13,12 +15,26 @@ function FullScreenSpinner() {
   )
 }
 
+function Unavailable({ onRetry }: { onRetry: () => void }) {
+  return (
+    <main className="flex min-h-svh flex-col items-center justify-center gap-4 p-6 text-center">
+      <WifiOff className="text-muted-foreground size-10" aria-hidden />
+      <h1 className="text-xl font-semibold">Não foi possível conectar</h1>
+      <p className="text-muted-foreground max-w-sm text-sm">
+        O servidor não respondeu. Sua sessão continua guardada; tente de novo em instantes.
+      </p>
+      <Button onClick={onRetry}>Tentar de novo</Button>
+    </main>
+  )
+}
+
 /** Pages for logged-in users; anyone else goes to the login, coming back here after it. */
 export function RequireAuth() {
-  const { status } = useAuth()
+  const { status, retry } = useAuth()
   const location = useLocation()
 
   if (status === 'loading') return <FullScreenSpinner />
+  if (status === 'unavailable') return <Unavailable onRetry={retry} />
   if (status === 'anonymous') {
     const redirect = encodeURIComponent(location.pathname + location.search)
     return <Navigate to={`/login?redirect=${redirect}`} replace />

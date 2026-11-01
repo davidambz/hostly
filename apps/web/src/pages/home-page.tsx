@@ -12,7 +12,7 @@ export function HomePage() {
     <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-6 text-center">
       <div className="absolute top-4 right-4 flex items-center gap-1">
         <ModeToggle />
-        <Button variant="ghost" size="icon" aria-label="Sair" onClick={() => void logout()}>
+        <Button variant="ghost" size="icon" aria-label="Sair" onClick={logout}>
           <LogOut className="size-5" />
         </Button>
       </div>

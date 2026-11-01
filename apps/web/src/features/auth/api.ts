@@ -27,11 +27,14 @@ export async function fetchMe(): Promise<User> {
   return unwrap(await api.GET('/me'))
 }
 
-/** Revokes the session server-side; failures don't matter, the client forgets it anyway. */
+/**
+ * Revokes the session server-side. Best-effort: the client has already forgotten it, so
+ * failures (offline, API down) are ignored.
+ */
 export async function logout(): Promise<void> {
   try {
     await api.POST('/auth/logout')
   } catch {
-    // Offline or API down: the local session is dropped regardless.
+    // Nothing to do: the local session is already gone.
   }
 }

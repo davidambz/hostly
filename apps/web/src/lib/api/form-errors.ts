@@ -1,6 +1,6 @@
 import type { FieldValues, Path, UseFormSetError } from 'react-hook-form'
 
-import { ApiError } from './errors'
+import { ApiError, errorField } from './errors'
 
 /** Portuguese messages for the API codes a form can run into. */
 const MESSAGES: Record<string, string> = {
@@ -11,12 +11,15 @@ const MESSAGES: Record<string, string> = {
 }
 
 const GENERIC = 'Algo deu errado. Tente de novo em instantes.'
+const REJECTED = 'Não foi possível concluir. Confira os dados e tente de novo.'
+const INVALID_FIELD = 'Valor inválido.'
 const OFFLINE = 'Não foi possível falar com o servidor. Confira sua conexão.'
 
 /** The message to show for any error thrown by an API call. */
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    return MESSAGES[error.code] ?? (error.status >= 500 ? GENERIC : error.message)
+    // API messages are in English; the UI only shows Portuguese ones.
+    return MESSAGES[error.code] ?? (error.status >= 500 ? GENERIC : REJECTED)
   }
   return error instanceof TypeError ? OFFLINE : GENERIC
 }
@@ -31,25 +34,28 @@ function isIssueList(details: unknown): details is Issue[] {
 }
 
 /**
- * Puts an API error on the form: each field the API complains about gets its message
- * (when the form has that field), anything else becomes a form-level error (`root`).
+ * Puts an API error on the form: each field the API complains about gets the form's
+ * Portuguese message for it (API messages are English), a domain error naming a field goes
+ * on that field, and anything else becomes a form-level error (`root`).
  */
 export function applyApiError<T extends FieldValues>(
   error: unknown,
   setError: UseFormSetError<T>,
-  fields: readonly Path<T>[],
+  /** The form's fields, each with the message to show when the API rejects it. */
+  fields: Partial<Record<Path<T>, string>>,
 ): void {
-  const known = new Set<string>(fields)
+  const known = new Set<string>(Object.keys(fields))
+  const messageFor = (path: string) => fields[path as Path<T>] ?? INVALID_FIELD
   if (error instanceof ApiError) {
     if (error.code === 'VALIDATION_ERROR' && isIssueList(error.details)) {
       const issues = error.details.filter((issue) => known.has(issue.path))
       for (const issue of issues) {
-        setError(issue.path as Path<T>, { type: 'server', message: issue.message })
+        setError(issue.path as Path<T>, { type: 'server', message: messageFor(issue.path) })
       }
       if (issues.length > 0) return
     }
-    const field = (error.details as { field?: unknown } | undefined)?.field
-    if (typeof field === 'string' && known.has(field)) {
+    const field = errorField(error)
+    if (field !== undefined && known.has(field)) {
       setError(field as Path<T>, { type: 'server', message: errorMessage(error) })
       return
     }
