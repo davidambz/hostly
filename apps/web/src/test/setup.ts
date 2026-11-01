@@ -1,7 +1,11 @@
 import '@testing-library/jest-dom/vitest'
 
 import { cleanup } from '@testing-library/react'
-import { afterEach, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, vi } from 'vitest'
+
+import { setAccessToken } from '@/lib/api/session'
+
+import { server } from './server'
 
 // jsdom has no matchMedia; the theme provider reads it.
 Object.defineProperty(window, 'matchMedia', {
@@ -18,8 +22,18 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+beforeAll(() => {
+  server.listen({ onUnhandledFrame: 'error' })
+})
+
 afterEach(() => {
   cleanup()
+  server.resetHandlers()
+  setAccessToken(null)
   localStorage.clear()
   document.documentElement.classList.remove('dark')
+})
+
+afterAll(() => {
+  server.close()
 })

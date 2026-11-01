@@ -1,23 +1,11 @@
 import { http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { server } from '@/test/server'
 
 import { api, API_URL, refreshSession, RefreshUnavailableError } from './client'
 import { ApiError, unwrap } from './errors'
 import { getAccessToken, onAccessTokenChange, setAccessToken } from './session'
-
-const server = setupServer()
-
-beforeAll(() => {
-  server.listen({ onUnhandledFrame: 'error' })
-})
-afterEach(() => {
-  server.resetHandlers()
-  setAccessToken(null)
-})
-afterAll(() => {
-  server.close()
-})
 
 const me = { id: 'u1', name: 'Ana', email: 'ana@hostly.dev', cpf: '1', phone: '1', createdAt: '' }
 const expired = () =>
