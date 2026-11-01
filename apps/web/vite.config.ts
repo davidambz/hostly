@@ -61,6 +61,7 @@ export default defineConfig({
         'src/lib/api/schema.d.ts',
         'src/components/ui/**',
         'src/vite-env.d.ts',
+        'src/lib/browser.ts',
       ],
       reporter: ['text', 'html', 'lcov'],
       thresholds: { lines: 85, functions: 85, branches: 85, statements: 85 },

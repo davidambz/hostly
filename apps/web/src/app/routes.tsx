@@ -3,6 +3,7 @@ import { Navigate, type RouteObject } from 'react-router'
 import { AppLayout } from '@/components/layout/app-layout'
 import { RequireAuth, RequireGuest } from '@/features/auth/guards'
 import { NotFoundPage } from '@/pages/not-found-page'
+import { RouteErrorPage } from '@/pages/route-error-page'
 
 import type { RouteHandle } from './navigation'
 
@@ -10,53 +11,61 @@ const handle = (title: string): RouteHandle => ({ title })
 
 export const routes: RouteObject[] = [
   {
-    element: <RequireGuest />,
+    // One error screen for the whole app: anything thrown while rendering or lazy-loading.
+    errorElement: <RouteErrorPage />,
     children: [
       {
-        path: '/login',
-        handle: handle('Entrar'),
-        lazy: async () => ({ Component: (await import('@/features/auth/login-page')).LoginPage }),
-      },
-      {
-        path: '/cadastro',
-        handle: handle('Criar conta'),
-        lazy: async () => ({
-          Component: (await import('@/features/auth/register-page')).RegisterPage,
-        }),
-      },
-    ],
-  },
-  {
-    element: <RequireAuth />,
-    children: [
-      {
-        element: <AppLayout />,
+        element: <RequireGuest />,
         children: [
-          { path: '/', element: <Navigate to="/reservas" replace /> },
           {
-            path: '/reservas',
-            handle: handle('Reservas'),
+            path: '/login',
+            handle: handle('Entrar'),
             lazy: async () => ({
-              Component: (await import('@/features/bookings/bookings-page')).BookingsPage,
+              Component: (await import('@/features/auth/login-page')).LoginPage,
             }),
           },
           {
-            path: '/imoveis',
-            handle: handle('Imóveis'),
+            path: '/cadastro',
+            handle: handle('Criar conta'),
             lazy: async () => ({
-              Component: (await import('@/features/properties/properties-page')).PropertiesPage,
-            }),
-          },
-          {
-            path: '/intermediadores',
-            handle: handle('Intermediadores'),
-            lazy: async () => ({
-              Component: (await import('@/features/brokers/brokers-page')).BrokersPage,
+              Component: (await import('@/features/auth/register-page')).RegisterPage,
             }),
           },
         ],
       },
+      {
+        element: <RequireAuth />,
+        children: [
+          {
+            element: <AppLayout />,
+            children: [
+              { path: '/', element: <Navigate to="/reservas" replace /> },
+              {
+                path: '/reservas',
+                handle: handle('Reservas'),
+                lazy: async () => ({
+                  Component: (await import('@/features/bookings/bookings-page')).BookingsPage,
+                }),
+              },
+              {
+                path: '/imoveis',
+                handle: handle('Imóveis'),
+                lazy: async () => ({
+                  Component: (await import('@/features/properties/properties-page')).PropertiesPage,
+                }),
+              },
+              {
+                path: '/intermediadores',
+                handle: handle('Intermediadores'),
+                lazy: async () => ({
+                  Component: (await import('@/features/brokers/brokers-page')).BrokersPage,
+                }),
+              },
+            ],
+          },
+        ],
+      },
+      { path: '*', element: <NotFoundPage />, handle: handle('Página não encontrada') },
     ],
   },
-  { path: '*', element: <NotFoundPage />, handle: handle('Página não encontrada') },
 ]

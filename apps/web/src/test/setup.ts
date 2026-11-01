@@ -22,6 +22,15 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// jsdom has no ResizeObserver; Radix measures elements with it. Nothing to measure here.
+const noop = () => undefined
+class ResizeObserverStub {
+  observe = noop
+  unobserve = noop
+  disconnect = noop
+}
+globalThis.ResizeObserver = ResizeObserverStub
+
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' })
 })
