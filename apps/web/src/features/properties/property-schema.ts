@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { isValidCep, onlyDigits, STATES } from '@/lib/validation/brazil'
+import { isValidCep, maskCep, onlyDigits, STATES } from '@/lib/validation/brazil'
 
 import type { Property, PropertyInput } from './api'
 
@@ -44,7 +44,7 @@ export function toFormValues(property: Property): PropertyFormValues {
   return {
     name: property.name,
     type: property.type,
-    zipCode: property.zipCode ? `${property.zipCode.slice(0, 5)}-${property.zipCode.slice(5)}` : '',
+    zipCode: maskCep(property.zipCode ?? ''),
     state: (property.state ?? '') as PropertyFormValues['state'],
     city: text(property.city),
     neighborhood: text(property.neighborhood),
@@ -57,12 +57,12 @@ export function toFormValues(property: Property): PropertyFormValues {
   }
 }
 
-/** Form values to what the API takes: blank means no value, and only apartments have unit data. */
+/** Parsed form values (already trimmed) to what the API takes: blank means no value, and only apartments have unit data. */
 export function toPropertyInput(values: PropertyFormValues): Required<PropertyInput> {
-  const orNull = (value: string) => (value.trim() === '' ? null : value.trim())
+  const orNull = (value: string) => value || null
   const apartment = values.type === 'APARTMENT'
   return {
-    name: values.name.trim(),
+    name: values.name,
     type: values.type,
     zipCode: values.zipCode ? onlyDigits(values.zipCode) : null,
     state: values.state || null,

@@ -383,3 +383,92 @@ describe('deleting a property', () => {
     ).toBeInTheDocument()
   })
 })
+
+describe('review regressions', () => {
+  it('goes back to the last page when the current one ends up empty', async () => {
+    server.use(
+      http.get(url('/properties'), ({ request }) => {
+        const page = new URL(request.url).searchParams.get('page')
+        return HttpResponse.json(
+          page === '2'
+            ? { items: [], total: 20, page: 2, pageSize: 20 }
+            : { items: [house], total: 20, page: 1, pageSize: 20 },
+        )
+      }),
+    )
+    const { router } = await openPage('/imoveis?page=2')
+
+    expect(await screen.findByText('Casa da Praia')).toBeInTheDocument()
+    expect(router.state.location.search).toBe('')
+  })
+
+  it('shows the search of the URL when it changes from outside', async () => {
+    serveProperties([house])
+    const { router } = await openPage('/imoveis?q=casa')
+    expect(await screen.findByRole('searchbox')).toHaveValue('casa')
+
+    await router.navigate('/imoveis')
+
+    await waitFor(() => {
+      expect(screen.getByRole('searchbox')).toHaveValue('')
+    })
+    // and it stays cleared: the old text is not written back after the debounce
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    expect(router.state.location.search).toBe('')
+  })
+
+  it('keeps the street when the CEP covers a whole city', async () => {
+    serveProperties([house])
+    server.use(
+      http.get(`${VIACEP_URL}/88330000/json/`, () =>
+        HttpResponse.json({
+          uf: 'SC',
+          localidade: 'Balneário Camboriú',
+          bairro: '',
+          logradouro: '',
+        }),
+      ),
+    )
+    const { user } = await openPage()
+
+    await openActions(user, house.name, 'Editar')
+    const sheet = await screen.findByRole('dialog', { name: 'Editar imóvel' })
+    const cep = within(sheet).getByLabelText('CEP')
+    await user.clear(cep)
+    await user.type(cep, '88330000')
+
+    await waitFor(() => {
+      expect(within(sheet).getByLabelText('Cidade')).toHaveValue('Balneário Camboriú')
+    })
+    expect(within(sheet).getByLabelText('Rua')).toHaveValue('Avenida dos Búzios')
+    expect(within(sheet).getByLabelText('Bairro')).toHaveValue('Jurerê')
+  })
+
+  it('does not look the CEP up again when typing past its end', async () => {
+    serveProperties([])
+    let lookups = 0
+    server.use(
+      http.get(`${VIACEP_URL}/88053700/json/`, () => {
+        lookups++
+        return HttpResponse.json({
+          uf: 'SC',
+          localidade: 'Florianópolis',
+          bairro: 'Jurerê',
+          logradouro: 'Rua A',
+        })
+      }),
+    )
+    const { user } = await openPage()
+
+    await user.click(nth(await screen.findAllByRole('button', { name: 'Novo imóvel' }), 0))
+    const sheet = await screen.findByRole('dialog')
+    await user.type(within(sheet).getByLabelText('CEP'), '88053700')
+    await waitFor(() => {
+      expect(within(sheet).getByLabelText('Rua')).toHaveValue('Rua A')
+    })
+    await user.type(within(sheet).getByLabelText('CEP'), '9')
+
+    expect(within(sheet).getByLabelText('CEP')).toHaveValue('88053-700')
+    expect(lookups).toBe(1)
+  })
+})

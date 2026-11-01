@@ -78,16 +78,13 @@ export function PropertyForm({
         return
       }
       const options = { shouldDirty: true, shouldValidate: true }
-      form.setValue(
-        'state',
-        (STATES as readonly string[]).includes(address.state)
-          ? (address.state as PropertyFormValues['state'])
-          : '',
-        options,
-      )
-      form.setValue('city', address.city, options)
-      form.setValue('neighborhood', address.neighborhood, options)
-      form.setValue('street', address.street, options)
+      if ((STATES as readonly string[]).includes(address.state)) {
+        form.setValue('state', address.state as PropertyFormValues['state'], options)
+      }
+      // CEPs of a whole city have no street or neighborhood: keep what is already there.
+      for (const field of ['city', 'neighborhood', 'street'] as const) {
+        if (address[field]) form.setValue(field, address[field], options)
+      }
       setCepStatus('found')
       form.setFocus('number')
     } catch {
@@ -155,9 +152,12 @@ export function PropertyForm({
             }
             {...zipCode}
             onChange={(event: ChangeEvent<HTMLInputElement>) => {
-              event.target.value = maskCep(event.target.value)
+              const previous = form.getValues('zipCode')
+              const masked = maskCep(event.target.value)
+              if (event.target.value !== masked) event.target.value = masked
               void zipCode.onChange(event)
-              void searchCep(event.target.value)
+              // Typing past the end leaves the same CEP: don't look it up (and overwrite) again.
+              if (masked !== previous) void searchCep(masked)
             }}
           />
           <TextField label="Rua" error={errors.street?.message} {...form.register('street')} />

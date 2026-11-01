@@ -28,15 +28,17 @@ const property: Property = {
 }
 
 describe('toPropertyInput', () => {
-  it('turns blanks into null and strips the CEP mask', () => {
+  it('turns blanks into null and strips the CEP mask (after the schema trims)', () => {
     expect(
-      toPropertyInput({
-        ...EMPTY_PROPERTY_FORM,
-        name: ' Casa ',
-        zipCode: '88053-700',
-        state: 'SC',
-        city: '  ',
-      }),
+      toPropertyInput(
+        propertyFormSchema.parse({
+          ...EMPTY_PROPERTY_FORM,
+          name: ' Casa ',
+          zipCode: '88053-700',
+          state: 'SC',
+          city: '  ',
+        }),
+      ),
     ).toEqual({
       name: 'Casa',
       type: 'HOUSE',

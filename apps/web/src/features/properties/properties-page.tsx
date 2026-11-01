@@ -1,12 +1,12 @@
 import { CalendarDays, Home, MoreHorizontal, Pencil, Plus, SearchX, Trash2 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageHeader } from '@/components/page-header'
 import { PaginationBar } from '@/components/pagination-bar'
-import { SearchInput } from '@/components/search-input'
+import { SEARCH_MAX_LENGTH, SearchInput } from '@/components/search-input'
 import { EmptyState, ErrorState, LoadingState } from '@/components/states'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -39,15 +39,42 @@ import {
 import { apartmentLine, placeLine, streetLine } from './property-format'
 import { PropertySheet } from './property-sheet'
 
-type Editing = { mode: 'closed' } | { mode: 'new' } | { mode: 'edit'; property: Property }
+/**
+ * What a panel or dialog shows. It keeps its property after closing, so the content doesn't
+ * change while it animates out.
+ */
+interface Overlay {
+  open: boolean
+  property?: Property
+}
+
+function PropertyName({ property }: { property: Property }) {
+  const apartment = apartmentLine(property)
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-medium">{property.name}</span>
+        <Badge variant="secondary">{PROPERTY_TYPE_LABELS[property.type]}</Badge>
+      </div>
+      {apartment && <p className="text-muted-foreground text-xs">{apartment}</p>}
+    </>
+  )
+}
 
 export function PropertiesPage() {
   const { params, page, set } = useSearchParamState()
-  const search = params.get('q') ?? ''
+  const search = (params.get('q') ?? '').trim().slice(0, SEARCH_MAX_LENGTH)
   const properties = useProperties({ search, page })
   const remove = useDeleteProperty()
-  const [editing, setEditing] = useState<Editing>({ mode: 'closed' })
-  const [deleting, setDeleting] = useState<Property | null>(null)
+  const [editing, setEditing] = useState<Overlay>({ open: false })
+  const [deleting, setDeleting] = useState<Overlay>({ open: false })
+  const lastPage = Math.max(1, Math.ceil((properties.data?.total ?? 0) / PAGE_SIZE))
+  const pastTheEnd = properties.data?.items.length === 0 && page > lastPage
+
+  // A deletion or an old link can leave the page past the last one: go to the last one.
+  useEffect(() => {
+    if (pastTheEnd) set('page', lastPage)
+  }, [pastTheEnd, lastPage, set])
 
   const onSearch = useCallback(
     (value: string) => {
@@ -57,25 +84,26 @@ export function PropertiesPage() {
   )
 
   const confirmDelete = async () => {
-    if (!deleting) return
+    const property = deleting.property
+    if (!property) return
     try {
-      await remove.mutateAsync(deleting.id)
-      toast.success(`"${deleting.name}" foi excluído.`)
+      await remove.mutateAsync(property.id)
+      toast.success(`"${property.name}" foi excluído.`)
     } catch (error) {
       toast.error(
         error instanceof ApiError && error.code === 'PROPERTY_HAS_BOOKINGS'
-          ? `"${deleting.name}" tem reservas. Exclua as reservas dele antes de excluir o imóvel.`
+          ? `"${property.name}" tem reservas. Exclua as reservas dele antes de excluir o imóvel.`
           : errorMessage(error),
       )
     } finally {
-      setDeleting(null)
+      setDeleting({ open: false, property })
     }
   }
 
   const newButton = (
     <Button
       onClick={() => {
-        setEditing({ mode: 'new' })
+        setEditing({ open: true })
       }}
     >
       <Plus aria-hidden />
@@ -102,7 +130,7 @@ export function PropertiesPage() {
         />
       )}
 
-      {properties.isPending ? (
+      {properties.isPending || pastTheEnd ? (
         <LoadingState />
       ) : properties.isError ? (
         <ErrorState
@@ -140,13 +168,7 @@ export function PropertiesPage() {
                 {properties.data.items.map((property) => (
                   <TableRow key={property.id}>
                     <TableCell>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{property.name}</span>
-                        <Badge variant="secondary">{PROPERTY_TYPE_LABELS[property.type]}</Badge>
-                      </div>
-                      {apartmentLine(property) && (
-                        <p className="text-muted-foreground text-xs">{apartmentLine(property)}</p>
-                      )}
+                      <PropertyName property={property} />
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden md:table-cell">
                       {streetLine(property) || '—'}
@@ -168,7 +190,7 @@ export function PropertiesPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onSelect={() => {
-                              setEditing({ mode: 'edit', property })
+                              setEditing({ open: true, property })
                             }}
                           >
                             <Pencil className="size-4" />
@@ -184,7 +206,7 @@ export function PropertiesPage() {
                           <DropdownMenuItem
                             variant="destructive"
                             onSelect={() => {
-                              setDeleting(property)
+                              setDeleting({ open: true, property })
                             }}
                           >
                             <Trash2 className="size-4" />
@@ -210,22 +232,20 @@ export function PropertiesPage() {
       )}
 
       <PropertySheet
-        open={editing.mode !== 'closed'}
-        property={editing.mode === 'edit' ? editing.property : undefined}
+        open={editing.open}
+        property={editing.property}
         onOpenChange={(open) => {
-          if (!open) setEditing({ mode: 'closed' })
+          setEditing((current) => ({ ...current, open }))
         }}
       />
 
       <ConfirmDialog
-        open={deleting !== null}
+        open={deleting.open}
         onOpenChange={(open) => {
-          if (!open) setDeleting(null)
+          setDeleting((current) => ({ ...current, open }))
         }}
         title="Excluir imóvel?"
-        description={
-          deleting ? `"${deleting.name}" será excluído. Isso não pode ser desfeito.` : ''
-        }
+        description={`"${deleting.property?.name ?? ''}" será excluído. Isso não pode ser desfeito.`}
         confirmLabel="Excluir"
         pending={remove.isPending}
         onConfirm={() => void confirmDelete()}

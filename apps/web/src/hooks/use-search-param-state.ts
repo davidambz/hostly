@@ -1,6 +1,9 @@
 import { useCallback } from 'react'
 import { useSearchParams } from 'react-router'
 
+/** The API's highest page; anything past it is a broken link anyway. */
+const MAX_PAGE = 100_000
+
 /**
  * List state kept in the URL (`?q=casa&page=2`), so reloading, sharing a link and the back
  * button all keep the same view. Setting a value resets `page` unless it is the page.
@@ -27,6 +30,6 @@ export function useSearchParamState() {
     [setParams],
   )
 
-  const page = Math.max(1, Number.parseInt(params.get('page') ?? '1', 10) || 1)
+  const page = Math.min(MAX_PAGE, Math.max(1, Number.parseInt(params.get('page') ?? '1', 10) || 1))
   return { params, page, set }
 }

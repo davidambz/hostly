@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 export const SEARCH_DEBOUNCE_MS = 300
+/** The API rejects longer searches. */
+export const SEARCH_MAX_LENGTH = 255
 
 /** A search box that reports what was typed once the user pauses. */
 export function SearchInput({
@@ -19,6 +21,12 @@ export function SearchInput({
   placeholder?: string
 }) {
   const [text, setText] = useState(value)
+  const [lastValue, setLastValue] = useState(value)
+  // The search can change from outside (a link, the back button): show that one instead.
+  if (value !== lastValue) {
+    setLastValue(value)
+    if (value !== text.trim()) setText(value)
+  }
 
   useEffect(() => {
     if (text.trim() === value) return
@@ -41,6 +49,7 @@ export function SearchInput({
         aria-label={label}
         placeholder={placeholder ?? label}
         value={text}
+        maxLength={SEARCH_MAX_LENGTH}
         onChange={(event) => {
           setText(event.target.value)
         }}
@@ -55,7 +64,7 @@ export function SearchInput({
           aria-label="Limpar busca"
           onClick={() => {
             setText('')
-            onSearch('')
+            if (value !== '') onSearch('')
           }}
         >
           <X className="size-4" />
