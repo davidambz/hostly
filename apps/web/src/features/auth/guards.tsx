@@ -42,13 +42,16 @@ export function RequireAuth() {
   return <Outlet />
 }
 
-/** Login and signup: a logged-in user has no business there and goes on to the app. */
-export function RequireGuest() {
+/**
+ * Pages for visitors (home, login, signup): a logged-in user has no business there and goes on
+ * to the app, to `to` when given, else to where the login was asked to return.
+ */
+export function RequireGuest({ to }: { to?: string }) {
   const { status } = useAuth()
   const [params] = useSearchParams()
 
   if (status === 'loading') return <FullScreenSpinner />
   if (status === 'authenticated')
-    return <Navigate to={safeRedirect(params.get('redirect'))} replace />
+    return <Navigate to={to ?? safeRedirect(params.get('redirect'))} replace />
   return <Outlet />
 }

@@ -53,14 +53,14 @@ describe('session', () => {
       ),
       http.get(url('/me'), () => HttpResponse.json(testUser)),
     )
-    const { router } = renderRoute(routes, '/')
+    const { router } = renderRoute(routes, '/reservas')
 
     for (const delay of RESUME_RETRY_DELAYS_MS) await vi.advanceTimersByTimeAsync(delay)
 
     expect(
       await screen.findByRole('heading', { name: 'Não foi possível conectar' }),
     ).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/')
+    expect(router.state.location.pathname).toBe('/reservas')
 
     up = true
     await user.click(screen.getByRole('button', { name: 'Tentar de novo' }))

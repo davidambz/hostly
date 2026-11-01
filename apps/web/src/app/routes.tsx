@@ -1,4 +1,4 @@
-import { Navigate, type RouteObject } from 'react-router'
+import type { RouteObject } from 'react-router'
 
 import { AppLayout } from '@/components/layout/app-layout'
 import { RequireAuth, RequireGuest } from '@/features/auth/guards'
@@ -18,6 +18,18 @@ export const routes: RouteObject[] = [
     errorElement: <RouteErrorPage />,
     hydrateFallbackElement: <AppLoading />,
     children: [
+      {
+        element: <RequireGuest to="/reservas" />,
+        children: [
+          {
+            path: '/',
+            handle: handle('Reservas de temporada organizadas'),
+            lazy: async () => ({
+              Component: (await import('@/features/landing/landing-page')).LandingPage,
+            }),
+          },
+        ],
+      },
       {
         element: <RequireGuest />,
         children: [
@@ -43,7 +55,6 @@ export const routes: RouteObject[] = [
           {
             element: <AppLayout />,
             children: [
-              { path: '/', element: <Navigate to="/reservas" replace /> },
               {
                 path: '/reservas',
                 handle: handle('Reservas'),
