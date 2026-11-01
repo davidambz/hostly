@@ -33,6 +33,12 @@ export default defineConfig({
               test: /node_modules[\\/](zod|react-hook-form|@hookform)[\\/]/,
               priority: 2,
             },
+            {
+              // Only the bookings page uses dates: kept out of what every page loads.
+              name: 'dates',
+              test: /node_modules[\\/](date-fns|@date-fns|react-day-picker)[\\/]/,
+              priority: 2,
+            },
             { name: 'vendor', test: /node_modules/, priority: 1 },
           ],
         },
@@ -46,6 +52,13 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // Room for the first load of a lazy page (see src/test/setup.ts).
+    testTimeout: 15_000,
+    deps: {
+      // Pre-bundled once instead of loaded as hundreds of modules in every worker, which
+      // made the first test that opens the bookings page slow.
+      optimizer: { client: { enabled: true, include: ['date-fns', 'react-day-picker'] } },
+    },
     globals: true,
     setupFiles: ['src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],

@@ -86,3 +86,16 @@ export function useDeleteProperty() {
     onSuccess: invalidate,
   })
 }
+
+/** The API's largest page: enough for every property of a host in one go. */
+const ALL = 100
+
+/** Every property, by name, for pickers and the calendar colors. */
+export function useAllProperties() {
+  return useQuery({
+    queryKey: [...propertyKeys.all, 'all'],
+    queryFn: async () =>
+      unwrap(await api.GET('/properties', { params: { query: { page: 1, pageSize: ALL } } })),
+    select: (page) => page.items,
+  })
+}

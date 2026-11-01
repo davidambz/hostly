@@ -1,11 +1,15 @@
 import '@testing-library/jest-dom/vitest'
 
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, vi } from 'vitest'
 
 import { setAccessToken } from '@/lib/api/session'
 
 import { server } from './server'
+
+// Pages are lazy-loaded: the first test to open one also loads (and, under coverage,
+// instruments) its code, which can take longer than the 1 s default.
+configure({ asyncUtilTimeout: 5000 })
 
 // jsdom has no matchMedia; the theme provider reads it.
 Object.defineProperty(window, 'matchMedia', {

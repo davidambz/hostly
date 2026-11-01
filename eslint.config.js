@@ -62,6 +62,7 @@ export default defineConfig(
       '@typescript-eslint/no-confusing-void-expression': 'off',
       'react-hooks/purity': 'off',
       'react-hooks/set-state-in-effect': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
     },
   },
   {

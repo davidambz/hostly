@@ -6,6 +6,13 @@ import { ApiError, errorField } from './errors'
 const MESSAGES: Record<string, string> = {
   INVALID_CREDENTIALS: 'E-mail ou senha incorretos.',
   INVALID_DOCUMENT: 'Documento inválido para o tipo escolhido.',
+  INVALID_DATES: 'A saída precisa ser depois da entrada, em até 365 noites.',
+  DISCOUNT_EXCEEDS_LODGING: 'O desconto passa do valor das diárias.',
+  PAYMENT_EXCEEDS_TOTAL: 'O valor pago passa do total.',
+  COMMISSION_WITHOUT_BROKER: 'Comissão só com intermediador.',
+  PROPERTY_NOT_FOUND: 'Este imóvel não existe mais.',
+  BROKER_NOT_FOUND: 'Este intermediador não existe mais.',
+  BOOKING_NOT_FOUND: 'Esta reserva não existe mais.',
   EMAIL_TAKEN: 'Este e-mail já tem uma conta.',
   CPF_TAKEN: 'Este CPF já tem uma conta.',
   TOO_MANY_REQUESTS: 'Muitas tentativas. Espere um minuto e tente de novo.',
