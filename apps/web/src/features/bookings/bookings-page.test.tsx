@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { routes } from '@/app/routes'
 import { nth } from '@/test/nth'
@@ -163,6 +163,12 @@ async function openPage(path = '/reservas?data=2026-11-15') {
 
 const day = (date: string) =>
   screen.findByRole('button', { name: `Nova reserva com entrada em ${date}` })
+
+// The page is lazy-loaded: load its code once here, so the first test doesn't pay for it
+// inside its timeouts (slow on CI under coverage).
+beforeAll(async () => {
+  await import('./bookings-page')
+}, 30_000)
 
 beforeEach(() => {
   server.use(...loggedInHandlers)

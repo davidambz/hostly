@@ -30,6 +30,11 @@ export const loggedInHandlers = [
     HttpResponse.json({ accessToken: 'token', tokenType: 'Bearer', expiresIn: 900 }),
   ),
   http.get(url('/me'), () => HttpResponse.json(testUser)),
+  // Logging in lands on the bookings page: by default the account is empty.
+  ...['/properties', '/brokers', '/bookings'].map((path) =>
+    http.get(url(path), () => HttpResponse.json({ items: [], total: 0, page: 1, pageSize: 20 })),
+  ),
+  http.get(url('/bookings/calendar'), () => HttpResponse.json([])),
 ]
 
 export const server = setupServer(...defaultHandlers)
