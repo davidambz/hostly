@@ -26,8 +26,12 @@ import { colorOf, type PropertyColor } from './property-colors'
 
 export type CalendarView = 'month' | 'week'
 
-/** Stays shown per day in the month view; the rest go behind "+N". */
-const MONTH_LANES = 3
+/**
+ * Rows of stays in the month view: as many as the busiest week needs, at least 3 (so empty
+ * months keep their shape) and at most 5; past that, the rest go behind "+N".
+ */
+const MIN_MONTH_LANES = 3
+const MAX_MONTH_LANES = 5
 /** Height of one stay bar and the gap below it, in rem. */
 const LANE_REM = 1.5
 /** Room for the day number at the top of each day, in rem. */
@@ -123,6 +127,16 @@ export function BookingsCalendar({
     }
   }, [selection, onSelectDays])
 
+  const monthLanes = Math.min(
+    MAX_MONTH_LANES,
+    Math.max(
+      MIN_MONTH_LANES,
+      ...weeks.flatMap((days) =>
+        layoutWeek(days, bookings.data ?? []).map((segment) => segment.lane + 1),
+      ),
+    ),
+  )
+
   const step = (direction: 1 | -1) => {
     onDateChange(view === 'month' ? addMonthsISO(date, direction) : addDaysISO(date, 7 * direction))
   }
@@ -205,6 +219,7 @@ export function BookingsCalendar({
           </div>
           {weeks.map((days) => (
             <WeekRow
+              monthLanes={monthLanes}
               key={days[0]}
               days={days}
               view={view}
@@ -235,6 +250,7 @@ export function BookingsCalendar({
 }
 
 function WeekRow({
+  monthLanes,
   days,
   view,
   anchor,
@@ -248,6 +264,7 @@ function WeekRow({
   onOpenBooking,
   onShowWeek,
 }: {
+  monthLanes: number
   days: string[]
   view: CalendarView
   anchor: string
@@ -262,13 +279,13 @@ function WeekRow({
   onShowWeek: (day: string) => void
 }) {
   const segments = layoutWeek(days, bookings)
-  const lanes = view === 'month' ? MONTH_LANES : Math.max(1, ...segments.map((s) => s.lane + 1))
+  const lanes = view === 'month' ? monthLanes : Math.max(1, ...segments.map((s) => s.lane + 1))
   const visible = segments.filter((segment) => segment.lane < lanes)
   const perDay = staysPerDay(segments, days.length)
   const shownPerDay = staysPerDay(visible, days.length)
   const minHeight =
     view === 'month'
-      ? `${DAY_HEADER_REM + LANE_REM * (MONTH_LANES + 1)}rem`
+      ? `${DAY_HEADER_REM + LANE_REM * (monthLanes + 1)}rem`
       : `max(16rem, ${DAY_HEADER_REM + LANE_REM * (lanes + 1)}rem)`
 
   return (
@@ -282,9 +299,12 @@ function WeekRow({
             key={day}
             style={{ animationDelay: `${String(index * 30)}ms` }}
             className={cn(
-              // A quieter motif than the home page's: here the bars are the content.
-              'azulejo animate-tile-settle relative rounded-[2px] [--tile-ink:color-mix(in_oklab,var(--glaze)_55%,var(--card))]',
-              outside && 'bg-muted [--tile-ink:var(--glaze-strong)]',
+              'animate-tile-settle relative rounded-[2px]',
+              // The month's nights carry the pattern (quieter than the home page's: here the
+              // bars are the content); days of other months are plain and recede.
+              outside
+                ? 'bg-muted'
+                : 'azulejo [--tile-ink:color-mix(in_oklab,var(--glaze)_55%,var(--card))]',
               selected && 'ring-primary bg-accent ring-2 ring-inset',
             )}
           >

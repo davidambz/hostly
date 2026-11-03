@@ -241,8 +241,25 @@ describe('calendar', () => {
     expect(await screen.findByRole('heading', { name: '15 – 21 nov 2026' })).toBeInTheDocument()
   })
 
-  it('sends a full day to the week view with "+N"', async () => {
+  it('shows every stay of a busy day up to five, without "+N"', async () => {
     const crowd = ['A', 'B', 'C', 'D'].map((name, index) =>
+      makeBooking({
+        id: `018f0000-0000-7000-8000-00000000020${index}`,
+        guestName: name,
+        property: index % 2 ? ape : casa,
+        checkIn: '2026-11-03',
+        checkOut: '2026-11-04',
+      }),
+    )
+    serve({ bookings: crowd })
+    await openPage()
+
+    expect(await screen.findAllByRole('button', { name: /^[ABCD], / })).toHaveLength(4)
+    expect(screen.queryByRole('button', { name: /a mais em/ })).not.toBeInTheDocument()
+  })
+
+  it('sends a full day to the week view with "+N"', async () => {
+    const crowd = ['A', 'B', 'C', 'D', 'E', 'F'].map((name, index) =>
       makeBooking({
         id: `018f0000-0000-7000-8000-00000000010${index}`,
         guestName: name,
@@ -262,7 +279,7 @@ describe('calendar', () => {
     await user.click(more)
 
     expect(await screen.findByRole('heading', { name: '1 – 7 nov 2026' })).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /^[ABCD], / })).toHaveLength(4)
+    expect(screen.getAllByRole('button', { name: /^[ABCDEF], / })).toHaveLength(6)
   })
 
   it('filters by property through the URL, and hides the legend', async () => {
