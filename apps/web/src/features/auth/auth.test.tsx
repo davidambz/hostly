@@ -241,6 +241,24 @@ describe('login', () => {
 })
 
 describe('signup', () => {
+  it('says which property it opens next when the home page brought one', async () => {
+    renderRoute(routes, '/cadastro?redirect=%2Fimoveis%3Fnovo%3DCasa%2BAzul')
+
+    expect(await screen.findByText('Casa Azul')).toBeInTheDocument()
+    expect(screen.getByText(/abrimos o cadastro de/)).toBeInTheDocument()
+  })
+
+  it.each([
+    ['no redirect', '/cadastro'],
+    ['another page', '/cadastro?redirect=%2Freservas'],
+    ['an empty name', '/cadastro?redirect=%2Fimoveis%3Fnovo%3D%2B'],
+  ])('says nothing about a property with %s', async (_case, path) => {
+    renderRoute(routes, path)
+
+    await screen.findByRole('heading', { name: 'Criar conta' })
+    expect(screen.queryByText(/abrimos o cadastro de/)).not.toBeInTheDocument()
+  })
+
   async function fillSignup(overrides: Partial<Record<string, string>> = {}) {
     const values = {
       Nome: 'Ana Souza',

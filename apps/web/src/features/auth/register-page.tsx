@@ -20,11 +20,20 @@ const API_FIELD_MESSAGES = {
   password: 'Senha inválida.',
 }
 
+/** The property name the home page sent along (`/imoveis?novo=…`), if any. */
+function propertyFromRedirect(redirect: string | null): string | undefined {
+  if (!redirect?.startsWith('/imoveis?')) return undefined
+  const name = new URLSearchParams(redirect.slice('/imoveis?'.length)).get('novo')?.trim()
+  if (!name) return undefined
+  return name
+}
+
 export function RegisterPage() {
   const { register: registerAccount } = useAuth()
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const redirect = params.get('redirect')
+  const broughtProperty = propertyFromRedirect(redirect)
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
@@ -63,6 +72,15 @@ export function RegisterPage() {
       }
     >
       <form noValidate onSubmit={(event) => void onSubmit(event)} className="grid gap-4">
+        {broughtProperty && (
+          <p className="bg-accent text-accent-foreground flex items-start gap-2.5 rounded-md p-3 text-sm">
+            <span aria-hidden className="bg-property-5 mt-1 size-3 shrink-0 rounded-[2px]" />
+            <span>
+              Depois de criar a conta, abrimos o cadastro de{' '}
+              <strong className="font-semibold">{broughtProperty}</strong>.
+            </span>
+          </p>
+        )}
         <FormError message={errors.root?.message} />
         <TextField
           label="Nome"
