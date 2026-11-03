@@ -5,3 +5,4 @@ pnpm-lock.yaml
 **/src/generated
 apps/api/openapi.json
 .claude
+**/.impeccable/hook.cache.json

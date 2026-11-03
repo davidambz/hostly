@@ -34,6 +34,14 @@
   --input: #c4d7dc;
   --ring: #1b98e0;
 
+  /* The public pages' Prussian band: the same in both themes. */
+  --band: #13293d;
+  --band-foreground: #e8f1f2;
+  --band-accent: #1d3a52;
+  --band-border: #2e5170;
+  /* Depth under the screenshot frame on public pages. */
+  --frame-shadow: rgb(8 19 29 / 0.5);
+
   --sidebar: #13293d;
   --sidebar-foreground: #e8f1f2;
   --sidebar-primary: #1b98e0;
@@ -90,6 +98,8 @@
   --border: #24425a;
   --input: #2b4d68;
   --ring: #1b98e0;
+
+  --frame-shadow: rgb(0 0 0 / 0.6);
 
   --sidebar: #08131d;
   --sidebar-foreground: #e8f1f2;
@@ -171,6 +181,10 @@
   --color-property-7-foreground: var(--property-7-foreground);
   --color-property-8: var(--property-8);
   --color-property-8-foreground: var(--property-8-foreground);
+  --color-band: var(--band);
+  --color-band-foreground: var(--band-foreground);
+  --color-band-accent: var(--band-accent);
+  --color-band-border: var(--band-border);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);

@@ -53,14 +53,14 @@ describe('session', () => {
       ),
       http.get(url('/me'), () => HttpResponse.json(testUser)),
     )
-    const { router } = renderRoute(routes, '/')
+    const { router } = renderRoute(routes, '/reservas')
 
     for (const delay of RESUME_RETRY_DELAYS_MS) await vi.advanceTimersByTimeAsync(delay)
 
     expect(
       await screen.findByRole('heading', { name: 'Não foi possível conectar' }),
     ).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/')
+    expect(router.state.location.pathname).toBe('/reservas')
 
     up = true
     await user.click(screen.getByRole('button', { name: 'Tentar de novo' }))
@@ -371,13 +371,13 @@ describe('signup', () => {
 describe('safeRedirect', () => {
   it.each([
     ['/reservas?x=1', '/reservas?x=1'],
-    [null, '/'],
-    ['', '/'],
-    ['https://evil.com', '/'],
-    ['//evil.com', '/'],
-    ['reservas', '/'],
-    ['/\\evil.com', '/'],
-    ['/\t/evil.com', '/'],
+    [null, '/reservas'],
+    ['', '/reservas'],
+    ['https://evil.com', '/reservas'],
+    ['//evil.com', '/reservas'],
+    ['reservas', '/reservas'],
+    ['/\\evil.com', '/reservas'],
+    ['/\t/evil.com', '/reservas'],
     ['/reservas#hoje', '/reservas#hoje'],
   ])('%j → %j', (target, expected) => {
     expect(safeRedirect(target)).toBe(expected)

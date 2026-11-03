@@ -4,7 +4,7 @@ import { Navigate, Outlet, useLocation, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 
 import { useAuth } from './auth-context'
-import { safeRedirect } from './redirect'
+import { APP_HOME, safeRedirect } from './redirect'
 
 function FullScreenSpinner() {
   return (
@@ -51,4 +51,33 @@ export function RequireGuest() {
   if (status === 'authenticated')
     return <Navigate to={safeRedirect(params.get('redirect'))} replace />
   return <Outlet />
+}
+
+/**
+ * The public home page: shown at once, without waiting for the session to resume, and left
+ * for the app as soon as it turns out the visitor is logged in. If the API can't be reached,
+ * a notice offers to try again, since the visitor may well have a session.
+ */
+export function RequireVisitor() {
+  const { status, retry } = useAuth()
+
+  if (status === 'authenticated') return <Navigate to={APP_HOME} replace />
+  return (
+    <>
+      {status === 'unavailable' && (
+        <div
+          role="status"
+          className="bg-muted text-foreground flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-2 text-center text-sm"
+        >
+          <WifiOff className="text-muted-foreground size-4" aria-hidden />
+          Não foi possível conectar ao servidor. Se você já entrou antes, sua sessão continua
+          guardada.
+          <Button variant="link" size="sm" className="h-auto p-0" onClick={retry}>
+            Tentar de novo
+          </Button>
+        </div>
+      )}
+      <Outlet />
+    </>
+  )
 }
