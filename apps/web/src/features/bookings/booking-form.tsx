@@ -148,28 +148,28 @@ export function BookingForm({
         <TextField
           label="Diária"
           inputMode="numeric"
-          placeholder="R$ 0,00"
+          placeholder="R$"
           error={errors.nightlyRate?.message}
           {...money('nightlyRate')}
         />
         <TextField
           label="Limpeza"
           inputMode="numeric"
-          placeholder="R$ 0,00"
+          placeholder="R$"
           error={errors.cleaningFee?.message}
           {...money('cleaningFee')}
         />
         <TextField
           label="Desconto"
           inputMode="numeric"
-          placeholder="R$ 0,00"
+          placeholder="R$"
           error={errors.discount?.message}
           {...money('discount')}
         />
         <TextField
           label="Valor já pago"
           inputMode="numeric"
-          placeholder="R$ 0,00"
+          placeholder="R$"
           error={errors.amountPaid?.message}
           {...money('amountPaid')}
         />

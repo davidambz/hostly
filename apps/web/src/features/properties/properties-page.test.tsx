@@ -85,6 +85,17 @@ describe('properties list', () => {
     expect(within(nth(rows, 2)).getByText('Mar Azul · Unidade 1204')).toBeInTheDocument()
   })
 
+  it('marks each property with the color it has on the calendar', async () => {
+    serveProperties([house, apartment])
+    await openPage()
+
+    const rows = within(await screen.findByRole('table', { name: 'Imóveis' })).getAllByRole('row')
+    await waitFor(() => {
+      expect(nth(rows, 1).querySelector('.bg-property-1')).not.toBeNull()
+    })
+    expect(nth(rows, 2).querySelector('.bg-property-2')).not.toBeNull()
+  })
+
   it('invites to create the first one when there are none', async () => {
     serveProperties([])
     await openPage()

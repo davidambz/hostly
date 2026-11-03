@@ -28,12 +28,13 @@ const API_FIELD_MESSAGES = {
   landlinePhone: 'Telefone fixo inválido.',
 }
 
-const DOCUMENT_FIELD: Record<BrokerType, { label: string; placeholder: string; hint?: string }> = {
-  INDIVIDUAL: { label: 'CPF', placeholder: '000.000.000-00' },
+// The format goes in the hint, not the placeholder: a placeholder shaped like a document
+// looks filled in, and contradicts the error next to it.
+const DOCUMENT_FIELD: Record<BrokerType, { label: string; hint: string }> = {
+  INDIVIDUAL: { label: 'CPF', hint: 'Com ou sem pontos e traço.' },
   COMPANY: {
     label: 'CNPJ',
-    placeholder: '00.000.000/0000-00',
-    hint: 'Aceita o CNPJ alfanumérico (com letras).',
+    hint: 'Com ou sem pontuação; aceita o CNPJ alfanumérico (com letras).',
   },
 }
 
@@ -113,7 +114,7 @@ export function BrokerForm({
 
       <TextField
         label="Nome"
-        placeholder={type === 'INDIVIDUAL' ? 'Maria Corretora' : 'Imobiliária Litoral'}
+        placeholder={type === 'INDIVIDUAL' ? 'ex.: Maria Souza' : 'ex.: Imobiliária Litoral'}
         autoFocus
         error={errors.name?.message}
         {...form.register('name')}
@@ -121,7 +122,6 @@ export function BrokerForm({
 
       <TextField
         label={documentField.label}
-        placeholder={documentField.placeholder}
         hint={documentField.hint}
         autoCapitalize="characters"
         error={errors.document?.message}
@@ -132,7 +132,7 @@ export function BrokerForm({
         label="E-mail"
         type="email"
         autoComplete="off"
-        placeholder="contato@exemplo.com"
+        placeholder="ex.: contato@exemplo.com"
         error={errors.email?.message}
         {...form.register('email')}
       />
@@ -141,14 +141,14 @@ export function BrokerForm({
         <TextField
           label="Celular"
           type="tel"
-          placeholder="(48) 99999-0000"
+          placeholder="ex.: (48) 99999-0000"
           error={errors.mobilePhone?.message}
           {...withMask(form.register('mobilePhone'), maskPhone)}
         />
         <TextField
           label="Telefone fixo"
           type="tel"
-          placeholder="(48) 3333-4444"
+          placeholder="ex.: (48) 3333-4444"
           error={errors.landlinePhone?.message}
           {...withMask(form.register('landlinePhone'), maskPhone)}
         />

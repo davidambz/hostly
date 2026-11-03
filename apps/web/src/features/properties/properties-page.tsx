@@ -1,5 +1,5 @@
 import { CalendarDays, Home, MoreHorizontal, Pencil, Plus, SearchX, Trash2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 
@@ -35,17 +35,21 @@ import {
   PAGE_SIZE,
   type Property,
   PROPERTY_TYPE_LABELS,
+  useAllProperties,
   useDeleteProperty,
   useProperties,
 } from './api'
+import { colorOf, propertyColors } from '../bookings/property-colors'
 import { apartmentLine, placeLine, streetLine } from './property-format'
 import { PropertySheet } from './property-sheet'
 
-function PropertyName({ property }: { property: Property }) {
+function PropertyName({ property, glaze }: { property: Property; glaze?: string }) {
   const apartment = apartmentLine(property)
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
+        {/* The same color the property has on the calendar. */}
+        {glaze && <span aria-hidden className={`size-3 shrink-0 rounded-[2px] ${glaze}`} />}
         <span className="font-medium">{property.name}</span>
         <Badge variant="secondary">{PROPERTY_TYPE_LABELS[property.type]}</Badge>
       </div>
@@ -60,6 +64,12 @@ export function PropertiesPage() {
   const remove = useDeleteProperty()
   const editing = useOverlay<Property>()
   const deleting = useOverlay<Property>()
+  // Colors come from the whole (name-sorted) list, as on the calendar, not from this page.
+  const all = useAllProperties()
+  const colors = useMemo(
+    () => (all.data ? propertyColors(all.data.map((item) => item.id)) : undefined),
+    [all.data],
+  )
   // A name brought from the home page (`?novo=Casa da Praia`) opens the new-property form
   // with it, once; the parameter leaves the URL so a reload doesn't reopen it.
   const [draftName, setDraftName] = useState<string>()
@@ -168,7 +178,10 @@ export function PropertiesPage() {
                 {properties.data.items.map((property) => (
                   <TableRow key={property.id}>
                     <TableCell>
-                      <PropertyName property={property} />
+                      <PropertyName
+                        property={property}
+                        glaze={colors && colorOf(colors, property.id).dot}
+                      />
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden md:table-cell">
                       {streetLine(property) || '—'}
