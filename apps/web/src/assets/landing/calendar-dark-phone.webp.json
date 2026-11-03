@@ -1,4 +1,4 @@
 {
-  "prompt": "Origin: real screenshot of the Hostly web app (calendar-dark, phone layout), captured with Playwright (Chromium, 390x720 at 2x, WebP q82) from the local dev environment, logged in as a demo account seeded with made-up data (fictional properties, brokers and guests; no real people). Not generated.",
-  "createdAt": "2026-11-01T16:27:57.269Z"
+  "prompt": "Origin: real screenshot of the Hostly web app (bookings calendar, January 2027, color legend above the calendar; dark theme; phone layout, 390x720 at 2x), captured with Playwright (Chromium) from the local dev environment, logged in as a demo account seeded with made-up data (fictional properties, brokers and guests; no real people). WebP q82. Not generated.",
+  "createdAt": "2026-11-03T13:12:24.573Z"
 }

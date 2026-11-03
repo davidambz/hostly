@@ -46,8 +46,8 @@ export const SCREENS: Screen[] = [
     label: 'Calendário',
     title: 'O mês de todos os imóveis numa tela',
     caption:
-      'Cada imóvel tem a sua cor. Uma reserva que cai em noites já ocupadas daquele imóvel não entra.',
-    alt: 'Calendário de janeiro com as reservas de quatro imóveis, cada um com uma cor.',
+      'Cada cor é um imóvel: barras lado a lado são casas diferentes. No mesmo imóvel, uma reserva que cai em noites já ocupadas não entra.',
+    alt: 'Calendário de janeiro com as reservas de quatro imóveis, cada um com uma cor, e a legenda das cores acima.',
     image: { light: calendarLight, dark: calendarDark },
     phone: { light: calendarLightPhone, dark: calendarDarkPhone },
   },

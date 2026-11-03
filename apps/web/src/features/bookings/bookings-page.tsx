@@ -176,6 +176,24 @@ export function BookingsPage() {
 
           {mode === 'calendar' ? (
             <>
+              {/* Above the calendar: without it, bars of different properties in the same week
+                  look like one property booked twice. */}
+              {!filter && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                  <span className="text-muted-foreground">Cada cor é um imóvel:</span>
+                  <ul aria-label="Cores dos imóveis" className="flex flex-wrap gap-x-4 gap-y-1">
+                    {properties.data.map((property) => (
+                      <li key={property.id} className="flex items-center gap-1.5">
+                        <span
+                          className={`size-2.5 rounded-full ${colorOf(colors, property.id).dot}`}
+                          aria-hidden
+                        />
+                        {property.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <BookingsCalendar
                 view={view}
                 date={date}
@@ -193,22 +211,6 @@ export function BookingsPage() {
                 onSelectDays={selectDays}
                 onOpenBooking={openBooking}
               />
-              {!filter && (
-                <ul
-                  aria-label="Cores dos imóveis"
-                  className="flex flex-wrap gap-x-4 gap-y-1 text-sm"
-                >
-                  {properties.data.map((property) => (
-                    <li key={property.id} className="flex items-center gap-1.5">
-                      <span
-                        className={`size-2.5 rounded-full ${colorOf(colors, property.id).dot}`}
-                        aria-hidden
-                      />
-                      {property.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
             </>
           ) : (
             <BookingsList
