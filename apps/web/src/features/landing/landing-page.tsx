@@ -1,6 +1,6 @@
-import { CalendarDays, FolderGit2, House, type LucideIcon, ReceiptText, Users } from 'lucide-react'
+import { FolderGit2 } from 'lucide-react'
 import { Tabs as TabsPrimitive } from 'radix-ui'
-import { useId, useRef, useState } from 'react'
+import { useId, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 
 import { Brand } from '@/components/brand'
@@ -20,47 +20,13 @@ const BLANK_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAAL
 
 export const REPOSITORY_URL = 'https://github.com/davidambz/hostly'
 
-const JOBS: { icon: LucideIcon; title: string; text: string; screen: ScreenId }[] = [
-  {
-    icon: CalendarDays,
-    title: 'Calendário de reservas',
-    text: 'Todas as reservas de todos os imóveis no mês ou na semana, e nunca duas no mesmo imóvel na mesma noite.',
-    screen: 'calendar',
-  },
-  {
-    icon: House,
-    title: 'Imóveis',
-    text: 'Casas e apartamentos com o endereço completo a partir do CEP.',
-    screen: 'properties',
-  },
-  {
-    icon: Users,
-    title: 'Intermediadores e comissão',
-    text: 'Corretores e imobiliárias, pessoa física ou empresa, com a comissão de cada reserva calculada sobre as diárias.',
-    screen: 'brokers',
-  },
-  {
-    icon: ReceiptText,
-    title: 'Resumo financeiro de cada reserva',
-    text: 'Total do hóspede, comissão, quanto você recebe, quanto já entrou e quanto falta receber.',
-    screen: 'booking',
-  },
-]
-
 /** The public home page: the calendar as a tiled wall, the money math working, the real screens. */
 export function LandingPage() {
   const { resolvedTheme } = useTheme()
   const navigate = useNavigate()
   const [screen, setScreen] = useState<ScreenId>('calendar')
   const [propertyName, setPropertyName] = useState('')
-  const tour = useRef<HTMLElement>(null)
   const nameId = useId()
-
-  const showScreen = (id: ScreenId) => {
-    setScreen(id)
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    tour.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
-  }
 
   return (
     <div className="bg-background min-h-svh">
@@ -78,65 +44,67 @@ export function LandingPage() {
       </header>
 
       <main>
-        <section
-          aria-labelledby="hero-title"
-          className="mx-auto grid max-w-7xl gap-10 px-4 pt-8 pb-16 sm:px-6 lg:min-h-[calc(100svh-4rem)] lg:grid-cols-12 lg:items-center lg:gap-12 lg:pt-4"
-        >
-          <div className="lg:col-span-5">
-            <h1
-              id="hero-title"
-              className="font-display animate-tile-flip text-5xl leading-[1.02] tracking-[-0.02em] text-balance sm:text-6xl xl:text-7xl"
-            >
-              Sua temporada, ladrilho por ladrilho.
-            </h1>
-            <p
-              style={{ animationDelay: '120ms' }}
-              className="animate-tile-flip text-muted-foreground mt-6 max-w-md text-lg text-pretty"
-            >
-              Cada noite de cada imóvel num calendário que não deixa marcar duas vezes, e quanto
-              cada reserva rende, já com a comissão do intermediador.
-            </p>
-            <form
-              style={{ animationDelay: '240ms' }}
-              className="animate-tile-flip mt-8 grid max-w-md gap-2"
-              onSubmit={(event) => {
-                event.preventDefault()
-                void navigate(signupPath(propertyName))
-              }}
-            >
-              <label htmlFor={nameId} className="text-sm font-medium">
-                Comece pelo nome do seu imóvel
-              </label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  id={nameId}
-                  value={propertyName}
-                  maxLength={60}
-                  autoComplete="off"
-                  placeholder="ex.: Casa da Praia"
-                  className="h-11 text-base sm:flex-1"
-                  onChange={(event) => {
-                    setPropertyName(event.target.value)
-                  }}
-                />
-                <Button type="submit" size="lg" className="h-11">
-                  Criar conta
-                </Button>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                Já usa o Hostly?{' '}
-                <Link
-                  to="/login"
-                  className="text-primary font-medium underline-offset-4 hover:underline"
-                >
-                  Entrar
-                </Link>
+        <section aria-labelledby="hero-title" className="relative lg:min-h-[calc(100svh-4rem)]">
+          <div className="mx-auto grid max-w-7xl px-4 pt-6 pb-8 sm:px-6 lg:min-h-[calc(100svh-4rem)] lg:grid-cols-12 lg:items-center lg:pt-0 lg:pb-16">
+            <div className="relative z-10 lg:col-span-5 lg:pr-10">
+              <h1
+                id="hero-title"
+                className="font-display animate-tile-flip text-[2.75rem] leading-[1.02] tracking-[-0.02em] text-balance sm:text-6xl xl:text-7xl"
+              >
+                Sua temporada, ladrilho por ladrilho.
+              </h1>
+              <p
+                style={{ animationDelay: '120ms' }}
+                className="animate-tile-flip text-muted-foreground mt-4 max-w-md text-base text-pretty sm:mt-6 sm:text-lg"
+              >
+                Cada noite de cada imóvel num calendário que não deixa marcar duas vezes, e quanto
+                cada reserva rende, já com a comissão do intermediador.
               </p>
-            </form>
+              <form
+                style={{ animationDelay: '240ms' }}
+                className="animate-tile-flip mt-6 grid max-w-md gap-2 sm:mt-8"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  void navigate(signupPath(propertyName))
+                }}
+              >
+                <label htmlFor={nameId} className="text-sm font-medium">
+                  Comece pelo nome do seu imóvel
+                </label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id={nameId}
+                    value={propertyName}
+                    maxLength={60}
+                    autoComplete="off"
+                    placeholder="ex.: Casa da Praia"
+                    className="h-11 text-base sm:flex-1"
+                    onChange={(event) => {
+                      setPropertyName(event.target.value)
+                    }}
+                  />
+                  <Button type="submit" size="lg" className="h-11">
+                    Criar conta
+                  </Button>
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  Já usa o Hostly?{' '}
+                  <Link
+                    to="/login"
+                    className="text-primary font-medium underline-offset-4 hover:underline"
+                  >
+                    Entrar
+                  </Link>
+                </p>
+              </form>
+            </div>
           </div>
 
-          <div className="bg-card rounded-md border p-3 shadow-[0_30px_60px_-30px_var(--frame-shadow)] sm:p-4 lg:col-span-7 lg:h-[min(40rem,calc(100svh-7rem))]">
-            <TileWall visitorName={propertyName} />
+          {/* The wall: the right 7/12 of the hero, bleeding off the right edge, top to bottom. */}
+          <div className="sm:pl-6 lg:absolute lg:inset-y-0 lg:right-0 lg:w-[58%] lg:pb-6 lg:pl-0">
+            <div className="h-full overflow-hidden sm:rounded-l-md">
+              <TileWall visitorName={propertyName} />
+            </div>
           </div>
         </section>
 
@@ -164,9 +132,8 @@ export function LandingPage() {
         </section>
 
         <section
-          ref={tour}
           aria-labelledby="tour-title"
-          className="mx-auto max-w-7xl scroll-mt-4 px-4 py-16 sm:px-6 sm:py-24"
+          className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24"
         >
           <h2
             id="tour-title"
@@ -251,45 +218,6 @@ export function LandingPage() {
               Telas reais do Hostly, com dados fictícios.
             </p>
           </TabsPrimitive.Root>
-        </section>
-
-        <section
-          aria-labelledby="jobs-title"
-          className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 sm:pb-24"
-        >
-          <h2
-            id="jobs-title"
-            className="font-display max-w-2xl text-3xl leading-tight tracking-tight text-balance sm:text-4xl"
-          >
-            Tudo o que a planilha fazia, sem a conta de cabeça
-          </h2>
-          <ul className="bg-grout mt-10 grid gap-[3px] overflow-hidden rounded-md p-[3px] sm:grid-cols-2">
-            {JOBS.map(({ icon: Icon, title, text, screen: target }) => (
-              <li key={title} className="bg-card flex flex-col gap-4 rounded-[2px] p-6 sm:p-8">
-                <span
-                  aria-hidden
-                  className="azulejo text-primary flex size-12 items-center justify-center rounded-[3px] border [--tile-ink:var(--glaze-strong)]"
-                >
-                  <Icon className="size-6" />
-                </span>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold">{title}</h3>
-                  <p className="text-muted-foreground mt-1 text-pretty">{text}</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="self-start"
-                  onClick={() => {
-                    showScreen(target)
-                  }}
-                >
-                  Ver a tela
-                  <span className="sr-only">: {title}</span>
-                </Button>
-              </li>
-            ))}
-          </ul>
         </section>
 
         <section
