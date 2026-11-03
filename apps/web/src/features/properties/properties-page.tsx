@@ -1,4 +1,5 @@
 import { CalendarDays, Home, MoreHorizontal, Pencil, Plus, SearchX, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 
@@ -54,11 +55,24 @@ function PropertyName({ property }: { property: Property }) {
 }
 
 export function PropertiesPage() {
-  const { page, search, setSearch, setPage } = useSearchParamState()
+  const { params, page, search, set, setSearch, setPage } = useSearchParamState()
   const properties = useProperties({ search, page })
   const remove = useDeleteProperty()
   const editing = useOverlay<Property>()
   const deleting = useOverlay<Property>()
+  // A name brought from the home page (`?novo=Casa da Praia`) opens the new-property form
+  // with it, once; the parameter leaves the URL so a reload doesn't reopen it.
+  const [draftName, setDraftName] = useState<string>()
+  const broughtName = params.get('novo')?.trim()
+  const handledName = useRef<string>(undefined)
+  const { show: showEditing } = editing
+  useEffect(() => {
+    if (!broughtName || handledName.current === broughtName) return
+    handledName.current = broughtName
+    setDraftName(broughtName.slice(0, 255))
+    showEditing()
+    set('novo', undefined)
+  }, [broughtName, showEditing, set])
   const pastTheEnd = useClampedPage({
     page,
     pageSize: PAGE_SIZE,
@@ -87,6 +101,7 @@ export function PropertiesPage() {
   const newButton = (
     <Button
       onClick={() => {
+        setDraftName(undefined)
         editing.show()
       }}
     >
@@ -214,7 +229,12 @@ export function PropertiesPage() {
         </>
       )}
 
-      <PropertySheet open={editing.open} property={editing.item} onOpenChange={editing.setOpen} />
+      <PropertySheet
+        open={editing.open}
+        property={editing.item}
+        draftName={draftName}
+        onOpenChange={editing.setOpen}
+      />
 
       <ConfirmDialog
         open={deleting.open}
