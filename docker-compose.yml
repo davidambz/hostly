@@ -45,6 +45,7 @@ services:
     volumes:
       - ./apps/api/src:/repo/apps/api/src
       - ./apps/api/prisma:/repo/apps/api/prisma
+      - ./packages/validation/src:/repo/packages/validation/src
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,6 +66,7 @@ services:
       - ./apps/web/src:/repo/apps/web/src
       - ./apps/web/public:/repo/apps/web/public
       - ./apps/web/index.html:/repo/apps/web/index.html
+      - ./packages/validation/src:/repo/packages/validation/src
     depends_on:
       - api
 

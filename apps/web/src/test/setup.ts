@@ -7,8 +7,7 @@ import { setAccessToken } from '@/lib/api/session'
 
 import { server } from './server'
 
-// Pages are lazy-loaded: the first test to open one also loads (and, under coverage,
-// instruments) its code, which can take longer than the 1 s default.
+// Under coverage on CI, renders and requests can take longer than the 1 s default.
 configure({ asyncUtilTimeout: 5000 })
 
 // jsdom has no matchMedia; the theme provider reads it.

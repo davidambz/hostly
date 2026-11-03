@@ -1,7 +1,11 @@
 /**
- * Validators for Brazilian documents and phones. They take the normalized value: digits
- * only for CPF, CEP and phones (`onlyDigits`), digits and uppercase letters for CNPJ, which
- * can be alphanumeric (`normalizeDocument`).
+ * Brazilian documents, phones and CEPs: the rules the API enforces and the web app checks
+ * before sending, in one place.
+ *
+ * - Validators (`isValid…`) take the normalized value: digits only for CPF, CEP and phones
+ *   (`onlyDigits`, `normalizePhone`), digits and uppercase letters for a CNPJ, which can be
+ *   alphanumeric (`normalizeDocument`). A masked value is not valid as is.
+ * - Masks (`mask…`) take anything typed and format it, also while typing.
  */
 
 export function onlyDigits(value: string): string {
@@ -139,4 +143,49 @@ export function isValidCnpj(cnpj: string): boolean {
  */
 export function normalizeDocument(value: string): string {
   return value.toUpperCase().replace(/[^0-9A-Z]/g, '')
+}
+
+// Masks for typing: they format, they don't validate.
+
+/** `52998224725` → `529.982.247-25`, also while typing. */
+export function maskCpf(value: string): string {
+  const d = onlyDigits(value).slice(0, 11)
+  return d
+    .replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2')
+}
+
+/** `48999990000` → `(48) 99999-0000`; `4833334444` → `(48) 3333-4444`; `+55 …` is dropped. */
+export function maskPhone(value: string): string {
+  const d = normalizePhone(value).slice(0, 11)
+  if (d.length <= 2) return d.length ? `(${d}` : ''
+  const area = d.slice(0, 2)
+  const rest = d.slice(2)
+  const split = rest.length > 8 ? 5 : 4
+  return rest.length > split
+    ? `(${area}) ${rest.slice(0, split)}-${rest.slice(split)}`
+    : `(${area}) ${rest}`
+}
+
+/** `88053700` → `88053-700`, also while typing. */
+export function maskCep(value: string): string {
+  const d = onlyDigits(value).slice(0, 8)
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+}
+
+/**
+ * `12ABC34501DE35` → `12.ABC.345/01DE-35`, also while typing. The first 12 characters can be
+ * letters (alphanumeric CNPJ, from July 2026); the 2 check digits are always digits.
+ */
+export function maskCnpj(value: string): string {
+  const raw = normalizeDocument(value)
+  const base = raw.slice(0, 12)
+  const check = onlyDigits(raw.slice(12)).slice(0, 2)
+  let masked = base.slice(0, 2)
+  if (base.length > 2) masked += `.${base.slice(2, 5)}`
+  if (base.length > 5) masked += `.${base.slice(5, 8)}`
+  if (base.length > 8) masked += `/${base.slice(8, 12)}`
+  if (check) masked += `-${check}`
+  return masked
 }

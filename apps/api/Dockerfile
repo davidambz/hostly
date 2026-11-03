@@ -48,7 +48,8 @@ CMD ["pnpm", "db:deploy"]
 
 FROM source AS build
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm --filter @hostly/api build \
+    pnpm --filter @hostly/validation build \
+ && pnpm --filter @hostly/api build \
  && pnpm --filter @hostly/api deploy --prod --legacy /out
 
 FROM node:${NODE_VERSION}-alpine AS prod

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { STATES } from './brazil.js'
+import { STATES } from '@hostly/validation'
 import {
   cepSchema,
   cpfSchema,

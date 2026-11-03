@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { maskPhone } from '@/lib/validation/brazil'
+import { maskPhone } from '@hostly/validation'
 
 import { applyMask } from './mask'
 

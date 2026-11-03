@@ -1,4 +1,4 @@
-import { isValidCep, onlyDigits } from './validation/brazil'
+import { isValidCep, onlyDigits } from '@hostly/validation'
 
 /** What ViaCEP knows about a CEP, in the shape of our address fields. */
 export interface CepAddress {
@@ -23,8 +23,9 @@ export const VIACEP_URL = 'https://viacep.com.br/ws'
  * malformed); rejects when ViaCEP can't be reached, so the caller can tell the two apart.
  */
 export async function lookupCep(cep: string, signal?: AbortSignal): Promise<CepAddress | null> {
-  if (!isValidCep(cep)) return null
-  const response = await fetch(`${VIACEP_URL}/${onlyDigits(cep)}/json/`, { signal })
+  const digits = onlyDigits(cep)
+  if (!isValidCep(digits)) return null
+  const response = await fetch(`${VIACEP_URL}/${digits}/json/`, { signal })
   if (!response.ok) {
     if (response.status === 400) return null
     throw new Error(`ViaCEP answered ${response.status}`)

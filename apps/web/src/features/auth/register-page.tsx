@@ -9,7 +9,7 @@ import { PasswordField } from '@/components/form/password-field'
 import { TextField } from '@/components/form/text-field'
 import { Button } from '@/components/ui/button'
 import { applyApiError } from '@/lib/api/form-errors'
-import { maskCpf, maskPhone } from '@/lib/validation/brazil'
+import { maskCpf, maskPhone } from '@hostly/validation'
 
 import { AccountCreatedError, useAuth } from './auth-context'
 import { AuthLayout } from './auth-layout'

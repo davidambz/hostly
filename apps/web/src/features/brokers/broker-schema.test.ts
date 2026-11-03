@@ -49,6 +49,8 @@ describe('brokerFormSchema', () => {
     ['a CNPJ for a person', 'INDIVIDUAL', '11.222.333/0001-81', 'CPF inválido.'],
     ['a CPF for a company', 'COMPANY', '529.982.247-25', 'CNPJ inválido.'],
     ['a CPF with a wrong digit', 'INDIVIDUAL', '529.982.247-26', 'CPF inválido.'],
+    // What is sent keeps the letter, and the API would reject it.
+    ['a CPF with a letter in it', 'INDIVIDUAL', '529982247a25', 'CPF inválido.'],
   ] as const)('rejects %s', (_case, type, document, message) => {
     const issue = parse({ type, document }).error?.issues[0]
     expect(issue).toMatchObject({ path: ['document'], message })

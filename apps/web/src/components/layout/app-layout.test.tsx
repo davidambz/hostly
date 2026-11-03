@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { routes } from '@/app/routes'
+import { routes } from '@/test/app-routes'
 import { THEME_STORAGE_KEY } from '@/components/theme/theme-context'
 import { renderRoute } from '@/test/render'
 import { loggedInHandlers, server } from '@/test/server'

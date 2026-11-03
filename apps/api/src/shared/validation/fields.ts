@@ -10,7 +10,7 @@ import {
   normalizePhone,
   onlyDigits,
   STATES,
-} from './brazil.js'
+} from '@hostly/validation'
 
 /**
  * Reusable request fields. They accept what people type (masks, spaces, any case) and
