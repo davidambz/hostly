@@ -38,8 +38,8 @@ const STAYS: WallStay[] = [
   { property: 2, guest: 'Camila Duarte', from: 22, to: 28 },
 ]
 
-/** The visitor's property: a first stay on the free nights of the last row. */
-const VISITOR = { glaze: 5 as const, from: 31, to: 35 }
+/** The visitor's property: a first stay on free January nights, in its own lane. */
+const VISITOR = { glaze: 5 as const, from: 25, to: 31 }
 
 /** January 2027 starts on a Friday: the wall opens on Sunday 27 December. */
 const FIRST_DAY = -4
@@ -98,7 +98,7 @@ export function TileWall({ visitorName }: { visitorName: string }) {
         <ul aria-label="Imóveis do exemplo" className="flex flex-wrap gap-1">
           {[...PROPERTIES, { name: name || 'Seu imóvel', glaze: VISITOR.glaze }].map(
             (property, lane) => (
-              <li key={lane}>
+              <li key={lane === visitorLane ? `visitor-${String(Boolean(name))}` : lane}>
                 <button
                   type="button"
                   aria-pressed={focus === lane}
@@ -117,6 +117,8 @@ export function TileWall({ visitorName }: { visitorName: string }) {
                   className={cn(
                     'bg-muted hover:bg-accent focus-visible:ring-ring flex items-center gap-1.5 rounded-[3px] px-2 py-0.5 outline-none focus-visible:ring-2',
                     lane === visitorLane && !name && 'text-muted-foreground',
+                    // On a phone this chip is the part of the wall in view while typing.
+                    lane === visitorLane && name && 'animate-tile-flip ring-property-5 ring-2',
                   )}
                 >
                   <span className={cn('size-2.5 rounded-[2px]', DOT[property.glaze])} aria-hidden />
@@ -148,7 +150,7 @@ export function TileWall({ visitorName }: { visitorName: string }) {
         {Array.from({ length: WEEKS }, (_, week) => (
           <div
             key={week}
-            className="relative grid min-h-[4.5rem] grid-cols-7 gap-[3px]"
+            className="relative grid min-h-[5.75rem] grid-cols-7 gap-[3px]"
             aria-hidden
           >
             {Array.from({ length: 7 }, (_, column) => {
@@ -198,7 +200,7 @@ export function TileWall({ visitorName }: { visitorName: string }) {
                   <Band
                     // Repainted whenever the name changes.
                     key={name}
-                    lane={0}
+                    lane={visitorLane}
                     start={part.start}
                     span={part.span}
                     glaze={VISITOR.glaze}
@@ -210,7 +212,7 @@ export function TileWall({ visitorName }: { visitorName: string }) {
           </div>
         ))}
 
-        {/* The visitor's house-number plaque, set on the free tiles of the last row. */}
+        {/* The visitor's house-number plaque, a sign hung on the wall's last row. */}
         <div
           aria-hidden
           key={name}
