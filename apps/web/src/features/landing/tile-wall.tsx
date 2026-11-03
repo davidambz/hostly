@@ -231,7 +231,7 @@ function Band({
         animationDelay: `${String(delay)}ms`,
       }}
       className={cn(
-        'animate-paint absolute h-[0.9rem] truncate rounded-[3px] px-1.5 text-[0.7rem] leading-[0.9rem] font-semibold transition-opacity duration-300',
+        'animate-paint absolute h-[0.9rem] truncate rounded-[3px] px-1.5 text-xs leading-[0.9rem] font-semibold transition-opacity duration-300',
         outline
           ? 'border-property-5 text-muted-foreground border border-dashed bg-transparent'
           : GLAZE[glaze],
