@@ -58,8 +58,9 @@ export function useBookings(query: BookingListQuery) {
   })
 }
 
-export function useCalendarBookings(query: CalendarQuery) {
+export function useCalendarBookings(query: CalendarQuery, { enabled = true } = {}) {
   return useQuery({
+    enabled,
     queryKey: bookingKeys.calendar(query),
     queryFn: async () =>
       unwrap(
