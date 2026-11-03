@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Padrão</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        width: 1440px;
+        height: 900px;
+        font-family: system-ui, sans-serif;
+        background: #fff;
+        color: #13293d;
+        overflow: hidden;
+      }
+      nav {
+        height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 64px;
+        border-bottom: 1px solid #e3edf0;
+        font-size: 18px;
+      }
+      nav b {
+        font-size: 24px;
+      }
+      h1 {
+        position: absolute;
+        top: 180px;
+        left: 64px;
+        width: 560px;
+        font-size: 60px;
+        line-height: 1.05;
+        letter-spacing: -0.03em;
+      }
+      p {
+        position: absolute;
+        top: 380px;
+        left: 64px;
+        width: 500px;
+        font-size: 22px;
+        color: #4a6378;
+      }
+      .cta {
+        position: absolute;
+        top: 480px;
+        left: 64px;
+        background: #006494;
+        color: #fff;
+        padding: 16px 26px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 22px;
+      }
+      .shot {
+        position: absolute;
+        top: 150px;
+        right: 64px;
+        width: 700px;
+        height: 460px;
+        border-radius: 14px;
+        border: 1px solid #d2e1e5;
+        box-shadow: 0 30px 60px -24px #13293d55;
+        background: linear-gradient(#f7fafb 0 40px, #fff 40px);
+      }
+      .feat {
+        position: absolute;
+        top: 690px;
+        left: 64px;
+        right: 64px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .feat div {
+        height: 150px;
+        border: 1px solid #e3edf0;
+        border-radius: 12px;
+        padding: 24px;
+        font-size: 22px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <nav><b>Hostly</b><span>Entrar · Criar conta</span></nav>
+    <h1>Gestão de reservas para aluguel de temporada</h1>
+    <p>Calendário, imóveis e intermediadores num só lugar.</p>
+    <div class="cta">Criar conta</div>
+    <div class="shot"></div>
+    <div class="feat">
+      <div>Calendário</div>
+      <div>Imóveis</div>
+      <div>Financeiro</div>
+    </div>
+  </body>
+</html>

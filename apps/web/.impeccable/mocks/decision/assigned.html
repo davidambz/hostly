@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Quadro de chaves</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        width: 1440px;
+        height: 900px;
+        font-family: system-ui, sans-serif;
+        background: #13293d;
+        color: #e8f1f2;
+        overflow: hidden;
+      }
+      .board {
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(90deg, #13293d 0 2px, #162f46 2px 140px);
+      }
+      nav {
+        position: absolute;
+        top: 28px;
+        left: 64px;
+        right: 64px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 18px;
+      }
+      nav b {
+        font-size: 26px;
+        letter-spacing: -0.02em;
+      }
+      nav .cta {
+        background: #1b98e0;
+        color: #0b1a27;
+        padding: 12px 22px;
+        border-radius: 8px;
+        font-weight: 700;
+      }
+      h1 {
+        position: absolute;
+        top: 120px;
+        left: 64px;
+        width: 760px;
+        font-size: 76px;
+        line-height: 0.98;
+        letter-spacing: -0.035em;
+      }
+      .sub {
+        position: absolute;
+        top: 300px;
+        left: 64px;
+        width: 560px;
+        font-size: 22px;
+        color: #b9d2dc;
+      }
+      .try {
+        position: absolute;
+        top: 400px;
+        left: 64px;
+        display: flex;
+        gap: 12px;
+      }
+      .try span {
+        background: #e8f1f2;
+        color: #13293d;
+        padding: 16px 20px;
+        border-radius: 8px;
+        width: 340px;
+        font-size: 22px;
+      }
+      .try i {
+        background: #1b98e0;
+        color: #0b1a27;
+        padding: 16px 26px;
+        border-radius: 8px;
+        font-style: normal;
+        font-weight: 700;
+        font-size: 22px;
+      }
+      .rail {
+        position: absolute;
+        left: 64px;
+        right: 64px;
+        height: 2px;
+        background: #d6c7a1;
+      }
+      .hook {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #d6c7a1;
+        margin-top: -5px;
+      }
+      .tag {
+        position: absolute;
+        padding: 10px 14px;
+        border-radius: 6px 6px 14px 14px;
+        background: #e8f1f2;
+        color: #13293d;
+        font-weight: 700;
+        font-size: 22px;
+        transform-origin: top center;
+      }
+      .tag.a {
+        background: #1b98e0;
+        color: #0b1a27;
+      }
+      .tag.b {
+        background: #006494;
+        color: #fff;
+      }
+      .tag.new {
+        outline: 3px dashed #1b98e0;
+        background: transparent;
+        color: #e8f1f2;
+        transform: rotate(-4deg);
+      }
+      .lbl {
+        position: absolute;
+        left: 64px;
+        font-size: 22px;
+        color: #d6c7a1;
+        font-weight: 700;
+      }
+      .days {
+        position: absolute;
+        top: 500px;
+        left: 300px;
+        right: 64px;
+        display: grid;
+        grid-template-columns: repeat(31, 1fr);
+        font-size: 13px;
+        color: #7e9aac;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="board"></div>
+    <nav>
+      <b>⌐ Hostly</b><span>Entrar &nbsp; <span class="cta">Criar conta</span></span>
+    </nav>
+    <h1>Cada noite de cada imóvel, pendurada no lugar certo.</h1>
+    <p class="sub">O quadro de chaves da sua temporada: quem entra, quando sai e quanto rende.</p>
+    <div class="try"><span>Nome do seu imóvel…</span><i>Pendurar no quadro</i></div>
+    <div class="days">
+      1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+    </div>
+    <div class="lbl" style="top: 560px">Casa da Praia</div>
+    <div class="rail" style="top: 600px; left: 300px"></div>
+    <div class="tag a" style="top: 612px; left: 300px; width: 300px">Ana · 3–10</div>
+    <div class="tag b" style="top: 612px; left: 640px; width: 380px">Carlos · 12–22</div>
+    <div class="lbl" style="top: 700px">Apto Centro</div>
+    <div class="rail" style="top: 740px; left: 300px"></div>
+    <div class="tag b" style="top: 752px; left: 380px; width: 260px">Rafael · 5–11</div>
+    <div class="tag a" style="top: 752px; left: 900px; width: 420px">Juliana · 20–31</div>
+    <div class="lbl" style="top: 820px">Seu imóvel</div>
+    <div class="rail" style="top: 860px; left: 300px"></div>
+    <div class="tag new" style="top: 868px; left: 560px; width: 300px">sua primeira reserva</div>
+  </body>
+</html>
