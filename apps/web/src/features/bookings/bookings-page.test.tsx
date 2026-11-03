@@ -200,6 +200,12 @@ describe('calendar', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual(['Casa da Praia', 'Apê Centro'])
+    // Said in words and placed before the calendar, so side-by-side bars read as different
+    // properties rather than one property booked twice.
+    expect(screen.getByText('Cada cor é um imóvel:')).toBeInTheDocument()
+    expect(
+      legend.compareDocumentPosition(nth(pedroBars, 0)) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   it('moves between months and back to today through the URL', async () => {
