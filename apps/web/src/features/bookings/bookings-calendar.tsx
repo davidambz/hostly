@@ -32,6 +32,18 @@ const MONTH_LANES = 3
 const LANE_REM = 1.5
 /** Room for the day number at the top of each day, in rem. */
 const DAY_HEADER_REM = 1.75
+/** The grout between tiles, in px. */
+const GROUT_PX = 3
+
+/** Left edge of column `index` in a row of 7 tiles separated by grout. */
+function columnLeft(index: number) {
+  return `calc((100% - ${String(6 * GROUT_PX)}px) / 7 * ${String(index)} + ${String(index * GROUT_PX)}px)`
+}
+
+/** Width of `span` columns, grout between them included. */
+function columnsWidth(span: number) {
+  return `calc((100% - ${String(6 * GROUT_PX)}px) / 7 * ${String(span)} + ${String((span - 1) * GROUT_PX)}px)`
+}
 
 interface Selection {
   anchor: string
@@ -149,7 +161,10 @@ export function BookingsCalendar({
             <ChevronRight />
           </Button>
         </div>
-        <h2 className="text-lg font-semibold first-letter:uppercase" aria-live="polite">
+        <h2
+          className="font-display text-2xl leading-none tracking-tight first-letter:uppercase"
+          aria-live="polite"
+        >
           {title(view, date)}
         </h2>
         {bookings.isFetching && (
@@ -177,12 +192,12 @@ export function BookingsCalendar({
           onRetry={() => void bookings.refetch()}
         />
       ) : (
-        <div className="overflow-hidden rounded-lg border select-none">
-          <div className="bg-muted/50 grid grid-cols-7 border-b" aria-hidden>
+        <div className="bg-grout grid gap-[3px] overflow-hidden rounded-md p-[3px] select-none">
+          <div className="grid grid-cols-7 gap-[3px]" aria-hidden>
             {WEEKDAYS.map((weekday) => (
               <div
                 key={weekday}
-                className="text-muted-foreground px-2 py-1.5 text-xs font-medium uppercase"
+                className="bg-card text-muted-foreground rounded-[2px] px-2 py-1.5 text-xs font-medium tracking-wide uppercase"
               >
                 {weekday}
               </div>
@@ -257,7 +272,7 @@ function WeekRow({
       : `max(16rem, ${DAY_HEADER_REM + LANE_REM * (lanes + 1)}rem)`
 
   return (
-    <div className="relative grid grid-cols-7 border-b last:border-b-0" style={{ minHeight }}>
+    <div className="relative grid grid-cols-7 gap-[3px]" style={{ minHeight }}>
       {days.map((day, index) => {
         const hidden = (perDay[index] ?? 0) - (shownPerDay[index] ?? 0)
         const selected = range !== null && day >= range[0] && day <= range[1]
@@ -265,10 +280,12 @@ function WeekRow({
         return (
           <div
             key={day}
+            style={{ animationDelay: `${String(index * 30)}ms` }}
             className={cn(
-              'relative border-r last:border-r-0',
-              outside && 'bg-muted/30',
-              selected && 'bg-primary/15',
+              // A quieter motif than the home page's: here the bars are the content.
+              'azulejo animate-tile-settle relative rounded-[2px] [--tile-ink:color-mix(in_oklab,var(--glaze)_55%,var(--card))]',
+              outside && 'bg-muted [--tile-ink:var(--glaze-strong)]',
+              selected && 'ring-primary bg-accent ring-2 ring-inset',
             )}
           >
             <button
@@ -289,9 +306,9 @@ function WeekRow({
             />
             <span
               className={cn(
-                'pointer-events-none relative m-1 inline-flex size-6 items-center justify-center rounded-full text-xs',
+                'font-display pointer-events-none relative m-1 inline-flex size-6 items-center justify-center rounded-[3px] text-sm',
                 outside && 'text-muted-foreground',
-                day === today && 'bg-primary text-primary-foreground font-semibold',
+                day === today && 'bg-primary text-primary-foreground',
               )}
               aria-hidden
             >
@@ -300,13 +317,14 @@ function WeekRow({
             {hidden > 0 && (
               <button
                 type="button"
-                className="text-muted-foreground hover:text-foreground relative mx-1 text-xs font-medium"
-                style={{ position: 'absolute', bottom: '0.125rem', left: 0 }}
+                aria-label={`${String(hidden)} ${hidden === 1 ? 'reserva' : 'reservas'} a mais em ${formatLongDate(day)}`}
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute bottom-0.5 left-0 mx-1 rounded-sm px-0.5 text-xs font-medium whitespace-nowrap outline-none focus-visible:ring-2"
                 onClick={() => {
                   onShowWeek(day)
                 }}
               >
-                +{hidden} {hidden === 1 ? 'reserva' : 'reservas'}
+                +{hidden}
+                <span className="hidden md:inline"> {hidden === 1 ? 'reserva' : 'reservas'}</span>
               </button>
             )}
           </div>
@@ -317,7 +335,7 @@ function WeekRow({
           key={segment.item.id}
           segment={segment}
           color={colorOf(colors, segment.item.property.id)}
-          showProperty={view === 'week'}
+          index={segment.lane * 7 + segment.start}
           onOpen={onOpenBooking}
         />
       ))}
@@ -328,12 +346,13 @@ function WeekRow({
 function StayBar({
   segment,
   color,
-  showProperty,
+  index,
   onOpen,
 }: {
   segment: Segment<Booking>
   color: PropertyColor
-  showProperty: boolean
+  /** Order on the wall, for the paint stagger. */
+  index: number
   onOpen: (booking: Booking) => void
 }) {
   const booking = segment.item
@@ -344,22 +363,24 @@ function StayBar({
       title={label}
       aria-label={label}
       className={cn(
-        'focus-visible:ring-ring absolute h-5 truncate rounded-md px-2 text-left text-xs font-medium shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
+        'focus-visible:ring-ring animate-paint absolute h-5 truncate rounded-[3px] px-2 text-left text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
         color.bar,
         segment.continuesBefore && 'rounded-l-none',
         segment.continuesAfter && 'rounded-r-none',
       )}
       style={{
         top: `${DAY_HEADER_REM + 0.25 + segment.lane * LANE_REM}rem`,
-        left: `calc(${(segment.start / 7) * 100}% + ${segment.continuesBefore ? 0 : 2}px)`,
-        width: `calc(${(segment.span / 7) * 100}% - ${(segment.continuesBefore ? 0 : 2) + (segment.continuesAfter ? 0 : 2)}px)`,
+        left: `calc(${columnLeft(segment.start)} + ${segment.continuesBefore ? 0 : 3}px)`,
+        width: `calc(${columnsWidth(segment.span)} - ${(segment.continuesBefore ? 0 : 3) + (segment.continuesAfter ? 0 : 3)}px)`,
+        animationDelay: `${String(150 + Math.min(index, 20) * 25)}ms`,
       }}
       onClick={() => {
         onOpen(booking)
       }}
     >
       {booking.guestName}
-      {showProperty && <span className="font-normal opacity-80"> · {booking.property.name}</span>}
+      {/* The property too, not only its color: it shows wherever the bar has room. */}
+      <span className="font-normal opacity-80"> · {booking.property.name}</span>
     </button>
   )
 }

@@ -185,7 +185,7 @@ export function BookingsPage() {
                     {properties.data.map((property) => (
                       <li key={property.id} className="flex items-center gap-1.5">
                         <span
-                          className={`size-2.5 rounded-full ${colorOf(colors, property.id).dot}`}
+                          className={`size-2.5 rounded-[2px] ${colorOf(colors, property.id).dot}`}
                           aria-hidden
                         />
                         {property.name}
@@ -237,6 +237,7 @@ export function BookingsPage() {
         draft={sheet.item?.draft}
         onOpenChange={sheet.setOpen}
         onDelete={askDelete}
+        month={date}
       />
 
       <ConfirmDialog

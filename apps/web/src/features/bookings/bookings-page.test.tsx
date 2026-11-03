@@ -254,7 +254,12 @@ describe('calendar', () => {
     serve({ bookings: crowd })
     const { user } = await openPage()
 
-    await user.click(await screen.findByRole('button', { name: '+1 reserva' }))
+    // Short on screen ("+1"), complete for assistive technology.
+    const more = await screen.findByRole('button', {
+      name: '1 reserva a mais em 3 de novembro de 2026',
+    })
+    expect(more).toHaveTextContent('+1')
+    await user.click(more)
 
     expect(await screen.findByRole('heading', { name: '1 – 7 nov 2026' })).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /^[ABCD], / })).toHaveLength(4)
@@ -693,7 +698,9 @@ describe('list', () => {
     expect(nth(rows, 1)).toHaveTextContent('R$ 1.500,00')
     expect(nth(rows, 1)).toHaveTextContent('R$ 1.000,00')
     expect(nth(rows, 2)).toHaveTextContent('Apê Centro · via Carlos Lima')
-    expect(within(nth(rows, 2)).getByText('Quitado')).toBeInTheDocument()
+    // In its column (from sm up) and under the stay (phones, which have no money columns).
+    expect(within(nth(rows, 2)).getAllByText('Quitado')).toHaveLength(2)
+    expect(within(nth(rows, 1)).getByText('Falta receber R$ 1.000,00')).toHaveClass('sm:hidden')
     expect(router.state.location.search).toBe('?modo=lista')
     expect(Object.fromEntries(nth(queries, 0))).toEqual({
       status: 'upcoming',
