@@ -72,9 +72,8 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
         tags: ['auth'],
         summary: 'Create an account',
         description:
-          'CPF and phone are accepted with or without masks and stored as digits; the ' +
-          'e-mail is stored lowercase. Answers 409 with code EMAIL_TAKEN or CPF_TAKEN ' +
-          'when either is already registered.',
+          'Name, e-mail and password only; the e-mail is stored lowercase. Answers 409 ' +
+          'with code EMAIL_TAKEN when the e-mail is already registered.',
         body: registerBodySchema,
         response: {
           201: publicUserSchema,

@@ -8,8 +8,6 @@ import { UsersRepository } from './users.repository.js'
 const newUser = {
   name: 'Ana',
   email: 'ana@hostly.dev',
-  cpf: '52998224725',
-  phone: '48999990000',
   passwordHash: 'hash',
 }
 
@@ -33,13 +31,7 @@ describe('UsersRepository.create', () => {
       { driverAdapterError: { cause: { constraint: { index: 'users_email_key' } } } },
       'email',
     ],
-    [
-      'the adapter constraint users_cpf_key',
-      { driverAdapterError: { cause: { constraint: { index: 'users_cpf_key' } } } },
-      'cpf',
-    ],
     ['meta.target [email]', { target: ['email'] }, 'email'],
-    ['meta.target cpf', { target: 'cpf' }, 'cpf'],
   ])('reports a violation found through %s as a UniqueFieldError', async (_case, meta, field) => {
     const error = await repositoryFailingWith(uniqueViolation(meta))
       .create(newUser)
@@ -49,15 +41,40 @@ describe('UsersRepository.create', () => {
     expect(error).toMatchObject({ field })
   })
 
-  it('lets a violation of any other unique constraint through untouched', async () => {
-    const violation = uniqueViolation({ target: ['phone'] })
+  it.each([
+    ['meta.target [cpf]', { target: ['cpf'] }],
+    [
+      'the adapter constraint users_cpf_key',
+      { driverAdapterError: { cause: { constraint: { index: 'users_cpf_key' } } } },
+    ],
+  ])(
+    'lets a violation of any other unique constraint (%s) through untouched',
+    async (_case, meta) => {
+      const violation = uniqueViolation(meta)
 
-    await expect(repositoryFailingWith(violation).create(newUser)).rejects.toBe(violation)
-  })
+      await expect(repositoryFailingWith(violation).create(newUser)).rejects.toBe(violation)
+    },
+  )
 
   it('lets any other database error through untouched', async () => {
     const failure = new Error('connection reset')
 
     await expect(repositoryFailingWith(failure).create(newUser)).rejects.toBe(failure)
+  })
+})
+
+describe('UsersRepository.existsByEmail', () => {
+  it.each([
+    ['an account', { id: 'u1' }, true],
+    ['no account', null, false],
+  ])('answers whether the e-mail has %s, reading only the id', async (_case, row, expected) => {
+    const findUnique = vi.fn().mockResolvedValue(row)
+    const repository = new UsersRepository({ user: { findUnique } } as unknown as Database)
+
+    await expect(repository.existsByEmail('ana@hostly.dev')).resolves.toBe(expected)
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { email: 'ana@hostly.dev' },
+      select: { id: true },
+    })
   })
 })

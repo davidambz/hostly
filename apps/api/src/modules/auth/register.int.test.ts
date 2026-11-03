@@ -12,8 +12,6 @@ let app: App
 const validBody = {
   name: 'Ana Souza',
   email: 'ana@hostly.dev',
-  cpf: '529.982.247-25',
-  phone: '(48) 99999-0000',
   password: 'correct horse battery',
 }
 
@@ -39,8 +37,8 @@ describe('POST /auth/register', () => {
         id: expect.stringMatching(/^[0-9a-f-]{36}$/) as string,
         name: 'Ana Souza',
         email: 'ana@hostly.dev',
-        cpf: '52998224725',
-        phone: '48999990000',
+        cpf: null,
+        phone: null,
         createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) as string,
       })
     })
@@ -61,20 +59,24 @@ describe('POST /auth/register', () => {
       })
 
       const user = await db.user.findUniqueOrThrow({ where: { email: 'ana@hostly.dev' } })
-      expect(user).toMatchObject({
-        name: 'Ana Souza',
-        cpf: '52998224725',
-        phone: '48999990000',
-      })
+      expect(user).toMatchObject({ name: 'Ana Souza', cpf: null, phone: null })
       expect(user.passwordHash).toMatch(/^\$argon2id\$/)
       await expect(verify(user.passwordHash, 'correct horse battery')).resolves.toBe(true)
     })
 
-    it('accepts a landline phone and unmasked CPF', async () => {
+    it('ignores a CPF or phone sent anyway: signup no longer takes them', async () => {
       const response = await register({ ...validBody, cpf: '52998224725', phone: '4833334444' })
 
       expect(response.statusCode).toBe(201)
-      expect(response.json()).toMatchObject({ phone: '4833334444' })
+      expect(response.json()).toMatchObject({ cpf: null, phone: null })
+    })
+
+    it('lets many accounts exist without a CPF, next to older ones that have it', async () => {
+      await createUser(db, { cpf: '52998224725' })
+
+      expect((await register(validBody)).statusCode).toBe(201)
+      expect((await register({ ...validBody, email: 'bia@hostly.dev' })).statusCode).toBe(201)
+      expect(await db.user.count({ where: { cpf: null } })).toBe(2)
     })
 
     it('ignores fields it does not know, such as a password hash or id', async () => {
@@ -106,15 +108,6 @@ describe('POST /auth/register', () => {
       })
     })
 
-    it('answers 409 CPF_TAKEN for a CPF already in use, masked or not', async () => {
-      await createUser(db, { cpf: '52998224725' })
-
-      const response = await register(validBody)
-
-      expect(response.statusCode).toBe(409)
-      expect(response.json()).toMatchObject({ code: 'CPF_TAKEN', details: { field: 'cpf' } })
-    })
-
     it('does not create a second user on conflict', async () => {
       await register(validBody)
       await register(validBody)
@@ -125,7 +118,7 @@ describe('POST /auth/register', () => {
     it('lets exactly one of two simultaneous signups with the same e-mail through', async () => {
       const [first, second] = await Promise.all([
         register(validBody),
-        register({ ...validBody, cpf: '111.444.777-35' }),
+        register({ ...validBody, name: 'Outra Ana' }),
       ])
 
       expect([first.statusCode, second.statusCode].sort()).toEqual([201, 409])
@@ -138,10 +131,6 @@ describe('POST /auth/register', () => {
       ['name', ''],
       ['name', '   '],
       ['email', 'not-an-email'],
-      ['cpf', '529.982.247-26'],
-      ['cpf', '111.111.111-11'],
-      ['phone', '(20) 99999-0000'],
-      ['phone', '9999-0000'],
       ['password', 'short'],
     ])('answers 400 for an invalid %s (%j)', async (field, value) => {
       const response = await register({ ...validBody, [field]: value })
@@ -153,23 +142,20 @@ describe('POST /auth/register', () => {
       })
     })
 
-    it.each(['name', 'email', 'cpf', 'phone', 'password'])(
-      'answers 400 when %s is missing',
-      async (field) => {
-        const { [field as keyof typeof validBody]: _omitted, ...body } = validBody
+    it.each(['name', 'email', 'password'])('answers 400 when %s is missing', async (field) => {
+      const { [field as keyof typeof validBody]: _omitted, ...body } = validBody
 
-        const response = await register(body)
+      const response = await register(body)
 
-        expect(response.statusCode).toBe(400)
-        expect(response.json()).toMatchObject({ details: [{ path: field }] })
-      },
-    )
+      expect(response.statusCode).toBe(400)
+      expect(response.json()).toMatchObject({ details: [{ path: field }] })
+    })
 
     it('reports every invalid field at once', async () => {
-      const response = await register({ name: '', email: 'x', cpf: '1', phone: '1', password: '1' })
+      const response = await register({ name: '', email: 'x', password: '1' })
 
       const paths = response.json<{ details: { path: string }[] }>().details.map((d) => d.path)
-      expect(paths.sort()).toEqual(['cpf', 'email', 'name', 'password', 'phone'])
+      expect(paths.sort()).toEqual(['email', 'name', 'password'])
     })
 
     it('answers 400 for a body that is not an object', async () => {
@@ -179,7 +165,7 @@ describe('POST /auth/register', () => {
     })
 
     it('creates nothing when the input is invalid', async () => {
-      await register({ ...validBody, cpf: 'invalid' })
+      await register({ ...validBody, email: 'invalid' })
 
       expect(await db.user.count()).toBe(0)
     })
@@ -192,7 +178,7 @@ describe('POST /auth/register', () => {
 
       const statuses = []
       for (let i = 0; i < 3; i++) {
-        statuses.push((await register({ ...validBody, cpf: 'invalid' }, '10.0.0.1')).statusCode)
+        statuses.push((await register({ ...validBody, email: 'invalid' }, '10.0.0.1')).statusCode)
       }
 
       expect(statuses).toEqual([400, 400, 429])

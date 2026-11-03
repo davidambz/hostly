@@ -8,8 +8,10 @@ export const publicUserSchema = z
     id: z.uuid(),
     name: z.string(),
     email: z.email(),
-    cpf: z.string(),
-    phone: z.string(),
+    /** Accounts from before signup stopped asking for it; null otherwise. */
+    cpf: z.string().nullable(),
+    /** Accounts from before signup stopped asking for it; null otherwise. */
+    phone: z.string().nullable(),
     createdAt: z.iso.datetime(),
   })
   .meta({ id: 'User' })

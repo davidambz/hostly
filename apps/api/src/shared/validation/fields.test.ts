@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import { STATES } from '@hostly/validation'
 import {
   cepSchema,
-  cpfSchema,
   emailSchema,
   nameSchema,
   optionalDocumentSchema,
@@ -13,7 +12,6 @@ import {
   optionalText,
   PASSWORD_MAX_LENGTH,
   passwordSchema,
-  phoneSchema,
   stateSchema,
 } from './fields.js'
 
@@ -36,43 +34,6 @@ describe('emailSchema', () => {
     'rejects %s',
     (email) => {
       expect(emailSchema.safeParse(email).success).toBe(false)
-    },
-  )
-})
-
-describe('cpfSchema', () => {
-  it.each(['529.982.247-25', '52998224725', ' 529 982 247 25 '])(
-    'normalizes %s to digits',
-    (cpf) => {
-      expect(cpfSchema.parse(cpf)).toBe('52998224725')
-    },
-  )
-
-  it.each(['529.982.247-26', '111.111.111-11', '', 'abc529x982247-25zz', '529_982_247_25'])(
-    'rejects %s',
-    (cpf) => {
-      const result = cpfSchema.safeParse(cpf)
-
-      expect(result.success).toBe(false)
-      expect(result.error?.issues[0]?.message).toBe('Invalid CPF')
-    },
-  )
-})
-
-describe('phoneSchema', () => {
-  it.each([
-    ['(48) 99999-0000', '48999990000'],
-    ['48 3333-4444', '4833334444'],
-    ['+55 48 99999-0000', '48999990000'],
-    ['048 99999-0000', '48999990000'],
-  ])('normalizes %s to %s', (phone, digits) => {
-    expect(phoneSchema.parse(phone)).toBe(digits)
-  })
-
-  it.each(['(20) 99999-0000', '9999-0000', '', 'tel: 48a99999b0000', '48 99999-0000 ramal 2'])(
-    'rejects %s',
-    (phone) => {
-      expect(phoneSchema.safeParse(phone).success).toBe(false)
     },
   )
 })

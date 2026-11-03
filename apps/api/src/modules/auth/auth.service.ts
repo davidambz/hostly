@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import type { User } from '../../generated/prisma/client.js'
 import { UniqueFieldError } from '../../shared/database-errors.js'
 import { ConflictError, UnauthorizedError } from '../../shared/errors.js'
-import type { UserUniqueField, UsersRepository } from '../users/users.repository.js'
+import type { UsersRepository } from '../users/users.repository.js'
 import type { LoginInput, RegisterInput } from './auth.schemas.js'
 import { generateRefreshToken, hashRefreshToken } from './refresh-token.js'
 import type { NewRefreshToken, RefreshTokensRepository } from './refresh-tokens.repository.js'
@@ -15,7 +15,7 @@ import type { NewRefreshToken, RefreshTokensRepository } from './refresh-tokens.
 export const ROTATION_GRACE_MS = 30_000
 
 export interface AuthServiceDeps {
-  users: Pick<UsersRepository, 'create' | 'takenFields' | 'findByEmail'>
+  users: Pick<UsersRepository, 'create' | 'findByEmail' | 'existsByEmail'>
   refreshTokens: Pick<
     RefreshTokensRepository,
     'create' | 'findByHash' | 'replace' | 'revokeFamily' | 'deleteExpired'
@@ -35,15 +35,11 @@ export interface Session {
   refreshTokenExpiresAt: Date
 }
 
-const TAKEN: Record<UserUniqueField, { code: string; message: string }> = {
-  email: { code: 'EMAIL_TAKEN', message: 'E-mail already registered' },
-  cpf: { code: 'CPF_TAKEN', message: 'CPF already registered' },
-}
-
-function takenError(field: UserUniqueField) {
-  const { code, message } = TAKEN[field]
-  return new ConflictError(message, { code, details: { field } })
-}
+const emailTaken = () =>
+  new ConflictError('E-mail already registered', {
+    code: 'EMAIL_TAKEN',
+    details: { field: 'email' },
+  })
 
 const invalidCredentials = () =>
   new UnauthorizedError('Invalid e-mail or password', { code: 'INVALID_CREDENTIALS' })
@@ -68,12 +64,11 @@ export class AuthService {
     this.getDummyHash().catch(() => undefined)
   }
 
-  /** Creates the account; throws ConflictError (EMAIL_TAKEN / CPF_TAKEN) if either is in use. */
+  /** Creates the account; throws ConflictError (EMAIL_TAKEN) if the e-mail is in use. */
   async register({ password, ...profile }: RegisterInput): Promise<User> {
-    // Checked before hashing, so a taken e-mail or CPF doesn't cost an argon2 run.
-    const [taken] = await this.deps.users.takenFields(profile)
-    if (taken) {
-      throw takenError(taken)
+    // Checked before hashing, so a taken e-mail doesn't cost an argon2 run.
+    if (await this.deps.users.existsByEmail(profile.email)) {
+      throw emailTaken()
     }
 
     const passwordHash = await this.deps.hashPassword(password)
@@ -82,7 +77,7 @@ export class AuthService {
     } catch (error) {
       // Someone else took it between the check and the insert.
       if (error instanceof UniqueFieldError) {
-        throw takenError(error.field as UserUniqueField)
+        throw emailTaken()
       }
       throw error
     }

@@ -20,10 +20,10 @@ model User {
   name         String   @db.VarChar(255)
   /// Always stored lowercase.
   email        String   @unique @db.VarChar(255)
-  /// CPF, 11 digits.
-  cpf          String   @unique @db.Char(11)
-  /// DDD + number, 10 or 11 digits.
-  phone        String   @db.VarChar(11)
+  /// CPF, 11 digits. Optional: signup no longer asks for it (accounts from before have it).
+  cpf          String?  @unique @db.Char(11)
+  /// DDD + number, 10 or 11 digits. Optional, like the CPF.
+  phone        String?  @db.VarChar(11)
   passwordHash String   @map("password_hash")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
