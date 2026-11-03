@@ -1,7 +1,7 @@
 import type { RouteObject } from 'react-router'
 
 import { AppLayout } from '@/components/layout/app-layout'
-import { RequireAuth, RequireGuest } from '@/features/auth/guards'
+import { RequireAuth, RequireGuest, RequireVisitor } from '@/features/auth/guards'
 import { NotFoundPage } from '@/pages/not-found-page'
 import { RouteErrorPage } from '@/pages/route-error-page'
 
@@ -19,7 +19,7 @@ export const routes: RouteObject[] = [
     hydrateFallbackElement: <AppLoading />,
     children: [
       {
-        element: <RequireGuest to="/reservas" />,
+        element: <RequireVisitor />,
         children: [
           {
             path: '/',

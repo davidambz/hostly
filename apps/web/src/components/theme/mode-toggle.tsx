@@ -17,13 +17,13 @@ const OPTIONS: { value: Theme; label: string; Icon: typeof Sun }[] = [
   { value: 'system', label: 'Sistema', Icon: Monitor },
 ]
 
-export function ModeToggle() {
+export function ModeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme()
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Alterar tema">
+        <Button variant="ghost" size="icon" aria-label="Alterar tema" className={className}>
           <Sun className="size-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
           <Moon className="absolute size-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
         </Button>

@@ -21,6 +21,10 @@ import propertiesLightPhone from '@/assets/landing/properties-light-phone.webp'
 
 export type ScreenId = 'calendar' | 'list' | 'booking' | 'properties' | 'brokers'
 
+export function isScreenId(value: string): value is ScreenId {
+  return SCREENS.some((screen) => screen.id === value)
+}
+
 export interface Screen {
   id: ScreenId
   /** The tab's label. */

@@ -1,6 +1,6 @@
 import { CalendarDays, FolderGit2, House, type LucideIcon, ReceiptText, Users } from 'lucide-react'
 import { Tabs as TabsPrimitive } from 'radix-ui'
-import { type ReactNode, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 
 import { useTheme } from '@/components/theme/theme-context'
@@ -8,7 +8,10 @@ import { ModeToggle } from '@/components/theme/mode-toggle'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-import { SCREENS, type ScreenId } from './screens'
+import { isScreenId, SCREENS, type ScreenId } from './screens'
+
+/** A transparent 1×1 GIF. */
+const BLANK_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
 export const REPOSITORY_URL = 'https://github.com/davidambz/hostly'
 
@@ -72,7 +75,7 @@ export function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Brand />
           <nav aria-label="Conta" className="flex items-center gap-1 sm:gap-2">
-            <ModeToggle />
+            <ModeToggle className={bandGhost} />
             <Button asChild variant="ghost" className={bandGhost}>
               <Link to="/login">Entrar</Link>
             </Button>
@@ -84,7 +87,12 @@ export function LandingPage() {
       </header>
 
       <main>
-        <Tabs value={screen} onValueChange={setScreen}>
+        <TabsPrimitive.Root
+          value={screen}
+          onValueChange={(value) => {
+            if (isScreenId(value)) setScreen(value)
+          }}
+        >
           <div className="bg-band text-band-foreground pb-36 sm:pb-56 lg:pb-72">
             <section
               aria-labelledby="hero-title"
@@ -131,16 +139,21 @@ export function LandingPage() {
                       'data-[state=active]:text-band-foreground',
                     )}
                   >
-                    <img
-                      src={item.image[resolvedTheme]}
-                      alt=""
-                      width={2000}
-                      height={1250}
-                      className={cn(
-                        'ring-band-border hidden aspect-[16/10] w-full rounded-md object-cover object-left-top opacity-60 ring-1 transition-[opacity,box-shadow] sm:block dark:opacity-75',
-                        'group-hover:opacity-80 group-data-[state=active]:opacity-100 group-data-[state=active]:ring-2 group-data-[state=active]:ring-sidebar-primary',
-                      )}
-                    />
+                    {/* Phones show no thumbnails, so they get a blank pixel instead of the capture. */}
+                    <picture>
+                      <source media="(min-width: 640px)" srcSet={item.image[resolvedTheme]} />
+                      <img
+                        src={BLANK_PIXEL}
+                        alt=""
+                        width={2000}
+                        height={1250}
+                        loading="lazy"
+                        className={cn(
+                          'ring-band-border hidden aspect-[16/10] w-full rounded-md object-cover object-left-top opacity-60 ring-1 transition-[opacity,box-shadow] sm:block dark:opacity-75',
+                          'group-hover:opacity-80 group-data-[state=active]:opacity-100 group-data-[state=active]:ring-2 group-data-[state=active]:ring-sidebar-primary',
+                        )}
+                      />
+                    </picture>
                     <span className="group-data-[state=active]:border-sidebar-primary flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 sm:border-0 sm:px-0.5 sm:py-0">
                       {item.label}
                     </span>
@@ -186,7 +199,7 @@ export function LandingPage() {
               Telas reais do Hostly, com dados fictícios.
             </p>
           </div>
-        </Tabs>
+        </TabsPrimitive.Root>
 
         <section
           aria-labelledby="jobs-title"
@@ -259,27 +272,5 @@ export function LandingPage() {
         </a>
       </footer>
     </div>
-  )
-}
-
-function Tabs({
-  value,
-  onValueChange,
-  children,
-}: {
-  value: ScreenId
-  onValueChange: (value: ScreenId) => void
-  children: ReactNode
-}) {
-  return (
-    <TabsPrimitive.Root
-      value={value}
-      onValueChange={(next) => {
-        const match = SCREENS.find((item) => item.id === next)
-        if (match) onValueChange(match.id)
-      }}
-    >
-      {children}
-    </TabsPrimitive.Root>
   )
 }

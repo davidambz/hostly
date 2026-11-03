@@ -371,13 +371,13 @@ describe('signup', () => {
 describe('safeRedirect', () => {
   it.each([
     ['/reservas?x=1', '/reservas?x=1'],
-    [null, '/'],
-    ['', '/'],
-    ['https://evil.com', '/'],
-    ['//evil.com', '/'],
-    ['reservas', '/'],
-    ['/\\evil.com', '/'],
-    ['/\t/evil.com', '/'],
+    [null, '/reservas'],
+    ['', '/reservas'],
+    ['https://evil.com', '/reservas'],
+    ['//evil.com', '/reservas'],
+    ['reservas', '/reservas'],
+    ['/\\evil.com', '/reservas'],
+    ['/\t/evil.com', '/reservas'],
     ['/reservas#hoje', '/reservas#hoje'],
   ])('%j → %j', (target, expected) => {
     expect(safeRedirect(target)).toBe(expected)
