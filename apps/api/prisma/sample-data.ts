@@ -31,8 +31,6 @@ export async function seedSampleData(db: Database, today = new Date()) {
       data: {
         name: 'Ana Souza',
         email: SAMPLE_EMAIL,
-        cpf: '52998224725',
-        phone: '48999887766',
         passwordHash,
       },
     })

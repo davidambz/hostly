@@ -50,12 +50,19 @@ describe('users', () => {
   })
 
   it('refuses a duplicate CPF', async () => {
-    const existing = await createUser(db)
+    await createUser(db, { cpf: '52998224725' })
 
     await expectViolation(
-      db.user.create({ data: await buildUser({ cpf: existing.cpf }) }),
+      db.user.create({ data: await buildUser({ cpf: '52998224725' }) }),
       'users_cpf_key',
     )
+  })
+
+  it('takes any number of users without a CPF or phone', async () => {
+    await createUser(db)
+    await createUser(db)
+
+    expect(await db.user.count({ where: { cpf: null, phone: null } })).toBe(2)
   })
 
   it('refuses an e-mail with uppercase letters', async () => {

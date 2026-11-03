@@ -2,10 +2,8 @@ import { z } from 'zod'
 
 import {
   isValidCep,
-  isValidCpf,
   isValidLandlinePhone,
   isValidMobilePhone,
-  isValidPhone,
   normalizeDocument,
   normalizePhone,
   onlyDigits,
@@ -21,20 +19,6 @@ import {
 export const nameSchema = z.string().trim().min(1, 'Required').max(255)
 
 export const emailSchema = z.string().trim().toLowerCase().pipe(z.email().max(255))
-
-/** Accepts `529.982.247-25` or `52998224725`; yields digits only. */
-export const cpfSchema = z
-  .string()
-  .regex(/^[\d.\-\s]*$/, 'Invalid CPF')
-  .transform(onlyDigits)
-  .refine(isValidCpf, { message: 'Invalid CPF' })
-
-/** Accepts `(48) 99999-0000`, `+55 48 99999-0000` or `48999990000`; yields DDD + number. */
-export const phoneSchema = z
-  .string()
-  .regex(/^[\d\s().+-]*$/, 'Invalid phone number')
-  .transform(normalizePhone)
-  .refine(isValidPhone, { message: 'Invalid phone number' })
 
 export const PASSWORD_MIN_LENGTH = 8
 export const PASSWORD_MAX_LENGTH = 128

@@ -119,7 +119,7 @@ export interface paths {
     put?: never
     /**
      * Create an account
-     * @description CPF and phone are accepted with or without masks and stored as digits; the e-mail is stored lowercase. Answers 409 with code EMAIL_TAKEN or CPF_TAKEN when either is already registered.
+     * @description Name, e-mail and password only; the e-mail is stored lowercase. Answers 409 with code EMAIL_TAKEN when the e-mail is already registered.
      */
     post: {
       parameters: {
@@ -133,8 +133,6 @@ export interface paths {
           'application/json': {
             name: string
             email: string
-            cpf: string
-            phone: string
             password: string
           }
         }
@@ -1584,8 +1582,8 @@ export interface components {
       name: string
       /** Format: email */
       email: string
-      cpf: string
-      phone: string
+      cpf: string | null
+      phone: string | null
       /** Format: date-time */
       createdAt: string
     }
@@ -1706,8 +1704,8 @@ export interface components {
       name: string
       /** Format: email */
       email: string
-      cpf: string
-      phone: string
+      cpf: string | null
+      phone: string | null
       /** Format: date-time */
       createdAt: string
     }

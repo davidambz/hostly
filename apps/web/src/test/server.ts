@@ -9,8 +9,8 @@ export const testUser = {
   id: '018f0000-0000-7000-8000-000000000001',
   name: 'Ana Souza',
   email: 'ana@hostly.dev',
-  cpf: '52998224725',
-  phone: '48999990000',
+  cpf: null,
+  phone: null,
   createdAt: '2026-10-31T12:00:00.000Z',
 }
 

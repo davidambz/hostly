@@ -2,7 +2,7 @@ import { hash } from '@node-rs/argon2'
 
 import type { Prisma } from '../generated/prisma/client.js'
 import type { Database } from '../shared/database.js'
-import { validCnpj, validCpf } from './documents.js'
+import { validCnpj } from './documents.js'
 
 /**
  * Factories for integration tests. Each `build*` returns valid create input with unique
@@ -39,8 +39,7 @@ export async function buildUser(
   return {
     name: `User ${n}`,
     email: `user${n}@hostly.test`,
-    cpf: validCpf(n),
-    phone: '48999990000',
+    // Like a signup today: no CPF or phone (accounts from before have them; pass them in).
     passwordHash: await testPasswordHash(),
     ...overrides,
   }

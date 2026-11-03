@@ -245,8 +245,6 @@ describe('signup', () => {
     const values = {
       Nome: 'Ana Souza',
       'E-mail': 'ana@hostly.dev',
-      CPF: '52998224725',
-      Telefone: '48999990000',
       Senha: 'hostly123',
       'Confirme a senha': 'hostly123',
       ...overrides,
@@ -259,15 +257,18 @@ describe('signup', () => {
     return user
   }
 
-  it('masks CPF and phone as the user types', async () => {
-    const user = userEvent.setup()
+  it('asks only for name, e-mail and password', async () => {
     renderRoute(routes, '/cadastro')
 
-    await user.type(await screen.findByLabelText('CPF'), '52998224725')
-    await user.type(screen.getByLabelText('Telefone'), '48999990000')
-
-    expect(screen.getByLabelText('CPF')).toHaveValue('529.982.247-25')
-    expect(screen.getByLabelText('Telefone')).toHaveValue('(48) 99999-0000')
+    await screen.findByLabelText('Nome')
+    expect(screen.getAllByRole('textbox').map((input) => input.getAttribute('name'))).toEqual([
+      'name',
+      'email',
+    ])
+    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
+    expect(screen.getByLabelText('Confirme a senha')).toBeInTheDocument()
+    expect(screen.queryByLabelText('CPF')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Telefone')).not.toBeInTheDocument()
   })
 
   it('creates the account, logs in and opens the app', async () => {
@@ -296,15 +297,13 @@ describe('signup', () => {
     expect(sent).toEqual({
       name: 'Ana Souza',
       email: 'ana@hostly.dev',
-      cpf: '529.982.247-25',
-      phone: '(48) 99999-0000',
       password: 'hostly123',
     })
   })
 
   it.each([
-    ['an invalid CPF', { CPF: '52998224726' }, 'CPF inválido.'],
-    ['an invalid phone', { Telefone: '4889999000' }, 'Telefone inválido. Use DDD + número.'],
+    ['no name', { Nome: '' }, 'Informe seu nome.'],
+    ['an invalid e-mail', { 'E-mail': 'ana@' }, 'E-mail inválido.'],
     [
       'a short password',
       { Senha: 'curta', 'Confirme a senha': 'curta' },
@@ -319,17 +318,18 @@ describe('signup', () => {
     expect(await screen.findByText(message)).toBeInTheDocument()
   })
 
-  it.each([
-    ['EMAIL_TAKEN', 'email', 'E-mail', 'Este e-mail já tem uma conta.'],
-    ['CPF_TAKEN', 'cpf', 'CPF', 'Este CPF já tem uma conta.'],
-  ])('shows %s on the %s field', async (code, field, label, message) => {
-    server.use(http.post(url('/auth/register'), () => apiError(409, code, { field })))
+  it('shows EMAIL_TAKEN on the e-mail field', async () => {
+    server.use(
+      http.post(url('/auth/register'), () => apiError(409, 'EMAIL_TAKEN', { field: 'email' })),
+    )
     renderRoute(routes, '/cadastro')
 
     await fillSignup()
 
     await waitFor(() => {
-      expect(screen.getByLabelText(label)).toHaveAccessibleDescription(message)
+      expect(screen.getByLabelText('E-mail')).toHaveAccessibleDescription(
+        'Este e-mail já tem uma conta.',
+      )
     })
   })
 
@@ -352,7 +352,7 @@ describe('signup', () => {
     server.use(
       http.post(url('/auth/register'), () =>
         apiError(400, 'VALIDATION_ERROR', [
-          { location: 'body', path: 'phone', message: 'Invalid phone number' },
+          { location: 'body', path: 'name', message: 'Too long' },
         ]),
       ),
     )
@@ -361,9 +361,7 @@ describe('signup', () => {
     await fillSignup()
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Telefone')).toHaveAccessibleDescription(
-        'Telefone inválido. Use DDD + número.',
-      )
+      expect(screen.getByLabelText('Nome')).toHaveAccessibleDescription('Nome inválido.')
     })
   })
 })

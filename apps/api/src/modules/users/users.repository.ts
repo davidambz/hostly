@@ -6,14 +6,8 @@ import { uniqueViolation, violates } from '../../shared/prisma-errors.js'
 export interface NewUser {
   name: string
   email: string
-  cpf: string
-  phone: string
   passwordHash: string
 }
-
-export type UserUniqueField = 'email' | 'cpf'
-
-const UNIQUE_FIELDS: UserUniqueField[] = ['email', 'cpf']
 
 export class UsersRepository {
   constructor(private readonly db: Database) {}
@@ -26,29 +20,23 @@ export class UsersRepository {
     return this.db.user.findUnique({ where: { email } })
   }
 
-  /** Which of `email` and `cpf` already belong to an account. */
-  async takenFields(values: Pick<NewUser, UserUniqueField>): Promise<UserUniqueField[]> {
-    const users = await this.db.user.findMany({
-      where: { OR: [{ email: values.email }, { cpf: values.cpf }] },
-      select: { email: true, cpf: true },
-    })
-    return UNIQUE_FIELDS.filter((field) => users.some((user) => user[field] === values[field]))
+  /** Whether an account uses this e-mail, without loading it (nor its password hash). */
+  async existsByEmail(email: string): Promise<boolean> {
+    const user = await this.db.user.findUnique({ where: { email }, select: { id: true } })
+    return user !== null
   }
 
   /**
-   * Throws UniqueFieldError when the e-mail or CPF is taken. The unique constraints are
-   * the real guard: two signups racing for the same e-mail can't both get in.
+   * Throws UniqueFieldError when the e-mail is taken. The unique constraint is the real
+   * guard: two signups racing for the same e-mail can't both get in.
    */
   async create(data: NewUser): Promise<User> {
     try {
       return await this.db.user.create({ data })
     } catch (error) {
       const violation = uniqueViolation(error)
-      const field = violation
-        ? UNIQUE_FIELDS.find((f) => violates(violation, { table: 'users', field: f }))
-        : undefined
-      if (field) {
-        throw new UniqueFieldError(field)
+      if (violation && violates(violation, { table: 'users', field: 'email' })) {
+        throw new UniqueFieldError('email')
       }
       throw error
     }

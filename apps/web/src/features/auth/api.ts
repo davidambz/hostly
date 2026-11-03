@@ -11,8 +11,6 @@ export interface Credentials {
 
 export interface RegisterInput extends Credentials {
   name: string
-  cpf: string
-  phone: string
 }
 
 export async function login(credentials: Credentials) {

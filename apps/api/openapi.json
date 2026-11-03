@@ -53,9 +53,11 @@
             "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
           },
           "cpf": {
+            "nullable": true,
             "type": "string"
           },
           "phone": {
+            "nullable": true,
             "type": "string"
           },
           "createdAt": {
@@ -568,9 +570,11 @@
             "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
           },
           "cpf": {
+            "nullable": true,
             "type": "string"
           },
           "phone": {
+            "nullable": true,
             "type": "string"
           },
           "createdAt": {
@@ -1188,7 +1192,7 @@
         "tags": [
           "auth"
         ],
-        "description": "CPF and phone are accepted with or without masks and stored as digits; the e-mail is stored lowercase. Answers 409 with code EMAIL_TAKEN or CPF_TAKEN when either is already registered.",
+        "description": "Name, e-mail and password only; the e-mail is stored lowercase. Answers 409 with code EMAIL_TAKEN when the e-mail is already registered.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1204,14 +1208,6 @@
                   "email": {
                     "type": "string"
                   },
-                  "cpf": {
-                    "type": "string",
-                    "pattern": "^[\\d.\\-\\s]*$"
-                  },
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^[\\d\\s().+-]*$"
-                  },
                   "password": {
                     "type": "string",
                     "minLength": 8,
@@ -1221,8 +1217,6 @@
                 "required": [
                   "name",
                   "email",
-                  "cpf",
-                  "phone",
                   "password"
                 ]
               }

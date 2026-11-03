@@ -25,6 +25,13 @@ describe('toPublicUser', () => {
     })
   })
 
+  it('gives null CPF and phone for an account created without them', () => {
+    const recent = { ...user, cpf: null, phone: null }
+
+    expect(toPublicUser(recent)).toMatchObject({ cpf: null, phone: null })
+    expect(publicUserSchema.safeParse(toPublicUser(recent)).success).toBe(true)
+  })
+
   it('never exposes the password hash', () => {
     expect(JSON.stringify(toPublicUser(user))).not.toContain('argon2')
   })

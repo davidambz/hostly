@@ -4,12 +4,10 @@ import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 
 import { FormError } from '@/components/form/form-error'
-import { withMask } from '@/components/form/mask'
 import { PasswordField } from '@/components/form/password-field'
 import { TextField } from '@/components/form/text-field'
 import { Button } from '@/components/ui/button'
 import { applyApiError } from '@/lib/api/form-errors'
-import { maskCpf, maskPhone } from '@hostly/validation'
 
 import { AccountCreatedError, useAuth } from './auth-context'
 import { AuthLayout } from './auth-layout'
@@ -19,8 +17,6 @@ import { PASSWORD_MIN_LENGTH, type RegisterValues, registerSchema } from './sche
 const API_FIELD_MESSAGES = {
   name: 'Nome inválido.',
   email: 'E-mail inválido.',
-  cpf: 'CPF inválido.',
-  phone: 'Telefone inválido. Use DDD + número.',
   password: 'Senha inválida.',
 }
 
@@ -31,7 +27,7 @@ export function RegisterPage() {
   const redirect = params.get('redirect')
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: '', email: '', cpf: '', phone: '', password: '', confirmPassword: '' },
+    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
   })
   const { errors, isSubmitting } = form.formState
 
@@ -82,24 +78,6 @@ export function RegisterPage() {
           error={errors.email?.message}
           {...form.register('email')}
         />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <TextField
-            label="CPF"
-            inputMode="numeric"
-            placeholder="000.000.000-00"
-            error={errors.cpf?.message}
-            {...withMask(form.register('cpf'), maskCpf)}
-          />
-          <TextField
-            label="Telefone"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel-national"
-            placeholder="(00) 00000-0000"
-            error={errors.phone?.message}
-            {...withMask(form.register('phone'), maskPhone)}
-          />
-        </div>
         <PasswordField
           label="Senha"
           autoComplete="new-password"

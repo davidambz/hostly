@@ -1,20 +1,16 @@
 import { z } from 'zod'
 
 import {
-  cpfSchema,
   PASSWORD_MAX_LENGTH,
   emailSchema,
   nameSchema,
   passwordSchema,
-  phoneSchema,
 } from '../../shared/validation/fields.js'
 import { publicUserSchema } from '../users/users.schemas.js'
 
 export const registerBodySchema = z.object({
   name: nameSchema,
   email: emailSchema,
-  cpf: cpfSchema,
-  phone: phoneSchema,
   password: passwordSchema,
 })
 
