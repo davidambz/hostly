@@ -36,17 +36,17 @@ const MAX_MONTH_LANES = 5
 const LANE_REM = 1.5
 /** Room for the day number at the top of each day, in rem. */
 const DAY_HEADER_REM = 1.75
-/** The grout between tiles, in px. */
-const GROUT_PX = 3
+/** The grid line between days, in px. */
+const LINE_PX = 3
 
-/** Left edge of column `index` in a row of 7 tiles separated by grout. */
+/** Left edge of column `index` in a row of 7 days separated by grid lines. */
 function columnLeft(index: number) {
-  return `calc((100% - ${String(6 * GROUT_PX)}px) / 7 * ${String(index)} + ${String(index * GROUT_PX)}px)`
+  return `calc((100% - ${String(6 * LINE_PX)}px) / 7 * ${String(index)} + ${String(index * LINE_PX)}px)`
 }
 
-/** Width of `span` columns, grout between them included. */
+/** Width of `span` columns, grid lines between them included. */
 function columnsWidth(span: number) {
-  return `calc((100% - ${String(6 * GROUT_PX)}px) / 7 * ${String(span)} + ${String((span - 1) * GROUT_PX)}px)`
+  return `calc((100% - ${String(6 * LINE_PX)}px) / 7 * ${String(span)} + ${String((span - 1) * LINE_PX)}px)`
 }
 
 interface Selection {
@@ -176,7 +176,7 @@ export function BookingsCalendar({
           </Button>
         </div>
         <h2
-          className="font-display text-2xl leading-none tracking-tight first-letter:uppercase"
+          className="font-wide text-2xl leading-none font-semibold first-letter:uppercase"
           aria-live="polite"
         >
           {title(view, date)}
@@ -206,7 +206,7 @@ export function BookingsCalendar({
           onRetry={() => void bookings.refetch()}
         />
       ) : (
-        <div className="bg-grout grid gap-[3px] overflow-hidden rounded-md p-[3px] select-none">
+        <div className="bg-grid-line grid gap-[3px] overflow-hidden rounded-md p-[3px] select-none">
           <div className="grid grid-cols-7 gap-[3px]" aria-hidden>
             {WEEKDAYS.map((weekday) => (
               <div
@@ -299,12 +299,10 @@ function WeekRow({
             key={day}
             style={{ animationDelay: `${String(index * 30)}ms` }}
             className={cn(
-              'animate-tile-settle relative rounded-[2px]',
-              // The month's nights carry the pattern (quieter than the home page's: here the
-              // bars are the content); days of other months are plain and recede.
-              outside
-                ? 'bg-muted'
-                : 'azulejo [--tile-ink:color-mix(in_oklab,var(--glaze)_55%,var(--card))]',
+              'animate-surface relative rounded-[2px]',
+              // The month's nights are chart water, its contour lines running on across the
+              // days; days of other months are shoal-tinted and recede.
+              outside ? 'bg-shoal' : 'chart-water',
               selected && 'ring-primary bg-accent ring-2 ring-inset',
             )}
           >
@@ -326,7 +324,7 @@ function WeekRow({
             />
             <span
               className={cn(
-                'font-display pointer-events-none relative m-1 inline-flex size-6 items-center justify-center rounded-[3px] text-sm',
+                'pointer-events-none relative m-1 inline-flex size-6 items-center justify-center rounded-[3px] text-sm font-medium tabular-nums',
                 outside && 'text-muted-foreground',
                 day === today && 'bg-primary text-primary-foreground',
               )}
@@ -371,7 +369,7 @@ function StayBar({
 }: {
   segment: Segment<Booking>
   color: PropertyColor
-  /** Order on the wall, for the paint stagger. */
+  /** Order in the month, for the trace stagger. */
   index: number
   onOpen: (booking: Booking) => void
 }) {
@@ -383,7 +381,7 @@ function StayBar({
       title={label}
       aria-label={label}
       className={cn(
-        'focus-visible:ring-ring animate-paint absolute h-5 truncate rounded-[3px] px-2 text-left text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
+        'focus-visible:ring-ring animate-trace absolute h-5 truncate rounded-[3px] px-2 text-left text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
         color.bar,
         segment.continuesBefore && 'rounded-l-none',
         segment.continuesAfter && 'rounded-r-none',

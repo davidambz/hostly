@@ -13,7 +13,7 @@ export function PageHeader({
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="space-y-1">
-        <h1 className="font-display animate-tile-flip text-3xl leading-tight tracking-tight sm:text-4xl">
+        <h1 className="font-wide animate-surface text-3xl leading-tight font-bold sm:text-4xl">
           {title}
         </h1>
         {description && <p className="text-muted-foreground text-sm">{description}</p>}

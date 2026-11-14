@@ -189,22 +189,28 @@ describe('calendar', () => {
     expect(pedroBars).toHaveLength(2)
     expect(nth(pedroBars, 0)).toHaveClass('bg-property-2', 'rounded-r-none')
     expect(nth(pedroBars, 1)).toHaveClass('rounded-l-none')
-    // the whole grid: Nov 1 (a Sunday) to Dec 5, one request
-    expect(Object.fromEntries(nth(calendarQueries, 0))).toEqual({
-      from: '2026-11-01',
-      to: '2026-12-06',
-    })
-    const legend = screen.getByRole('list', { name: 'Cores dos imóveis' })
+    // the whole grid: Nov 1 (a Sunday) to Dec 5, one request; the soundings ask for the month
+    expect(calendarQueries.map((query) => Object.fromEntries(query))).toEqual(
+      expect.arrayContaining([
+        { from: '2026-11-01', to: '2026-12-06' },
+        { from: '2026-11-01', to: '2026-12-01' },
+      ]),
+    )
+    // The soundings are also the color key, placed before the calendar, so side-by-side bars
+    // read as different properties rather than one property booked twice.
+    const soundings = screen.getByRole('list', { name: 'Ocupação dos imóveis' })
     expect(
-      within(legend)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
-    ).toEqual(['Casa da Praia', 'Apê Centro'])
-    // Said in words and placed before the calendar, so side-by-side bars read as different
-    // properties rather than one property booked twice.
-    expect(screen.getByText('Cada cor é um imóvel:')).toBeInTheDocument()
+      await within(soundings).findByRole('button', {
+        name: 'Casa da Praia: 3 de 30 noites reservadas em novembro',
+      }),
+    ).toHaveClass('bg-depth-2')
     expect(
-      legend.compareDocumentPosition(nth(pedroBars, 0)) & Node.DOCUMENT_POSITION_FOLLOWING,
+      within(soundings).getByRole('button', {
+        name: 'Apê Centro: 4 de 30 noites reservadas em novembro',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      soundings.compareDocumentPosition(nth(pedroBars, 0)) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
   })
 
@@ -282,7 +288,7 @@ describe('calendar', () => {
     expect(screen.getAllByRole('button', { name: /^[ABCDEF], / })).toHaveLength(6)
   })
 
-  it('filters by property through the URL, and hides the legend', async () => {
+  it('filters by property through the URL, keeping the soundings', async () => {
     const { calendarQueries } = serve()
     const { user, router } = await openPage()
     await screen.findByText('Rafael Mendes')
@@ -296,7 +302,38 @@ describe('calendar', () => {
     expect(screen.getAllByText('Pedro Alves')).toHaveLength(2)
     expect(router.state.location.search).toContain(`imovel=${ape.id}`)
     expect(nth(calendarQueries, calendarQueries.length - 1).get('propertyId')).toBe(ape.id)
-    expect(screen.queryByRole('list', { name: 'Cores dos imóveis' })).not.toBeInTheDocument()
+    // The soundings stay, with the shown property pressed and the others set back.
+    const soundings = screen.getByRole('list', { name: 'Ocupação dos imóveis' })
+    expect(within(soundings).getByRole('button', { name: /^Apê Centro/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(within(soundings).getByRole('button', { name: /^Casa da Praia/ })).toHaveClass(
+      'opacity-55',
+    )
+  })
+
+  it('shows one property by picking its sounding, and all again by picking it twice', async () => {
+    serve()
+    const { user, router } = await openPage()
+    await screen.findAllByText('Pedro Alves')
+    const sounding = () =>
+      within(screen.getByRole('list', { name: 'Ocupação dos imóveis' })).getByRole('button', {
+        name: /^Casa da Praia/,
+      })
+
+    await user.click(sounding())
+    await waitFor(() => {
+      expect(screen.queryByText('Pedro Alves')).not.toBeInTheDocument()
+    })
+    expect(router.state.location.search).toContain(`imovel=${casa.id}`)
+    expect(sounding()).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(sounding())
+    await waitFor(() => {
+      expect(router.state.location.search).not.toContain('imovel=')
+    })
+    expect(await screen.findAllByText('Pedro Alves')).toHaveLength(2)
   })
 
   it('ignores a filter for a property that is not there', async () => {

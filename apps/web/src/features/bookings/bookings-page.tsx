@@ -18,7 +18,8 @@ import { type BookingDraft, BookingSheet } from './booking-sheet'
 import { BookingsCalendar, type CalendarView } from './bookings-calendar'
 import { BookingsList } from './bookings-list'
 import { formatStay, todayISO, validDateOrNull } from './dates'
-import { colorOf, propertyColors } from './property-colors'
+import { OccupancySoundings } from './occupancy-soundings'
+import { propertyColors } from './property-colors'
 
 interface SheetState {
   booking?: Booking
@@ -176,24 +177,17 @@ export function BookingsPage() {
 
           {mode === 'calendar' ? (
             <>
-              {/* Above the calendar: without it, bars of different properties in the same week
-                  look like one property booked twice. */}
-              {!filter && (
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                  <span className="text-muted-foreground">Cada cor é um imóvel:</span>
-                  <ul aria-label="Cores dos imóveis" className="flex flex-wrap gap-x-4 gap-y-1">
-                    {properties.data.map((property) => (
-                      <li key={property.id} className="flex items-center gap-1.5">
-                        <span
-                          className={`size-2.5 rounded-[2px] ${colorOf(colors, property.id).dot}`}
-                          aria-hidden
-                        />
-                        {property.name}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* Above the calendar, it is also the color key: without one, bars of different
+                  properties in the same week look like one property booked twice. */}
+              <OccupancySoundings
+                date={date}
+                properties={properties.data}
+                colors={colors}
+                selected={filter}
+                onSelect={(id) => {
+                  set('imovel', id)
+                }}
+              />
               <BookingsCalendar
                 view={view}
                 date={date}

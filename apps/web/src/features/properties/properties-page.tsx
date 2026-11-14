@@ -43,13 +43,13 @@ import { colorOf, propertyColors } from '../bookings/property-colors'
 import { apartmentLine, placeLine, streetLine } from './property-format'
 import { PropertySheet } from './property-sheet'
 
-function PropertyName({ property, glaze }: { property: Property; glaze?: string }) {
+function PropertyName({ property, swatch }: { property: Property; swatch?: string }) {
   const apartment = apartmentLine(property)
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
         {/* The same color the property has on the calendar. */}
-        {glaze && <span aria-hidden className={`size-3 shrink-0 rounded-[2px] ${glaze}`} />}
+        {swatch && <span aria-hidden className={`size-3 shrink-0 rounded-[2px] ${swatch}`} />}
         <span className="font-medium">{property.name}</span>
         <Badge variant="secondary">{PROPERTY_TYPE_LABELS[property.type]}</Badge>
       </div>
@@ -180,7 +180,7 @@ export function PropertiesPage() {
                     <TableCell>
                       <PropertyName
                         property={property}
-                        glaze={colors && colorOf(colors, property.id).dot}
+                        swatch={colors && colorOf(colors, property.id).dot}
                       />
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden md:table-cell">

@@ -11,7 +11,7 @@ import { reloadPage } from '@/lib/browser'
 export function RouteErrorPage({ inline = false }: { inline?: boolean }) {
   const error = useRouteError()
   const notFound = isRouteErrorResponse(error) && error.status === 404
-  // Inline: inside the app layout, which keeps its sidebar so the rest of the app still works.
+  // Inline: inside the app layout, which keeps its top bar so the rest of the app still works.
   const Wrapper = inline ? 'section' : 'main'
 
   return (
