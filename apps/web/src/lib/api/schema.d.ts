@@ -2164,6 +2164,75 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/reports/monthly': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Each month of a year
+     * @description The figures of every month of `year` and of the whole year, for `propertyId` or all properties (404 PROPERTY_NOT_FOUND for one that is not yours). Same rules as /reports/performance.
+     */
+    get: {
+      parameters: {
+        query: {
+          year: number
+          propertyId?: string
+        }
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['MonthlyReport']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/billing/checkout': {
     parameters: {
       query?: never
@@ -3623,6 +3692,36 @@ export interface components {
       /** @description Average nights of those bookings */
       averageStay: number | null
     }
+    MonthlyReportInput: {
+      year: number
+      months: {
+        /** @description Days of the period × properties */
+        nightsAvailable: number
+        nightsSold: number
+        /** @description Nights sold ÷ available, in basis points */
+        occupancyBps: number
+        /** @description Lodging of the nights inside the period, spread per night */
+        lodging: number
+        /** @description Cleaning fees of the bookings checking in during the period */
+        cleaning: number
+        /** @description Lodging + cleaning */
+        revenue: number
+        brokerFees: number
+        /** @description Revenue − broker fees */
+        net: number
+        /** @description Lodging ÷ nights sold */
+        averageDailyRate: number | null
+        /** @description Lodging ÷ nights available */
+        revpar: number
+        /** @description Bookings checking in during the period */
+        bookings: number
+        /** @description Average nights of those bookings */
+        averageStay: number | null
+        /** @description `YYYY-MM` */
+        month: string
+      }[]
+      total: components['schemas']['ReportFiguresInput']
+    }
     PerformanceReportInput: {
       /** Format: date */
       from: string
@@ -4000,6 +4099,36 @@ export interface components {
       bookings: number
       /** @description Average nights of those bookings */
       averageStay: number | null
+    }
+    MonthlyReport: {
+      year: number
+      months: {
+        /** @description Days of the period × properties */
+        nightsAvailable: number
+        nightsSold: number
+        /** @description Nights sold ÷ available, in basis points */
+        occupancyBps: number
+        /** @description Lodging of the nights inside the period, spread per night */
+        lodging: number
+        /** @description Cleaning fees of the bookings checking in during the period */
+        cleaning: number
+        /** @description Lodging + cleaning */
+        revenue: number
+        brokerFees: number
+        /** @description Revenue − broker fees */
+        net: number
+        /** @description Lodging ÷ nights sold */
+        averageDailyRate: number | null
+        /** @description Lodging ÷ nights available */
+        revpar: number
+        /** @description Bookings checking in during the period */
+        bookings: number
+        /** @description Average nights of those bookings */
+        averageStay: number | null
+        /** @description `YYYY-MM` */
+        month: string
+      }[]
+      total: components['schemas']['ReportFigures']
     }
     PerformanceReport: {
       /** Format: date */

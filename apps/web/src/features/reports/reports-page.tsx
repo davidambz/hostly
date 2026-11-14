@@ -48,6 +48,7 @@ import {
   shiftPeriod,
 } from './period'
 import { performanceCsv, performanceFileName } from './report-csv'
+import { ReportTabs } from './report-tabs'
 import { change, formatOccupancy, formatStay } from './report-format'
 
 export function ReportsPage() {
@@ -92,6 +93,8 @@ export function ReportsPage() {
           </Button>
         }
       />
+
+      <ReportTabs />
 
       <PeriodPicker period={period} onChange={goTo} loading={current.isFetching} />
 

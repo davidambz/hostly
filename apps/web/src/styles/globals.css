@@ -60,6 +60,9 @@
   /* Land on the chart, the one warm note. */
   --sand: #e9dfc7;
   --sand-foreground: #4a3b17;
+  /* The comparison series in charts (last year): amber against the blues, checked for
+     contrast and colour blindness against the card surface. */
+  --chart-compare: #b8742a;
 
   /* The calendar's grid lines, the shoal tint of days outside the month, the contour ink. */
   --grid-line: #d2e1e5;
@@ -141,6 +144,7 @@
 
   --sand: #3a3324;
   --sand-foreground: #eadfc4;
+  --chart-compare: #c27d3a;
 
   --grid-line: #1c3850;
   --shoal: #0d1f2f;
@@ -220,6 +224,7 @@
   --color-depth-6-foreground: var(--depth-6-foreground);
   --color-sand: var(--sand);
   --color-sand-foreground: var(--sand-foreground);
+  --color-chart-compare: var(--chart-compare);
   --color-grid-line: var(--grid-line);
   --color-shoal: var(--shoal);
   --color-bar: var(--bar);
