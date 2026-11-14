@@ -338,10 +338,10 @@
   }
 }
 
-/* A stay is traced along its nights, like a course drawn on the chart. */
+/* A stay is traced along its nights, like a course drawn on the chart, from a visible start. */
 @keyframes trace {
   from {
-    clip-path: inset(0 100% 0 0 round 4px);
+    clip-path: inset(0 88% 0 0 round 4px);
   }
   to {
     clip-path: inset(0 0 0 0 round 4px);
