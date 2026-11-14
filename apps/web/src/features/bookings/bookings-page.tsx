@@ -18,6 +18,7 @@ import { type Booking, bookingInputOf, useCreateBooking, useDeleteBooking } from
 import { type BookingDraft, BookingSheet } from './booking-sheet'
 import { BookingsCalendar, type CalendarView } from './bookings-calendar'
 import { BookingsList } from './bookings-list'
+import { FirstSteps } from './first-steps'
 import { formatStay, todayISO, validDateOrNull } from './dates'
 import { MonthMoney } from './month-money'
 import { OccupancySoundings } from './occupancy-soundings'
@@ -128,18 +129,32 @@ export function BookingsPage() {
           onRetry={() => void properties.refetch()}
         />
       ) : properties.data.length === 0 ? (
-        <EmptyState
-          icon={Home}
-          title="Cadastre um imóvel primeiro"
-          description="As reservas são de um imóvel. Cadastre a casa ou o apartamento e volte aqui."
-          action={
-            <Button asChild>
-              <Link to="/imoveis">Ir para imóveis</Link>
-            </Button>
+        <FirstSteps
+          hasProperty={false}
+          onNewBooking={() => {
+            openDraft()
+          }}
+          fallback={
+            <EmptyState
+              icon={Home}
+              title="Cadastre um imóvel primeiro"
+              description="As reservas são de um imóvel. Cadastre a casa ou o apartamento e volte aqui."
+              action={
+                <Button asChild>
+                  <Link to="/imoveis">Ir para imóveis</Link>
+                </Button>
+              }
+            />
           }
         />
       ) : (
         <>
+          <FirstSteps
+            hasProperty
+            onNewBooking={() => {
+              openDraft()
+            }}
+          />
           <UpcomingMoves
             today={todayISO()}
             propertyId={filter}
