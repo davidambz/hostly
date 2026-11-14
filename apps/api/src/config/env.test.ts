@@ -240,6 +240,22 @@ describe('loadEnv', () => {
     })
   })
 
+  describe('STRIPE_WEBHOOK_SECRET', () => {
+    const stripe = { ...base, STRIPE_SECRET_KEY: 'sk_test_x' }
+
+    it('is required in production along with the secret key', () => {
+      expect(() => loadEnv(stripe)).toThrow(/STRIPE_WEBHOOK_SECRET/)
+      expect(loadEnv({ ...stripe, STRIPE_WEBHOOK_SECRET: 'whsec_x' }).STRIPE_WEBHOOK_SECRET).toBe(
+        'whsec_x',
+      )
+    })
+
+    it('is not needed without Stripe, or outside production', () => {
+      expect(loadEnv(base).STRIPE_SECRET_KEY).toBeUndefined()
+      expect(loadEnv({ ...stripe, NODE_ENV: 'development' }).STRIPE_WEBHOOK_SECRET).toBeUndefined()
+    })
+  })
+
   describe('DOCS_ENABLED', () => {
     it.each([
       ['development', true],
