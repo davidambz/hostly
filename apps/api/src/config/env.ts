@@ -57,6 +57,12 @@ const envSchema = z
     REFRESH_TOKEN_TTL_DAYS: optional(z.coerce.number().int().positive().default(30)),
     /** The most a session lasts from its login, however much it's used. */
     REFRESH_SESSION_MAX_DAYS: optional(z.coerce.number().int().positive().default(90)),
+    /** Stripe's secret key (`sk_…`). Without it, checkout answers 503 BILLING_UNAVAILABLE. */
+    STRIPE_SECRET_KEY: optional(z.string().startsWith('sk_').optional()),
+    /** Signs Stripe's webhooks (`whsec_…`); `stripe listen` prints one for local work. */
+    STRIPE_WEBHOOK_SECRET: optional(z.string().startsWith('whsec_').optional()),
+    /** Where the web app lives, for Stripe to send the user back to. Defaults to the first CORS origin. */
+    APP_URL: optional(origin.optional()),
     /** Send the refresh cookie only over HTTPS. Defaults to on in production. */
     COOKIE_SECURE: optional(booleanString.optional()),
   })
@@ -71,10 +77,11 @@ const envSchema = z
       message: 'The development JWT secret must not be used in production',
     },
   )
-  .transform(({ DOCS_ENABLED, COOKIE_SECURE, ...env }) => ({
+  .transform(({ DOCS_ENABLED, COOKIE_SECURE, APP_URL, ...env }) => ({
     ...env,
     DOCS_ENABLED: DOCS_ENABLED ?? env.NODE_ENV !== 'production',
     COOKIE_SECURE: COOKIE_SECURE ?? env.NODE_ENV === 'production',
+    APP_URL: APP_URL ?? env.CORS_ORIGINS[0] ?? 'http://localhost:5173',
   }))
 
 export type Env = z.infer<typeof envSchema>

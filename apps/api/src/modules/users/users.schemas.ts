@@ -52,10 +52,19 @@ export const myPlanSchema = z
       /** Null: unlimited. */
       maxProperties: z.number().int().nullable(),
     }),
-    /** FREE, or GRANT when an administrator gave it. */
-    source: z.enum(['FREE', 'GRANT']),
-    /** When a granted plan ends; null when it doesn't (lifetime, or Free). */
+    /** FREE, GRANT when an administrator gave it, SUBSCRIPTION when it is paid. */
+    source: z.enum(['FREE', 'GRANT', 'SUBSCRIPTION']),
+    /** When a granted plan ends; null when it doesn't (lifetime, Free, or paid). */
     endsAt: z.iso.datetime().nullable(),
+    /** The paid subscription, when the plan comes from one. */
+    subscription: z
+      .object({
+        period: z.enum(['MONTHLY', 'SEMIANNUAL', 'ANNUAL']),
+        /** The next charge, or the end when the renewal was cancelled. */
+        currentPeriodEnd: z.iso.datetime().nullable(),
+        cancelAtPeriodEnd: z.boolean(),
+      })
+      .nullable(),
     propertyCount: z.number().int(),
     /** Whether the plan lets the user add another property now. */
     canAddProperty: z.boolean(),

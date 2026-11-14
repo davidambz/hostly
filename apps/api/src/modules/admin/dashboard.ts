@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import type { Database } from '../../shared/database.js'
+import { currentPlans } from '../plans/current-plan.js'
 import { FREE_PLAN } from '../plans/system-plans.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -24,7 +25,11 @@ export const dashboardSchema = z
       }),
     ),
     /** Where the accounts' plans come from. */
-    bySource: z.object({ free: z.number().int(), grant: z.number().int() }),
+    bySource: z.object({
+      free: z.number().int(),
+      grant: z.number().int(),
+      subscription: z.number().int(),
+    }),
     /** Grants in force that end in the next 30 days, soonest first. */
     grantsEndingSoon: z.array(
       z.object({
@@ -48,13 +53,12 @@ export async function dashboard(db: Database, now = new Date()): Promise<Dashboa
     OR: [{ endsAt: null }, { endsAt: { gt: now } }],
   }
   const soon = new Date(now.getTime() + DASHBOARD_WINDOW_DAYS * DAY_MS)
-  const [total, recent, plans, grantsByPlan, ending, properties, bookings] = await Promise.all([
-    db.user.count(),
+  const [users, recent, plans, ending, properties, bookings] = await Promise.all([
+    db.user.findMany({ select: { id: true } }),
     db.user.count({
       where: { createdAt: { gte: new Date(now.getTime() - DASHBOARD_WINDOW_DAYS * DAY_MS) } },
     }),
     db.plan.findMany({ orderBy: { name: 'asc' } }),
-    db.planGrant.groupBy({ by: ['planId'], where: inForce, _count: { _all: true } }),
     db.planGrant.findMany({
       where: { ...inForce, endsAt: { gt: now, lte: soon } },
       include: {
@@ -66,22 +70,34 @@ export async function dashboard(db: Database, now = new Date()): Promise<Dashboa
     db.property.count(),
     db.booking.count(),
   ])
-  const granted = new Map(grantsByPlan.map((row) => [row.planId, row._count._all]))
-  const onGrant = grantsByPlan.reduce((sum, row) => sum + row._count._all, 0)
+  // The same resolution the rest of the API uses, so the figures never disagree with it.
+  const current = [
+    ...(
+      await currentPlans(
+        db,
+        users.map((user) => user.id),
+        now,
+      )
+    ).values(),
+  ]
+  const count = (match: (plan: (typeof current)[number]) => boolean) => current.filter(match).length
   const byPlan = plans
     .map((plan) => ({
       id: plan.id,
       code: plan.code,
       name: plan.name,
-      // Everyone without a grant in force is on Free.
-      users: plan.code === FREE_PLAN ? total - onGrant : (granted.get(plan.id) ?? 0),
+      users: count((item) => item.plan.id === plan.id),
     }))
     .sort((a, b) => Number(b.code === FREE_PLAN) - Number(a.code === FREE_PLAN))
 
   return {
-    users: { total, new: recent },
+    users: { total: users.length, new: recent },
     byPlan,
-    bySource: { free: total - onGrant, grant: onGrant },
+    bySource: {
+      free: count((item) => item.source === 'FREE'),
+      grant: count((item) => item.source === 'GRANT'),
+      subscription: count((item) => item.source === 'SUBSCRIPTION'),
+    },
     grantsEndingSoon: ending.map((grant) => ({
       grantId: grant.id,
       user: grant.user,

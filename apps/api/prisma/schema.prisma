@@ -16,30 +16,34 @@ datasource db {
 // - every domain row belongs to a user, and every query filters by user_id
 
 model User {
-  id           String   @id @default(uuid(7)) @db.Uuid
-  name         String   @db.VarChar(255)
+  id               String   @id @default(uuid(7)) @db.Uuid
+  name             String   @db.VarChar(255)
   /// Always stored lowercase.
-  email        String   @unique @db.VarChar(255)
+  email            String   @unique @db.VarChar(255)
   /// CPF, 11 digits. Optional: signup no longer asks for it (accounts from before have it).
-  cpf          String?  @unique @db.Char(11)
+  cpf              String?  @unique @db.Char(11)
   /// DDD + number, 10 or 11 digits. Optional, like the CPF.
-  phone        String?  @db.VarChar(11)
-  passwordHash String   @map("password_hash")
+  phone            String?  @db.VarChar(11)
+  passwordHash     String   @map("password_hash")
   /// Can use the backoffice. Granted with `pnpm admin:grant <e-mail>` or by another admin.
-  isAdmin      Boolean  @default(false) @map("is_admin")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  isAdmin          Boolean  @default(false) @map("is_admin")
+  /// The user's customer at Stripe, created on the first checkout.
+  stripeCustomerId String?  @unique @map("stripe_customer_id") @db.VarChar(255)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  properties    Property[]
-  brokers       Broker[]
-  bookings      Booking[]
-  payments      Payment[]
-  refreshTokens RefreshToken[]
+  properties      Property[]
+  brokers         Broker[]
+  bookings        Booking[]
+  payments        Payment[]
+  refreshTokens   RefreshToken[]
   /// Plans given to this user by an administrator.
-  planGrants    PlanGrant[]      @relation("GrantBeneficiary")
+  planGrants      PlanGrant[]      @relation("GrantBeneficiary")
   /// Grants this administrator made, and the actions they took on grants.
-  grantsMade    PlanGrant[]      @relation("GrantAdmin")
-  grantEvents   PlanGrantEvent[]
+  grantsMade      PlanGrant[]      @relation("GrantAdmin")
+  grantEvents     PlanGrantEvent[]
+  subscriptions   Subscription[]
+  billingPayments BillingPayment[]
 
   @@map("users")
 }
@@ -237,6 +241,8 @@ model Plan {
   grants      PlanGrant[]
   grantEvents PlanGrantEvent[]
 
+  subscriptions Subscription[]
+
   @@map("plans")
 }
 
@@ -300,4 +306,65 @@ model PlanGrantEvent {
 
   @@index([grantId, at])
   @@map("plan_grant_events")
+}
+
+/// How often a paid plan is charged.
+enum BillingPeriod {
+  MONTHLY
+  SEMIANNUAL
+  ANNUAL
+}
+
+/// A paid plan, charged by Stripe. Its status mirrors the Stripe subscription's, kept up to
+/// date by Stripe's webhooks.
+model Subscription {
+  id                   String        @id @default(uuid(7)) @db.Uuid
+  userId               String        @map("user_id") @db.Uuid
+  planId               String        @map("plan_id") @db.Uuid
+  period               BillingPeriod
+  /// Stripe's status: active, past_due, canceled, incomplete, unpaid…
+  status               String        @db.VarChar(30)
+  stripeSubscriptionId String        @unique @map("stripe_subscription_id") @db.VarChar(255)
+  /// When the period already paid ends (the next charge, or the end after a cancellation).
+  currentPeriodEnd     DateTime?     @map("current_period_end") @db.Timestamptz(3)
+  /// The renewal was cancelled: Premium lasts until currentPeriodEnd.
+  cancelAtPeriodEnd    Boolean       @default(false) @map("cancel_at_period_end")
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     Plan             @relation(fields: [planId], references: [id], onDelete: Restrict)
+  payments BillingPayment[]
+
+  @@index([userId, status])
+  @@map("subscriptions")
+}
+
+/// A charge of a subscription, as Stripe reported it.
+model BillingPayment {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  subscriptionId  String?  @map("subscription_id") @db.Uuid
+  stripeInvoiceId String   @unique @map("stripe_invoice_id") @db.VarChar(255)
+  /// Cents.
+  amount          Int
+  /// "paid" or "failed".
+  status          String   @db.VarChar(20)
+  at              DateTime @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, at])
+  @@map("billing_payments")
+}
+
+/// Stripe events already handled: a webhook Stripe sends twice is applied once.
+model StripeEvent {
+  id         String   @id @db.VarChar(255)
+  type       String   @db.VarChar(100)
+  receivedAt DateTime @default(now()) @map("received_at") @db.Timestamptz(3)
+
+  @@map("stripe_events")
 }

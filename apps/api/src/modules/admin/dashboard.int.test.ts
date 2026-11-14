@@ -66,7 +66,7 @@ describe('GET /admin/dashboard', () => {
 
     expect(body).toMatchObject({
       users: { total: 4, new: 3 },
-      bySource: { free: 2, grant: 2 },
+      bySource: { free: 2, grant: 2, subscription: 0 },
       byPlan: [
         { code: 'free', users: 2 },
         { code: 'premium', users: 2 },

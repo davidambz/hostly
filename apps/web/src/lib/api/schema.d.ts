@@ -2104,6 +2104,139 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/billing/checkout': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Start paying for a plan
+     * @description Answers the Stripe Checkout page to send the user to. 409 SUBSCRIPTION_EXISTS while a paid plan runs; 400 PLAN_NOT_FOR_SALE, PERIOD_NOT_OFFERED; 503 BILLING_UNAVAILABLE without Stripe.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: uuid */
+            planId: string
+            /** @enum {string} */
+            period: 'MONTHLY' | 'SEMIANNUAL' | 'ANNUAL'
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              /** Format: uri */
+              url: string
+            }
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        503: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/billing/webhook': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Stripe's events
+     * @description Called by Stripe, signed with STRIPE_WEBHOOK_SECRET; 400 INVALID_SIGNATURE otherwise. Each event is applied once, however many times it arrives.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/admin/plans': {
     parameters: {
       query?: never
@@ -3012,7 +3145,7 @@ export interface components {
         name: string
       }
       /** @enum {string} */
-      planSource: 'FREE' | 'GRANT'
+      planSource: 'FREE' | 'GRANT' | 'SUBSCRIPTION'
       grant: {
         /** Format: uuid */
         id: string
@@ -3104,6 +3237,7 @@ export interface components {
       bySource: {
         free: number
         grant: number
+        subscription: number
       }
       grantsEndingSoon: {
         /** Format: uuid */
@@ -3147,9 +3281,16 @@ export interface components {
         maxProperties: number | null
       }
       /** @enum {string} */
-      source: 'FREE' | 'GRANT'
+      source: 'FREE' | 'GRANT' | 'SUBSCRIPTION'
       /** Format: date-time */
       endsAt: string | null
+      subscription: {
+        /** @enum {string} */
+        period: 'MONTHLY' | 'SEMIANNUAL' | 'ANNUAL'
+        /** Format: date-time */
+        currentPeriodEnd: string | null
+        cancelAtPeriodEnd: boolean
+      } | null
       propertyCount: number
       canAddProperty: boolean
     }
@@ -3311,7 +3452,7 @@ export interface components {
         name: string
       }
       /** @enum {string} */
-      planSource: 'FREE' | 'GRANT'
+      planSource: 'FREE' | 'GRANT' | 'SUBSCRIPTION'
       grant: {
         /** Format: uuid */
         id: string
@@ -3403,6 +3544,7 @@ export interface components {
       bySource: {
         free: number
         grant: number
+        subscription: number
       }
       grantsEndingSoon: {
         /** Format: uuid */
@@ -3446,9 +3588,16 @@ export interface components {
         maxProperties: number | null
       }
       /** @enum {string} */
-      source: 'FREE' | 'GRANT'
+      source: 'FREE' | 'GRANT' | 'SUBSCRIPTION'
       /** Format: date-time */
       endsAt: string | null
+      subscription: {
+        /** @enum {string} */
+        period: 'MONTHLY' | 'SEMIANNUAL' | 'ANNUAL'
+        /** Format: date-time */
+        currentPeriodEnd: string | null
+        cancelAtPeriodEnd: boolean
+      } | null
       propertyCount: number
       canAddProperty: boolean
     }

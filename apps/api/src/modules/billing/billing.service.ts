@@ -1,0 +1,176 @@
+import type Stripe from 'stripe'
+
+import type { BillingPeriod } from '../../generated/prisma/client.js'
+import type { Database } from '../../shared/database.js'
+import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js'
+import { FREE_PLAN } from '../plans/system-plans.js'
+import type { BillingGateway } from './billing-gateway.js'
+import { PAYING_STATUSES } from './paying-statuses.js'
+
+const PRICE_OF: Record<BillingPeriod, 'monthlyPrice' | 'semiannualPrice' | 'annualPrice'> = {
+  MONTHLY: 'monthlyPrice',
+  SEMIANNUAL: 'semiannualPrice',
+  ANNUAL: 'annualPrice',
+}
+
+const PERIODS = new Set<string>(['MONTHLY', 'SEMIANNUAL', 'ANNUAL'])
+
+const idOf = (value: string | { id: string } | null | undefined) =>
+  typeof value === 'string' ? value : (value?.id ?? null)
+
+/** When the paid period ends: the soonest end among the subscription's items. */
+function periodEnd(subscription: Stripe.Subscription): Date | null {
+  const ends = subscription.items.data.map((item) => item.current_period_end)
+  return ends.length > 0 ? new Date(Math.min(...ends) * 1000) : null
+}
+
+export class BillingService {
+  constructor(
+    private readonly db: Database,
+    private readonly gateway: BillingGateway,
+    private readonly appUrl: string,
+  ) {}
+
+  /**
+   * Starts paying for `planId` every `period`: returns the Stripe page to send the user to.
+   * 409 SUBSCRIPTION_EXISTS while a paid plan is running; 400 PLAN_NOT_FOR_SALE (Free, off
+   * sale) and PERIOD_NOT_OFFERED (no price for that period).
+   */
+  async checkout(userId: string, planId: string, period: BillingPeriod): Promise<string> {
+    const user = await this.db.user.findUniqueOrThrow({ where: { id: userId } })
+    const plan = await this.db.plan.findUnique({ where: { id: planId } })
+    if (!plan) {
+      throw new NotFoundError('Plan not found', {
+        code: 'PLAN_NOT_FOUND',
+        details: { field: 'planId' },
+      })
+    }
+    if (plan.code === FREE_PLAN || !plan.active) {
+      throw new BadRequestError('This plan is not for sale', {
+        code: 'PLAN_NOT_FOR_SALE',
+        details: { field: 'planId' },
+      })
+    }
+    const amount = plan[PRICE_OF[period]]
+    if (amount === null || amount === 0) {
+      throw new BadRequestError('The plan is not offered for this period', {
+        code: 'PERIOD_NOT_OFFERED',
+        details: { field: 'period' },
+      })
+    }
+    const running = await this.db.subscription.findFirst({
+      where: { userId, status: { in: PAYING_STATUSES } },
+    })
+    if (running) {
+      throw new ConflictError('A paid plan is already running', { code: 'SUBSCRIPTION_EXISTS' })
+    }
+
+    let customerId = user.stripeCustomerId
+    if (!customerId) {
+      customerId = await this.gateway.createCustomer(user)
+      await this.db.user.update({ where: { id: userId }, data: { stripeCustomerId: customerId } })
+    }
+    return this.gateway.createCheckout({
+      customerId,
+      productName: `Hostly ${plan.name}`,
+      amount,
+      period,
+      metadata: { userId, planId, period },
+      successUrl: `${this.appUrl}/plano?assinatura=confirmando`,
+      cancelUrl: `${this.appUrl}/plano`,
+    })
+  }
+
+  /**
+   * Applies a Stripe event. The event's id is stored in the same transaction as its effect:
+   * a webhook Stripe sends again is applied once, and one that fails is retried by Stripe.
+   */
+  async handle(event: Stripe.Event): Promise<void> {
+    const seen = await this.db.stripeEvent.findUnique({ where: { id: event.id } })
+    if (seen) return
+
+    // Read from Stripe before the transaction: the network has no business inside one.
+    const subscription = await this.subscriptionOf(event)
+
+    await this.db.$transaction(async (tx) => {
+      await tx.stripeEvent.create({ data: { id: event.id, type: event.type } })
+      if (subscription) await this.saveSubscription(tx, subscription)
+      if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
+        await this.savePayment(tx, event.data.object, event.type === 'invoice.paid')
+      }
+    })
+  }
+
+  /** The subscription an event is about, as Stripe has it now. */
+  private async subscriptionOf(event: Stripe.Event): Promise<Stripe.Subscription | null> {
+    switch (event.type) {
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+      case 'customer.subscription.deleted':
+        return event.data.object
+      case 'checkout.session.completed': {
+        const id = idOf(event.data.object.subscription)
+        return id ? this.gateway.retrieveSubscription(id) : null
+      }
+      default:
+        return null
+    }
+  }
+
+  private async saveSubscription(tx: Transaction, subscription: Stripe.Subscription) {
+    const { userId, planId, period } = subscription.metadata
+    if (!userId || !planId || !period || !PERIODS.has(period)) return
+    const data = {
+      status: subscription.status,
+      currentPeriodEnd: periodEnd(subscription),
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    }
+    await tx.subscription.upsert({
+      where: { stripeSubscriptionId: subscription.id },
+      create: {
+        ...data,
+        userId,
+        planId,
+        period: period as BillingPeriod,
+        stripeSubscriptionId: subscription.id,
+      },
+      update: data,
+    })
+  }
+
+  /**
+   * Records a charge. A failed one takes the plan away at once (past_due): Premium is for
+   * what is paid. Stripe follows with its own subscription update.
+   */
+  private async savePayment(tx: Transaction, invoice: Stripe.Invoice, paid: boolean) {
+    const stripeSubscriptionId = idOf(invoice.parent?.subscription_details?.subscription)
+    const subscription = stripeSubscriptionId
+      ? await tx.subscription.findUnique({ where: { stripeSubscriptionId } })
+      : null
+    const userId =
+      subscription?.userId ??
+      (await tx.user.findFirst({ where: { stripeCustomerId: idOf(invoice.customer) ?? '' } }))?.id
+    if (!userId || !invoice.id) return
+
+    await tx.billingPayment.upsert({
+      where: { stripeInvoiceId: invoice.id },
+      create: {
+        userId,
+        subscriptionId: subscription?.id ?? null,
+        stripeInvoiceId: invoice.id,
+        amount: paid ? invoice.amount_paid : invoice.amount_due,
+        status: paid ? 'paid' : 'failed',
+        at: new Date(invoice.created * 1000),
+      },
+      update: {
+        status: paid ? 'paid' : 'failed',
+        amount: paid ? invoice.amount_paid : invoice.amount_due,
+      },
+    })
+    if (!paid && subscription) {
+      await tx.subscription.update({ where: { id: subscription.id }, data: { status: 'past_due' } })
+    }
+  }
+}
+
+type Transaction = Parameters<Parameters<Database['$transaction']>[0]>[0]

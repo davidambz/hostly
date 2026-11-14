@@ -24,6 +24,7 @@ describe('loadEnv', () => {
       REFRESH_TOKEN_TTL_DAYS: 30,
       REFRESH_SESSION_MAX_DAYS: 90,
       COOKIE_SECURE: true,
+      APP_URL: 'http://localhost:5173',
     })
   })
 
@@ -82,6 +83,7 @@ describe('loadEnv', () => {
       REFRESH_TOKEN_TTL_DAYS: 7,
       REFRESH_SESSION_MAX_DAYS: 60,
       COOKIE_SECURE: true,
+      APP_URL: 'https://hostly.app',
     })
   })
 
@@ -89,6 +91,28 @@ describe('loadEnv', () => {
     expect(() =>
       loadEnv({ ...base, REFRESH_TOKEN_TTL_DAYS: '30', REFRESH_SESSION_MAX_DAYS: '7' }),
     ).toThrow(/REFRESH_SESSION_MAX_DAYS/)
+  })
+
+  it('takes the Stripe settings and the app URL', () => {
+    const env = loadEnv({
+      ...base,
+      STRIPE_SECRET_KEY: 'sk_test_123',
+      STRIPE_WEBHOOK_SECRET: 'whsec_123',
+      APP_URL: 'https://app.hostly.dev',
+    })
+
+    expect(env).toMatchObject({
+      STRIPE_SECRET_KEY: 'sk_test_123',
+      STRIPE_WEBHOOK_SECRET: 'whsec_123',
+      APP_URL: 'https://app.hostly.dev',
+    })
+  })
+
+  it('refuses a Stripe key that is not one, and an app URL with a path', () => {
+    expect(() => loadEnv({ ...base, STRIPE_SECRET_KEY: 'pk_test_123' })).toThrow(
+      /STRIPE_SECRET_KEY/,
+    )
+    expect(() => loadEnv({ ...base, APP_URL: 'https://hostly.app/app' })).toThrow(/APP_URL/)
   })
 
   it('ignores unknown variables', () => {

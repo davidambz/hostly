@@ -65,6 +65,14 @@ src/
 - As regras de integridade também ficam no banco, como CHECK constraints escritas à mão no SQL da migration (o Prisma não modela CHECK). Ao criar uma migration nova, use `--create-only` quando precisar acrescentar SQL.
 - O `.pnpmfile.cjs` tira o peer `prisma` do `@prisma/client`, para a CLI não ir para a imagem de produção. A CLI só existe na imagem `migrate`.
 
+### Planos, concessões e cobrança
+
+- Planos em `plans` (Free e Premium têm `code` estável; o Free é sempre de graça e à venda, garantido por CHECK). Limite de imóveis por plano (`max_properties`, nulo = ilimitado) e preço por periodicidade em centavos.
+- **Plano em vigor** (`modules/plans/current-plan.ts`, o único lugar que decide): concessão em vigor, senão assinatura paga ativa (`active`/`trialing`; `past_due` não conta), senão Free. Cadastrar imóvel acima do limite é 409 `PLAN_LIMIT_REACHED`, checado com a linha do usuário travada.
+- **Backoffice** em `/admin`: toda rota exige `is_admin` lido do banco a cada requisição (403 `ADMIN_ONLY`). O primeiro admin vem de `pnpm --filter @hostly/api admin:grant <e-mail>`.
+- **Concessões** (`plan_grants` + `plan_grant_events` como histórico): 1 mês, 6 meses, 1 ano ou vitalício; uma em vigor por usuário (restrição de exclusão no banco).
+- **Stripe**: `STRIPE_SECRET_KEY` (sem ela, checkout responde 503), `STRIPE_WEBHOOK_SECRET` e `APP_URL`, só no `.env` (nunca no repositório). O checkout cria o cliente na primeira vez e uma sessão de assinatura com o preço do plano. O webhook (`/billing/webhook`, corpo cru para conferir a assinatura) grava cada evento em `stripe_events` na mesma transação do efeito, então um evento repetido vale uma vez. Falha de pagamento tira o plano na hora; cancelamento vale até o fim do período pago. Nos testes, `FakeBilling` (`src/test/fake-billing.ts`) substitui a Stripe e assina os webhooks com o código da própria Stripe. Localmente, os webhooks chegam com `stripe listen --forward-to localhost:3333/billing/webhook`.
+
 ## Web (`apps/web`)
 
 ```
