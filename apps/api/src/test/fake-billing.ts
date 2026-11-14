@@ -2,6 +2,7 @@ import Stripe from 'stripe'
 
 import type {
   BillingGateway,
+  SavedCard,
   SubscriptionMetadata,
   SubscriptionRequest,
 } from '../modules/billing/billing-gateway.js'
@@ -91,10 +92,29 @@ export class FakeBilling implements BillingGateway {
     return Promise.resolve(updated)
   }
 
-  createPortal(customerId: string, returnUrl: string) {
-    return Promise.resolve(
-      `https://billing.stripe.com/p/session/test_${customerId}?return=${encodeURIComponent(returnUrl)}`,
-    )
+  /** Cards "saved" through the card form, by id, with whose they are. */
+  readonly cards = new Map<string, SavedCard & { customerId: string }>()
+  /** The card each subscription is charged on. */
+  readonly charging = new Map<string, string>()
+  readonly setups: string[] = []
+
+  createCardSetup(customerId: string) {
+    this.setups.push(customerId)
+    return Promise.resolve(`seti_${String(this.setups.length)}_secret_test`)
+  }
+
+  useCard(customerId: string, subscriptionId: string, paymentMethodId: string) {
+    if (this.cards.get(paymentMethodId)?.customerId !== customerId) return Promise.resolve(false)
+    this.charging.set(subscriptionId, paymentMethodId)
+    return Promise.resolve(true)
+  }
+
+  currentCard(_customerId: string, subscriptionId: string) {
+    const id = this.charging.get(subscriptionId)
+    const card = id ? this.cards.get(id) : undefined
+    if (!card) return Promise.resolve(null)
+    const { customerId: _owner, ...saved } = card
+    return Promise.resolve(saved)
   }
 
   /** Signs `payload` the way Stripe signs its webhooks. */

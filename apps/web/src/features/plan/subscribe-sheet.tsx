@@ -1,5 +1,4 @@
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
-import { loadStripe, type Stripe } from '@stripe/stripe-js'
 import { Loader2, LockKeyhole } from 'lucide-react'
 import { useId, useState } from 'react'
 
@@ -21,17 +20,7 @@ import { formatBRL } from '@/lib/money'
 import { type BillingPeriod, type Plan, useBillingConfig, useSubscribe } from './api'
 import { cardAppearance, cardFonts } from './card-appearance'
 import { type PeriodPrice, periodPrices } from './plan-labels'
-
-/** Stripe.js loaded once per key, the first time a card form opens. */
-const loaded = new Map<string, Promise<Stripe | null>>()
-function stripeFor(key: string) {
-  let stripe = loaded.get(key)
-  if (!stripe) {
-    stripe = loadStripe(key)
-    loaded.set(key, stripe)
-  }
-  return stripe
-}
+import { stripeFor } from './stripe'
 
 /**
  * Subscribing without leaving the app: the plan's periods to pick from and Stripe's card

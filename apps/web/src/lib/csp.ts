@@ -9,12 +9,12 @@
 export function contentSecurityPolicy(apiUrl: string): string {
   return [
     "default-src 'self'",
-    "script-src 'self' https://js.stripe.com",
+    "script-src 'self' https://js.stripe.com https://*.js.stripe.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://*.stripe.com",
     "font-src 'self' data:",
     `connect-src 'self' ${new URL(apiUrl).origin} https://api.stripe.com`,
-    'frame-src https://js.stripe.com https://hooks.stripe.com',
+    'frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com',
     "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",

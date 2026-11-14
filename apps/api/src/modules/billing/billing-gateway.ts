@@ -29,6 +29,14 @@ export interface SubscriptionRequest {
   metadata: SubscriptionMetadata
 }
 
+/** The card a subscription is charged on, as the user can tell it apart. Never the number. */
+export interface SavedCard {
+  brand: string
+  last4: string
+  expMonth: number
+  expYear: number
+}
+
 /**
  * What the API asks of the payment provider. Stripe in production; a fake in tests, so they
  * run without the network and decide what Stripe "answers".
@@ -61,8 +69,15 @@ export interface BillingGateway {
       metadata: SubscriptionMetadata
     },
   ): Promise<Stripe.Subscription>
-  /** Stripe's customer portal, where the user changes the card; returns its address. */
-  createPortal(customerId: string, returnUrl: string): Promise<string>
+  /** Starts saving a new card for the customer; the card form completes it with the secret. */
+  createCardSetup(customerId: string): Promise<string>
+  /**
+   * Charges the subscription (and the customer's next invoices) on a card the form saved.
+   * False when the card isn't the customer's.
+   */
+  useCard(customerId: string, subscriptionId: string, paymentMethodId: string): Promise<boolean>
+  /** The card the subscription is charged on, if any. */
+  currentCard(customerId: string, subscriptionId: string): Promise<SavedCard | null>
 }
 
 export class StripeGateway implements BillingGateway {
@@ -175,11 +190,47 @@ export class StripeGateway implements BillingGateway {
     })
   }
 
-  async createPortal(customerId: string, returnUrl: string): Promise<string> {
-    const session = await this.stripe.billingPortal.sessions.create({
+  async createCardSetup(customerId: string): Promise<string> {
+    const intent = await this.stripe.setupIntents.create({
       customer: customerId,
-      return_url: returnUrl,
+      // Saved to be charged later, at each renewal, without the user there.
+      usage: 'off_session',
     })
-    return session.url
+    if (!intent.client_secret) throw new Error('Stripe gave the setup no secret')
+    return intent.client_secret
+  }
+
+  async useCard(
+    customerId: string,
+    subscriptionId: string,
+    paymentMethodId: string,
+  ): Promise<boolean> {
+    const card = await this.stripe.paymentMethods.retrieve(paymentMethodId)
+    const owner = typeof card.customer === 'string' ? card.customer : card.customer?.id
+    if (owner !== customerId) return false
+    await this.stripe.customers.update(customerId, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    })
+    await this.stripe.subscriptions.update(subscriptionId, {
+      default_payment_method: paymentMethodId,
+    })
+    return true
+  }
+
+  async currentCard(customerId: string, subscriptionId: string): Promise<SavedCard | null> {
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ['default_payment_method'],
+    })
+    let method = subscription.default_payment_method
+    if (!method || typeof method === 'string') {
+      const customer = await this.stripe.customers.retrieve(customerId, {
+        expand: ['invoice_settings.default_payment_method'],
+      })
+      method = customer.deleted ? null : customer.invoice_settings.default_payment_method
+    }
+    const card = method && typeof method !== 'string' ? method.card : null
+    return card
+      ? { brand: card.brand, last4: card.last4, expMonth: card.exp_month, expYear: card.exp_year }
+      : null
   }
 }

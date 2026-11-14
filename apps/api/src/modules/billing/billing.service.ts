@@ -4,7 +4,7 @@ import type { BillingPeriod } from '../../generated/prisma/client.js'
 import type { Database } from '../../shared/database.js'
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js'
 import { FREE_PLAN } from '../plans/system-plans.js'
-import type { BillingGateway } from './billing-gateway.js'
+import type { BillingGateway, SavedCard } from './billing-gateway.js'
 import { PAYING_STATUSES } from './paying-statuses.js'
 
 const PRICE_OF: Record<BillingPeriod, 'monthlyPrice' | 'semiannualPrice' | 'annualPrice'> = {
@@ -28,7 +28,6 @@ export class BillingService {
   constructor(
     private readonly db: Database,
     private readonly gateway: BillingGateway,
-    private readonly appUrl: string,
   ) {}
 
   /**
@@ -166,13 +165,42 @@ export class BillingService {
     await this.db.$transaction((tx) => this.saveSubscription(tx, updated))
   }
 
-  /** Stripe's portal for the card; 404 NO_CUSTOMER for an account that never paid. */
-  async portal(userId: string): Promise<string> {
+  /** The running subscription and its customer at Stripe; 404 NO_SUBSCRIPTION without one. */
+  private async payer(userId: string) {
+    const subscription = await this.running(userId)
     const user = await this.db.user.findUniqueOrThrow({ where: { id: userId } })
     if (!user.stripeCustomerId) {
-      throw new NotFoundError('The account never paid with Stripe', { code: 'NO_CUSTOMER' })
+      throw new NotFoundError('No paid plan is running', { code: 'NO_SUBSCRIPTION' })
     }
-    return this.gateway.createPortal(user.stripeCustomerId, `${this.appUrl}/plano`)
+    return { subscription, customerId: user.stripeCustomerId }
+  }
+
+  /** The card the subscription is charged on; null when Stripe has none on file. */
+  async card(userId: string): Promise<SavedCard | null> {
+    const { subscription, customerId } = await this.payer(userId)
+    return this.gateway.currentCard(customerId, subscription.stripeSubscriptionId)
+  }
+
+  /** Starts saving a new card: the secret the card form completes it with. */
+  async cardSetup(userId: string): Promise<{ clientSecret: string }> {
+    const { customerId } = await this.payer(userId)
+    return { clientSecret: await this.gateway.createCardSetup(customerId) }
+  }
+
+  /**
+   * Charges the subscription on the card the form just saved. 400 INVALID_PAYMENT_METHOD
+   * for a card that isn't this customer's.
+   */
+  async setCard(userId: string, paymentMethodId: string): Promise<void> {
+    const { subscription, customerId } = await this.payer(userId)
+    if (
+      !(await this.gateway.useCard(customerId, subscription.stripeSubscriptionId, paymentMethodId))
+    ) {
+      throw new BadRequestError('That card is not yours', {
+        code: 'INVALID_PAYMENT_METHOD',
+        details: { field: 'paymentMethodId' },
+      })
+    }
   }
 
   /**

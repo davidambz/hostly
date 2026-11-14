@@ -90,8 +90,26 @@ export function useChangePeriod() {
   )
 }
 
-export function usePortal() {
-  return useMutation({
-    mutationFn: async () => unwrap(await api.POST('/billing/portal')),
+export type SavedCard = components['schemas']['SavedCard']
+
+/** The card the subscription is charged on: brand, last digits, expiry. */
+export function useSavedCard() {
+  return useQuery({
+    queryKey: ['plan', 'card'],
+    queryFn: async () => unwrap(await api.GET('/billing/card')).card,
   })
+}
+
+/** Starts saving a new card: the secret the card form completes it with. */
+export function useCardSetup() {
+  return useMutation({
+    mutationFn: async () => unwrap(await api.POST('/billing/card/setup')),
+  })
+}
+
+/** Charges the subscription on the card the form just saved. */
+export function useSetCard() {
+  return useSubscriptionMutation(async (paymentMethodId: string) =>
+    unwrap(await api.PUT('/billing/card', { body: { paymentMethodId } })),
+  )
 }

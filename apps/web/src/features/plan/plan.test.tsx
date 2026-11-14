@@ -3,12 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/lib/navigate', () => ({ leaveTo: vi.fn() }))
-
 // Stripe's card fields are frames from js.stripe.com: here they are stand-ins that record
 // what the page asks of them.
 const stripe = vi.hoisted(() => ({
   confirmPayment: vi.fn(),
+  confirmSetup: vi.fn(),
   submit: vi.fn(),
   amounts: [] as number[],
 }))
@@ -32,7 +31,7 @@ vi.mock('@stripe/react-stripe-js', async () => {
       }, [onReady])
       return <div>Campos do cartão</div>
     },
-    useStripe: () => ({ confirmPayment: stripe.confirmPayment }),
+    useStripe: () => ({ confirmPayment: stripe.confirmPayment, confirmSetup: stripe.confirmSetup }),
     useElements: () => ({ submit: stripe.submit }),
   }
 })
@@ -43,7 +42,6 @@ import { renderRoute } from '@/test/render'
 import { freePlan, loggedInHandlers, server, url } from '@/test/server'
 
 import type { MyGrant, Plan } from './api'
-import { leaveTo } from '@/lib/navigate'
 
 import { grantLabel, periodPrices, sourceLabel, subscriptionLabel, usageLabel } from './plan-labels'
 
@@ -460,9 +458,17 @@ describe('managing the subscription', () => {
         calls.push({ path: 'period', body: await request.json() })
         return new HttpResponse(null, { status: 204 })
       }),
-      http.post(url('/billing/portal'), () =>
-        HttpResponse.json({ url: 'https://billing.stripe.com/p/session/test_1' }),
+      http.get(url('/billing/card'), () =>
+        HttpResponse.json({ card: { brand: 'visa', last4: '4242', expMonth: 3, expYear: 2030 } }),
       ),
+      http.get(url('/billing/config'), () => HttpResponse.json({ publishableKey: 'pk_test_x' })),
+      http.post(url('/billing/card/setup'), () =>
+        HttpResponse.json({ clientSecret: 'seti_1_secret_test' }),
+      ),
+      http.put(url('/billing/card'), async ({ request }) => {
+        calls.push({ path: 'card', body: await request.json() })
+        return new HttpResponse(null, { status: 204 })
+      }),
     )
     return calls
   }
@@ -532,22 +538,46 @@ describe('managing the subscription', () => {
     })
   })
 
-  it('opens the Stripe portal to update the card', async () => {
-    serveSubscription()
+  it('shows the card and swaps it inside the app', async () => {
+    const calls = serveSubscription()
+    stripe.submit.mockResolvedValue({})
+    stripe.confirmSetup.mockResolvedValue({ setupIntent: { payment_method: 'pm_new' } })
+    const user = userEvent.setup()
+    renderRoute(routes, '/plano')
+
+    expect(
+      await screen.findByText('Visa •••• 4242 · vence 03/2030', {}, { timeout: 5000 }),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Trocar o cartão' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Trocar o cartão' })
+    await user.click(await within(sheet).findByRole('button', { name: 'Salvar cartão' }))
+
+    await vi.waitFor(() => {
+      expect(calls).toContainEqual({ path: 'card', body: { paymentMethodId: 'pm_new' } })
+    })
+    expect(stripe.confirmSetup).toHaveBeenCalledWith(
+      expect.objectContaining({ clientSecret: 'seti_1_secret_test', redirect: 'if_required' }),
+    )
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Trocar o cartão' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('keeps the old card when the bank refuses the new one', async () => {
+    const calls = serveSubscription()
+    stripe.submit.mockResolvedValue({})
+    stripe.confirmSetup.mockResolvedValue({ error: { message: 'Seu cartão foi recusado.' } })
     const user = userEvent.setup()
     renderRoute(routes, '/plano')
 
     await user.click(
-      await screen.findByRole(
-        'button',
-        { name: 'Atualizar forma de pagamento' },
-        { timeout: 5000 },
-      ),
+      await screen.findByRole('button', { name: 'Trocar o cartão' }, { timeout: 5000 }),
     )
+    const sheet = await screen.findByRole('dialog', { name: 'Trocar o cartão' })
+    await user.click(await within(sheet).findByRole('button', { name: 'Salvar cartão' }))
 
-    await vi.waitFor(() => {
-      expect(leaveTo).toHaveBeenCalledWith('https://billing.stripe.com/p/session/test_1')
-    })
+    expect(await within(sheet).findByRole('alert')).toHaveTextContent('Seu cartão foi recusado.')
+    expect(calls.some((call) => call.path === 'card')).toBe(false)
   })
 
   it('is not shown without a paid subscription', async () => {

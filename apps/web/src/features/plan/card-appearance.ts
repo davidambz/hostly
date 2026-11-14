@@ -39,12 +39,12 @@ export function cardAppearance(dark: boolean): Appearance {
 
 /** The app's face for the card fields, loaded by Stripe from this site. */
 export function cardFonts(): (CssFontSource | CustomFontSource)[] {
-  return [
-    {
-      family: 'Archivo Variable',
-      src: `url(${new URL(archivo, window.location.origin).href})`,
-      weight: '100 900',
-      display: 'swap',
-    },
-  ]
+  const src = `url(${new URL(archivo, window.location.origin).href})`
+  // One variable file, declared for each weight the fields use.
+  return ['400', '500', '600'].map((weight) => ({
+    family: 'Archivo Variable',
+    src,
+    weight,
+    display: 'swap',
+  }))
 }

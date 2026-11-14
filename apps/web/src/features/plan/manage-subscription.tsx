@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { errorMessage } from '@/lib/api/form-errors'
 import { formatBRL } from '@/lib/money'
-import { leaveTo } from '@/lib/navigate'
 
 import {
   type BillingPeriod,
@@ -17,10 +16,11 @@ import {
   type Plan,
   useBillingPayments,
   useChangePeriod,
-  usePortal,
+  useSavedCard,
   useSetRenewal,
 } from './api'
-import { periodPrices } from './plan-labels'
+import { CardSheet } from './card-sheet'
+import { cardLabel, periodPrices } from './plan-labels'
 
 const PERIOD_NAMES: Record<BillingPeriod, string> = {
   MONTHLY: 'Mensal',
@@ -171,23 +171,31 @@ function PeriodChange({ plan, current }: { plan: Plan; current: BillingPeriod })
 }
 
 function Card() {
-  const portal = usePortal()
-  const open = async () => {
-    try {
-      leaveTo((await portal.mutateAsync()).url)
-    } catch (error) {
-      toast.error(errorMessage(error))
-    }
-  }
+  const card = useSavedCard()
+  const [open, setOpen] = useState(false)
   return (
     <div className="grid gap-2">
       <h3 className="text-sm font-medium">Forma de pagamento</h3>
-      <div>
-        <Button size="sm" variant="outline" disabled={portal.isPending} onClick={() => void open()}>
-          <CreditCard aria-hidden />
-          Atualizar forma de pagamento
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="flex items-center gap-2 text-sm tabular-nums">
+          <CreditCard className="text-muted-foreground size-4" aria-hidden />
+          {card.isPending
+            ? 'Carregando o cartão…'
+            : card.data
+              ? cardLabel(card.data)
+              : 'Nenhum cartão salvo.'}
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            setOpen(true)
+          }}
+        >
+          Trocar o cartão
         </Button>
       </div>
+      <CardSheet open={open} onOpenChange={setOpen} />
     </div>
   )
 }

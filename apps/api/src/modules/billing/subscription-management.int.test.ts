@@ -95,19 +95,67 @@ describe('billing period', () => {
   })
 })
 
-describe('portal', () => {
-  it("opens Stripe's portal for the customer, coming back to the plan page", async () => {
+describe('the card', () => {
+  const visa = { brand: 'visa', last4: '4242', expMonth: 12, expYear: 2030 }
+
+  function get(url: string, as: User = user) {
+    return app.inject({ method: 'GET', url, headers: authHeader(app, as.id) })
+  }
+
+  function put(url: string, payload: object, as: User = user) {
+    return app.inject({ method: 'PUT', url, payload, headers: authHeader(app, as.id) })
+  }
+
+  async function withCustomer() {
+    await subscribe()
     await db.user.update({ where: { id: user.id }, data: { stripeCustomerId: 'cus_9' } })
+  }
 
-    const response = await post('/billing/portal')
+  it('saves a new card in the form and charges the subscription on it', async () => {
+    await withCustomer()
 
-    expect(response.json()).toEqual({
-      url: `https://billing.stripe.com/p/session/test_cus_9?return=${encodeURIComponent('https://app.hostly.test/plano')}`,
-    })
+    const setup = await post('/billing/card/setup')
+    billing.cards.set('pm_new', { ...visa, customerId: 'cus_9' })
+    const swap = await put('/billing/card', { paymentMethodId: 'pm_new' })
+
+    expect(setup.json()).toEqual({ clientSecret: 'seti_1_secret_test' })
+    expect(billing.setups).toEqual(['cus_9'])
+    expect(swap.statusCode).toBe(204)
+    expect(billing.charging.get('sub_1')).toBe('pm_new')
+    expect((await get('/billing/card')).json()).toEqual({ card: visa })
   })
 
-  it('answers 404 NO_CUSTOMER for an account that never paid', async () => {
-    expect((await post('/billing/portal')).json()).toMatchObject({ code: 'NO_CUSTOMER' })
+  it("answers 400 INVALID_PAYMENT_METHOD for someone else's card", async () => {
+    await withCustomer()
+    billing.cards.set('pm_other', { ...visa, customerId: 'cus_other' })
+
+    const response = await put('/billing/card', { paymentMethodId: 'pm_other' })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toMatchObject({ code: 'INVALID_PAYMENT_METHOD' })
+    expect(billing.charging.size).toBe(0)
+  })
+
+  it('has no card before one is on file', async () => {
+    await withCustomer()
+
+    expect((await get('/billing/card')).json()).toEqual({ card: null })
+  })
+
+  it.each([
+    ['GET', '/billing/card'],
+    ['POST', '/billing/card/setup'],
+  ] as const)('%s %s answers 404 NO_SUBSCRIPTION without a paid plan', async (method, url) => {
+    const response = await app.inject({ method, url, headers: authHeader(app, user.id) })
+
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toMatchObject({ code: 'NO_SUBSCRIPTION' })
+  })
+
+  it('answers 400 for something that is not a card id', async () => {
+    await withCustomer()
+
+    expect((await put('/billing/card', { paymentMethodId: 'tok_1' })).statusCode).toBe(400)
   })
 })
 

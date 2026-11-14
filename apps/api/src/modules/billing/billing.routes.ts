@@ -12,7 +12,6 @@ export interface BillingRoutesOptions {
   gateway: BillingGateway | null
   /** Stripe's publishable key, for the card form. */
   publishableKey?: string
-  appUrl: string
 }
 
 const unavailable = () =>
@@ -20,9 +19,7 @@ const unavailable = () =>
 
 /** Paying for a plan with Stripe, and Stripe telling the API what happened. */
 export const billingRoutes: FastifyPluginAsyncZod<BillingRoutesOptions> = async (app, options) => {
-  const service = options.gateway
-    ? new BillingService(app.db, options.gateway, options.appUrl)
-    : null
+  const service = options.gateway ? new BillingService(app.db, options.gateway) : null
 
   app.get(
     '/config',
@@ -135,17 +132,28 @@ export const billingRoutes: FastifyPluginAsyncZod<BillingRoutesOptions> = async 
     },
   )
 
-  app.post(
-    '/portal',
+  const cardSchema = z
+    .object({
+      brand: z.string().describe('visa, mastercard, amex…'),
+      last4: z.string(),
+      expMonth: z.number().int(),
+      expYear: z.number().int(),
+    })
+    .meta({ id: 'SavedCard' })
+
+  app.get(
+    '/card',
     {
       onRequest: [app.authenticate],
       schema: {
         tags: ['billing'],
-        summary: "Stripe's portal, to change the card",
-        description: 'Answers its address. 404 NO_CUSTOMER for an account that never paid.',
+        summary: 'The card the subscription is charged on',
+        description:
+          'Brand, last four digits and expiry; never the number. 404 NO_SUBSCRIPTION without a ' +
+          'paid plan.',
         security: [{ bearerAuth: [] }],
         response: {
-          200: z.object({ url: z.url() }),
+          200: z.object({ card: cardSchema.nullable() }),
           401: errorResponseSchema,
           404: errorResponseSchema,
           503: errorResponseSchema,
@@ -154,7 +162,54 @@ export const billingRoutes: FastifyPluginAsyncZod<BillingRoutesOptions> = async 
     },
     async (request) => {
       if (!service) throw unavailable()
-      return { url: await service.portal(request.user.sub) }
+      return { card: await service.card(request.user.sub) }
+    },
+  )
+
+  app.post(
+    '/card/setup',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        tags: ['billing'],
+        summary: 'Start saving a new card',
+        description:
+          "Answers the secret the card form (Stripe's Payment Element) saves the card with; the " +
+          'card goes to Stripe, never to this API. 404 NO_SUBSCRIPTION without a paid plan.',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: z.object({ clientSecret: z.string() }),
+          401: errorResponseSchema,
+          404: errorResponseSchema,
+          503: errorResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      if (!service) throw unavailable()
+      return service.cardSetup(request.user.sub)
+    },
+  )
+
+  app.put(
+    '/card',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        tags: ['billing'],
+        summary: 'Charge the subscription on the card just saved',
+        description:
+          '`paymentMethodId` is the card the form saved. 400 INVALID_PAYMENT_METHOD when it is ' +
+          "not this account's; 404 NO_SUBSCRIPTION without a paid plan.",
+        security: [{ bearerAuth: [] }],
+        body: z.object({ paymentMethodId: z.string().startsWith('pm_').max(255) }),
+        response: ok,
+      },
+    },
+    async (request, reply) => {
+      if (!service) throw unavailable()
+      await service.setCard(request.user.sub, request.body.paymentMethodId)
+      return reply.status(204).send(null)
     },
   )
 

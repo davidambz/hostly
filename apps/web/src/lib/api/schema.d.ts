@@ -2611,7 +2611,141 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/billing/portal': {
+  '/billing/card': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * The card the subscription is charged on
+     * @description Brand, last four digits and expiry; never the number. 404 NO_SUBSCRIPTION without a paid plan.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              card: components['schemas']['SavedCard'] | null
+            }
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        503: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Charge the subscription on the card just saved
+     * @description `paymentMethodId` is the card the form saved. 400 INVALID_PAYMENT_METHOD when it is not this account's; 404 NO_SUBSCRIPTION without a paid plan.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: starts_with */
+            paymentMethodId: string
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': null
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        503: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/billing/card/setup': {
     parameters: {
       query?: never
       header?: never
@@ -2621,8 +2755,8 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Stripe's portal, to change the card
-     * @description Answers its address. 404 NO_CUSTOMER for an account that never paid.
+     * Start saving a new card
+     * @description Answers the secret the card form (Stripe's Payment Element) saves the card with; the card goes to Stripe, never to this API. 404 NO_SUBSCRIPTION without a paid plan.
      */
     post: {
       parameters: {
@@ -2640,8 +2774,7 @@ export interface paths {
           }
           content: {
             'application/json': {
-              /** Format: uri */
-              url: string
+              clientSecret: string
             }
           }
         }
@@ -4093,6 +4226,13 @@ export interface components {
       pageSize: number
       total: number
     }
+    SavedCardInput: {
+      /** @description visa, mastercard, amex… */
+      brand: string
+      last4: string
+      expMonth: number
+      expYear: number
+    }
     BillingPaymentInput: {
       /** Format: uuid */
       id: string
@@ -4546,6 +4686,13 @@ export interface components {
       page: number
       pageSize: number
       total: number
+    }
+    SavedCard: {
+      /** @description visa, mastercard, amex… */
+      brand: string
+      last4: string
+      expMonth: number
+      expYear: number
     }
     BillingPayment: {
       /** Format: uuid */
