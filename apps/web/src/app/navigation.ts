@@ -1,4 +1,4 @@
-import { CalendarDays, Home, type LucideIcon, ShieldCheck, Users } from 'lucide-react'
+import { ChartColumn, CalendarDays, Home, type LucideIcon, ShieldCheck, Users } from 'lucide-react'
 
 export interface NavItem {
   title: string
@@ -11,6 +11,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: 'Reservas', to: '/reservas', icon: CalendarDays },
   { title: 'Imóveis', to: '/imoveis', icon: Home },
   { title: 'Intermediadores', to: '/intermediadores', icon: Users },
+  { title: 'Relatórios', to: '/relatorios', icon: ChartColumn },
 ]
 
 /** The backoffice, shown only to administrators. */

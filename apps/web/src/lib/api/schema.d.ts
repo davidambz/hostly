@@ -2104,6 +2104,66 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/reports/performance': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * How each property did in a period
+     * @description From `from` to the day before `to` (at most 731 days). Every property, zeros included, and the total. A booking crossing the edges counts only its nights inside, with its lodging and broker fee spread per night; the cleaning fee counts on the check-in day. Money in cents.
+     */
+    get: {
+      parameters: {
+        query: {
+          from: string
+          to: string
+        }
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['PerformanceReport']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/billing/checkout': {
     parameters: {
       query?: never
@@ -3539,6 +3599,65 @@ export interface components {
         bookings: number
       }
     }
+    ReportFiguresInput: {
+      /** @description Days of the period × properties */
+      nightsAvailable: number
+      nightsSold: number
+      /** @description Nights sold ÷ available, in basis points */
+      occupancyBps: number
+      /** @description Lodging of the nights inside the period, spread per night */
+      lodging: number
+      /** @description Cleaning fees of the bookings checking in during the period */
+      cleaning: number
+      /** @description Lodging + cleaning */
+      revenue: number
+      brokerFees: number
+      /** @description Revenue − broker fees */
+      net: number
+      /** @description Lodging ÷ nights sold */
+      averageDailyRate: number | null
+      /** @description Lodging ÷ nights available */
+      revpar: number
+      /** @description Bookings checking in during the period */
+      bookings: number
+      /** @description Average nights of those bookings */
+      averageStay: number | null
+    }
+    PerformanceReportInput: {
+      /** Format: date */
+      from: string
+      /** Format: date */
+      to: string
+      days: number
+      properties: {
+        /** @description Days of the period × properties */
+        nightsAvailable: number
+        nightsSold: number
+        /** @description Nights sold ÷ available, in basis points */
+        occupancyBps: number
+        /** @description Lodging of the nights inside the period, spread per night */
+        lodging: number
+        /** @description Cleaning fees of the bookings checking in during the period */
+        cleaning: number
+        /** @description Lodging + cleaning */
+        revenue: number
+        brokerFees: number
+        /** @description Revenue − broker fees */
+        net: number
+        /** @description Lodging ÷ nights sold */
+        averageDailyRate: number | null
+        /** @description Lodging ÷ nights available */
+        revpar: number
+        /** @description Bookings checking in during the period */
+        bookings: number
+        /** @description Average nights of those bookings */
+        averageStay: number | null
+        /** Format: uuid */
+        id: string
+        name: string
+      }[]
+      total: components['schemas']['ReportFiguresInput']
+    }
     UserInput: {
       /** Format: uuid */
       id: string
@@ -3857,6 +3976,65 @@ export interface components {
         properties: number
         bookings: number
       }
+    }
+    ReportFigures: {
+      /** @description Days of the period × properties */
+      nightsAvailable: number
+      nightsSold: number
+      /** @description Nights sold ÷ available, in basis points */
+      occupancyBps: number
+      /** @description Lodging of the nights inside the period, spread per night */
+      lodging: number
+      /** @description Cleaning fees of the bookings checking in during the period */
+      cleaning: number
+      /** @description Lodging + cleaning */
+      revenue: number
+      brokerFees: number
+      /** @description Revenue − broker fees */
+      net: number
+      /** @description Lodging ÷ nights sold */
+      averageDailyRate: number | null
+      /** @description Lodging ÷ nights available */
+      revpar: number
+      /** @description Bookings checking in during the period */
+      bookings: number
+      /** @description Average nights of those bookings */
+      averageStay: number | null
+    }
+    PerformanceReport: {
+      /** Format: date */
+      from: string
+      /** Format: date */
+      to: string
+      days: number
+      properties: {
+        /** @description Days of the period × properties */
+        nightsAvailable: number
+        nightsSold: number
+        /** @description Nights sold ÷ available, in basis points */
+        occupancyBps: number
+        /** @description Lodging of the nights inside the period, spread per night */
+        lodging: number
+        /** @description Cleaning fees of the bookings checking in during the period */
+        cleaning: number
+        /** @description Lodging + cleaning */
+        revenue: number
+        brokerFees: number
+        /** @description Revenue − broker fees */
+        net: number
+        /** @description Lodging ÷ nights sold */
+        averageDailyRate: number | null
+        /** @description Lodging ÷ nights available */
+        revpar: number
+        /** @description Bookings checking in during the period */
+        bookings: number
+        /** @description Average nights of those bookings */
+        averageStay: number | null
+        /** Format: uuid */
+        id: string
+        name: string
+      }[]
+      total: components['schemas']['ReportFigures']
     }
     User: {
       /** Format: uuid */

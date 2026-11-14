@@ -576,6 +576,227 @@
           "usage"
         ]
       },
+      "ReportFiguresInput": {
+        "type": "object",
+        "properties": {
+          "nightsAvailable": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Days of the period × properties"
+          },
+          "nightsSold": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "occupancyBps": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Nights sold ÷ available, in basis points"
+          },
+          "lodging": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Lodging of the nights inside the period, spread per night"
+          },
+          "cleaning": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Cleaning fees of the bookings checking in during the period"
+          },
+          "revenue": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Lodging + cleaning"
+          },
+          "brokerFees": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "net": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Revenue − broker fees"
+          },
+          "averageDailyRate": {
+            "nullable": true,
+            "description": "Lodging ÷ nights sold",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "revpar": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Lodging ÷ nights available"
+          },
+          "bookings": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Bookings checking in during the period"
+          },
+          "averageStay": {
+            "nullable": true,
+            "description": "Average nights of those bookings",
+            "type": "number"
+          }
+        },
+        "required": [
+          "nightsAvailable",
+          "nightsSold",
+          "occupancyBps",
+          "lodging",
+          "cleaning",
+          "revenue",
+          "brokerFees",
+          "net",
+          "averageDailyRate",
+          "revpar",
+          "bookings",
+          "averageStay"
+        ]
+      },
+      "PerformanceReportInput": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "days": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nightsAvailable": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Days of the period × properties"
+                },
+                "nightsSold": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "occupancyBps": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Nights sold ÷ available, in basis points"
+                },
+                "lodging": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Lodging of the nights inside the period, spread per night"
+                },
+                "cleaning": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Cleaning fees of the bookings checking in during the period"
+                },
+                "revenue": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Lodging + cleaning"
+                },
+                "brokerFees": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "net": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Revenue − broker fees"
+                },
+                "averageDailyRate": {
+                  "nullable": true,
+                  "description": "Lodging ÷ nights sold",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "revpar": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Lodging ÷ nights available"
+                },
+                "bookings": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Bookings checking in during the period"
+                },
+                "averageStay": {
+                  "nullable": true,
+                  "description": "Average nights of those bookings",
+                  "type": "number"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "nightsAvailable",
+                "nightsSold",
+                "occupancyBps",
+                "lodging",
+                "cleaning",
+                "revenue",
+                "brokerFees",
+                "net",
+                "averageDailyRate",
+                "revpar",
+                "bookings",
+                "averageStay",
+                "id",
+                "name"
+              ]
+            }
+          },
+          "total": {
+            "$ref": "#/components/schemas/ReportFiguresInput"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "days",
+          "properties",
+          "total"
+        ]
+      },
       "UserInput": {
         "type": "object",
         "properties": {
@@ -1924,6 +2145,230 @@
           "bySource",
           "grantsEndingSoon",
           "usage"
+        ],
+        "additionalProperties": false
+      },
+      "ReportFigures": {
+        "type": "object",
+        "properties": {
+          "nightsAvailable": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Days of the period × properties"
+          },
+          "nightsSold": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "occupancyBps": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Nights sold ÷ available, in basis points"
+          },
+          "lodging": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Lodging of the nights inside the period, spread per night"
+          },
+          "cleaning": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Cleaning fees of the bookings checking in during the period"
+          },
+          "revenue": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Lodging + cleaning"
+          },
+          "brokerFees": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "net": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Revenue − broker fees"
+          },
+          "averageDailyRate": {
+            "nullable": true,
+            "description": "Lodging ÷ nights sold",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "revpar": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Lodging ÷ nights available"
+          },
+          "bookings": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Bookings checking in during the period"
+          },
+          "averageStay": {
+            "nullable": true,
+            "description": "Average nights of those bookings",
+            "type": "number"
+          }
+        },
+        "required": [
+          "nightsAvailable",
+          "nightsSold",
+          "occupancyBps",
+          "lodging",
+          "cleaning",
+          "revenue",
+          "brokerFees",
+          "net",
+          "averageDailyRate",
+          "revpar",
+          "bookings",
+          "averageStay"
+        ],
+        "additionalProperties": false
+      },
+      "PerformanceReport": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "days": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nightsAvailable": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Days of the period × properties"
+                },
+                "nightsSold": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "occupancyBps": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Nights sold ÷ available, in basis points"
+                },
+                "lodging": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Lodging of the nights inside the period, spread per night"
+                },
+                "cleaning": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Cleaning fees of the bookings checking in during the period"
+                },
+                "revenue": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Lodging + cleaning"
+                },
+                "brokerFees": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "net": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Revenue − broker fees"
+                },
+                "averageDailyRate": {
+                  "nullable": true,
+                  "description": "Lodging ÷ nights sold",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "revpar": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Lodging ÷ nights available"
+                },
+                "bookings": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Bookings checking in during the period"
+                },
+                "averageStay": {
+                  "nullable": true,
+                  "description": "Average nights of those bookings",
+                  "type": "number"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "nightsAvailable",
+                "nightsSold",
+                "occupancyBps",
+                "lodging",
+                "cleaning",
+                "revenue",
+                "brokerFees",
+                "net",
+                "averageDailyRate",
+                "revpar",
+                "bookings",
+                "averageStay",
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "$ref": "#/components/schemas/ReportFigures"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "days",
+          "properties",
+          "total"
         ],
         "additionalProperties": false
       },
@@ -5393,6 +5838,74 @@
                   "items": {
                     "$ref": "#/components/schemas/Plan"
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/performance": {
+      "get": {
+        "summary": "How each property did in a period",
+        "tags": [
+          "reports"
+        ],
+        "description": "From `from` to the day before `to` (at most 731 days). Every property, zeros included, and the total. A booking crossing the edges counts only its nights inside, with its lodging and broker fee spread per night; the cleaning fee counts on the check-in day. Money in cents.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            },
+            "in": "query",
+            "name": "from",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            },
+            "in": "query",
+            "name": "to",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerformanceReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

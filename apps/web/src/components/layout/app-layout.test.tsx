@@ -39,6 +39,7 @@ describe('app layout', () => {
       'Reservas',
       'Imóveis',
       'Intermediadores',
+      'Relatórios',
     ])
     expect(within(nav).getByRole('link', { name: 'Imóveis' })).toHaveAttribute(
       'aria-current',

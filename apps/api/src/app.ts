@@ -12,6 +12,7 @@ import { adminRoutes } from './modules/admin/admin.routes.js'
 import { type BillingGateway, StripeGateway } from './modules/billing/billing-gateway.js'
 import { billingRoutes } from './modules/billing/billing.routes.js'
 import { plansRoutes } from './modules/plans/plans.routes.js'
+import { reportsRoutes } from './modules/reports/reports.routes.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
 import { bookingsRoutes } from './modules/bookings/bookings.routes.js'
 import { brokersRoutes } from './modules/brokers/brokers.routes.js'
@@ -101,6 +102,7 @@ export async function buildApp(env: Env, options: BuildAppOptions = {}) {
   await app.register(brokersRoutes, { prefix: '/brokers' })
   await app.register(bookingsRoutes, { prefix: '/bookings' })
   await app.register(plansRoutes)
+  await app.register(reportsRoutes, { prefix: '/reports' })
   await app.register(billingRoutes, {
     prefix: '/billing',
     gateway:
