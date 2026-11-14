@@ -66,6 +66,14 @@ export function formatShortDate(date: string): string {
   return format(parseDate(date), 'dd/MM')
 }
 
+/** `Hoje`, `Amanhã`, or the short weekday and date (`sex, 15 jan`) of a day near `today`. */
+export function formatNearDay(date: string, today: string): string {
+  if (date === today) return 'Hoje'
+  if (date === addDaysISO(today, 1)) return 'Amanhã'
+  const day = parseDate(date)
+  return `${WEEKDAYS[day.getDay()] ?? ''}, ${format(day, 'd MMM', { locale: ptBR })}`
+}
+
 /** `2026-11-12` → `12 de novembro de 2026`, for screen readers. */
 export function formatLongDate(date: string): string {
   return format(parseDate(date), "d 'de' MMMM 'de' yyyy", { locale: ptBR })

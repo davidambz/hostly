@@ -19,8 +19,10 @@ import { type BookingDraft, BookingSheet } from './booking-sheet'
 import { BookingsCalendar, type CalendarView } from './bookings-calendar'
 import { BookingsList } from './bookings-list'
 import { formatStay, todayISO, validDateOrNull } from './dates'
+import { MonthMoney } from './month-money'
 import { OccupancySoundings } from './occupancy-soundings'
 import { propertyColors } from './property-colors'
+import { UpcomingMoves } from './upcoming-moves'
 import { useRememberedView } from './use-remembered-view'
 
 interface SheetState {
@@ -138,6 +140,12 @@ export function BookingsPage() {
         />
       ) : (
         <>
+          <UpcomingMoves
+            today={todayISO()}
+            propertyId={filter}
+            colors={colors}
+            onOpenBooking={openBooking}
+          />
           <div className="flex flex-wrap items-end gap-3">
             <div className="grid gap-2">
               <label htmlFor="booking-property-filter" className="text-sm font-medium">
@@ -195,6 +203,7 @@ export function BookingsPage() {
                   set('imovel', id)
                 }}
               />
+              <MonthMoney date={date} propertyId={filter} />
               <BookingsCalendar
                 view={view}
                 date={date}

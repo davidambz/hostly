@@ -166,6 +166,9 @@ async function openPage(path = '/reservas?data=2026-11-15') {
   return { user, ...view }
 }
 
+/** The calendar alone: the guests' names also show in the upcoming days above it. */
+const calendar = () => within(screen.getByRole('region', { name: 'Calendário de reservas' }))
+
 const day = (date: string) =>
   screen.findByRole('button', { name: `Nova reserva com entrada em ${date}` })
 
@@ -178,6 +181,21 @@ afterEach(() => {
 })
 
 describe('calendar', () => {
+  it("adds up the money of the month's bookings beside the occupancy", async () => {
+    serve()
+    await openPage()
+
+    const money = await screen.findByRole('region', { name: 'Dinheiro de novembro' })
+    // Rafael (total 1.500, paid 500) and Pedro (total 1.950, paid 500, 180 to the broker).
+    await waitFor(() => {
+      expect(within(money).getByText('Total').nextSibling).toHaveTextContent('R$ 3.450,00')
+    })
+    expect(within(money).getByText('Recebido').nextSibling).toHaveTextContent('R$ 1.000,00')
+    expect(within(money).getByText('A receber').nextSibling).toHaveTextContent('R$ 1.000,00')
+    expect(within(money).getByText('Comissões').nextSibling).toHaveTextContent('R$ 180,00')
+    expect(within(money).getByText('2 reservas com entrada no mês.')).toBeInTheDocument()
+  })
+
   it('shows the stays of the month as bars, colored by property', async () => {
     const { calendarQueries } = serve()
     await openPage()
@@ -247,7 +265,7 @@ describe('calendar', () => {
     expect(await screen.findByRole('heading', { name: '8 – 14 nov 2026' })).toBeInTheDocument()
     expect(router.state.location.search).toBe('?data=2026-11-11&visao=semana')
     expect(await screen.findByText('· Casa da Praia')).toBeInTheDocument()
-    expect(screen.queryByText(/Pedro Alves/)).not.toBeInTheDocument()
+    expect(calendar().queryByText(/Pedro Alves/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Próxima semana' }))
     expect(await screen.findByRole('heading', { name: '15 – 21 nov 2026' })).toBeInTheDocument()
   })
@@ -301,10 +319,10 @@ describe('calendar', () => {
     await user.selectOptions(screen.getByLabelText('Imóvel'), 'Apê Centro')
 
     await waitFor(() => {
-      expect(screen.queryByText('Rafael Mendes')).not.toBeInTheDocument()
+      expect(calendar().queryByText('Rafael Mendes')).not.toBeInTheDocument()
     })
     // Nov 20–24 crosses a week: a bar in each
-    expect(screen.getAllByText('Pedro Alves')).toHaveLength(2)
+    expect(calendar().getAllByText('Pedro Alves')).toHaveLength(2)
     expect(router.state.location.search).toContain(`imovel=${ape.id}`)
     expect(nth(calendarQueries, calendarQueries.length - 1).get('propertyId')).toBe(ape.id)
     // The soundings stay, with the shown property pressed and the others set back.
@@ -329,7 +347,7 @@ describe('calendar', () => {
 
     await user.click(sounding())
     await waitFor(() => {
-      expect(screen.queryByText('Pedro Alves')).not.toBeInTheDocument()
+      expect(calendar().queryByText('Pedro Alves')).not.toBeInTheDocument()
     })
     expect(router.state.location.search).toContain(`imovel=${casa.id}`)
     expect(sounding()).toHaveAttribute('aria-pressed', 'true')
@@ -338,7 +356,7 @@ describe('calendar', () => {
     await waitFor(() => {
       expect(router.state.location.search).not.toContain('imovel=')
     })
-    expect(await screen.findAllByText('Pedro Alves')).toHaveLength(2)
+    expect(await calendar().findAllByText('Pedro Alves')).toHaveLength(2)
   })
 
   it('ignores a filter for a property that is not there', async () => {
