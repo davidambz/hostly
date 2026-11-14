@@ -133,7 +133,11 @@ describe('POST /billing/checkout', () => {
 
 describe('POST /billing/webhook', () => {
   it('refuses an event Stripe did not sign', async () => {
-    const payload = stripeEvent('evt_1', 'customer.subscription.created', stripeSubscription())
+    const payload = billing.subscriptionEvent(
+      'evt_1',
+      'customer.subscription.created',
+      stripeSubscription(),
+    )
 
     const response = await webhook(payload, 't=1,v1=forged')
 
@@ -157,7 +161,7 @@ describe('POST /billing/webhook', () => {
   })
 
   it('applies an event once, however many times it arrives', async () => {
-    const payload = stripeEvent(
+    const payload = billing.subscriptionEvent(
       'evt_same',
       'customer.subscription.created',
       stripeSubscription({ metadata: metadata() }),
@@ -172,7 +176,7 @@ describe('POST /billing/webhook', () => {
 
   it('takes the plan away at once when a payment fails, and records the charge', async () => {
     await webhook(
-      stripeEvent(
+      billing.subscriptionEvent(
         'evt_1',
         'customer.subscription.created',
         stripeSubscription({ metadata: metadata() }),
@@ -211,14 +215,14 @@ describe('POST /billing/webhook', () => {
 
   it('keeps the plan until the end of the paid period after a cancellation, then Free', async () => {
     await webhook(
-      stripeEvent(
+      billing.subscriptionEvent(
         'evt_1',
         'customer.subscription.created',
         stripeSubscription({ metadata: metadata() }),
       ),
     )
     await webhook(
-      stripeEvent(
+      billing.subscriptionEvent(
         'evt_2',
         'customer.subscription.updated',
         stripeSubscription({ metadata: metadata(), cancelAtPeriodEnd: true }),
@@ -230,7 +234,7 @@ describe('POST /billing/webhook', () => {
     })
 
     await webhook(
-      stripeEvent(
+      billing.subscriptionEvent(
         'evt_3',
         'customer.subscription.deleted',
         stripeSubscription({ metadata: metadata(), status: 'canceled' }),
@@ -243,7 +247,7 @@ describe('POST /billing/webhook', () => {
   it('ignores events it does not use, and subscriptions it can not place', async () => {
     const other = await webhook(stripeEvent('evt_1', 'customer.created', { id: 'cus_1' }))
     const anonymous = await webhook(
-      stripeEvent('evt_2', 'customer.subscription.created', stripeSubscription()),
+      billing.subscriptionEvent('evt_2', 'customer.subscription.created', stripeSubscription()),
     )
 
     expect(other.statusCode).toBe(200)
@@ -253,7 +257,7 @@ describe('POST /billing/webhook', () => {
 
   it('lets the paid plan count in the backoffice, behind a grant', async () => {
     await webhook(
-      stripeEvent(
+      billing.subscriptionEvent(
         'evt_1',
         'customer.subscription.created',
         stripeSubscription({ metadata: metadata() }),

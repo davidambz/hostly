@@ -29,6 +29,8 @@ model User {
   isAdmin          Boolean  @default(false) @map("is_admin")
   /// The user's customer at Stripe, created on the first checkout.
   stripeCustomerId String?  @unique @map("stripe_customer_id") @db.VarChar(255)
+  /// The last Stripe Checkout opened, expired when another one starts (one payment at a time).
+  stripeCheckoutSessionId String? @map("stripe_checkout_session_id") @db.VarChar(255)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 

@@ -37,7 +37,6 @@ export class BillingService {
    * sale) and PERIOD_NOT_OFFERED (no price for that period).
    */
   async checkout(userId: string, planId: string, period: BillingPeriod): Promise<string> {
-    const user = await this.db.user.findUniqueOrThrow({ where: { id: userId } })
     const plan = await this.db.plan.findUnique({ where: { id: planId } })
     if (!plan) {
       throw new NotFoundError('Plan not found', {
@@ -58,27 +57,44 @@ export class BillingService {
         details: { field: 'period' },
       })
     }
-    const running = await this.db.subscription.findFirst({
-      where: { userId, status: { in: PAYING_STATUSES } },
-    })
-    if (running) {
-      throw new ConflictError('A paid plan is already running', { code: 'SUBSCRIPTION_EXISTS' })
-    }
 
-    let customerId = user.stripeCustomerId
-    if (!customerId) {
-      customerId = await this.gateway.createCustomer(user)
-      await this.db.user.update({ where: { id: userId }, data: { stripeCustomerId: customerId } })
-    }
-    return this.gateway.createCheckout({
-      customerId,
-      productName: `Hostly ${plan.name}`,
-      amount,
-      period,
-      metadata: { userId, planId, period },
-      successUrl: `${this.appUrl}/plano?assinatura=confirmando`,
-      cancelUrl: `${this.appUrl}/plano`,
-    })
+    // One checkout at a time per user, with the user's row locked: two tabs (or a double
+    // click) would otherwise create two customers and two checkouts, and paying both would
+    // charge two subscriptions. Opening one expires the previous one.
+    return this.db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId}::uuid FOR UPDATE`
+        const user = await tx.user.findUniqueOrThrow({ where: { id: userId } })
+        const running = await tx.subscription.findFirst({
+          where: { userId, status: { in: PAYING_STATUSES } },
+        })
+        const previous = user.stripeCheckoutSessionId
+        // A previous checkout already paid means a subscription whose webhook is on its way.
+        if (running || (previous && (await this.gateway.expireCheckout(previous)) === 'complete')) {
+          throw new ConflictError('A paid plan is already running', {
+            code: 'SUBSCRIPTION_EXISTS',
+          })
+        }
+
+        const customerId = user.stripeCustomerId ?? (await this.gateway.createCustomer(user))
+        const session = await this.gateway.createCheckout({
+          customerId,
+          productName: `Hostly ${plan.name}`,
+          amount,
+          period,
+          metadata: { userId, planId, period },
+          successUrl: `${this.appUrl}/plano?assinatura=confirmando`,
+          cancelUrl: `${this.appUrl}/plano`,
+        })
+        await tx.user.update({
+          where: { id: userId },
+          data: { stripeCustomerId: customerId, stripeCheckoutSessionId: session.id },
+        })
+        return session.url
+      },
+      // Stripe answers inside the transaction, so it gets more than the default 5 s.
+      { timeout: 30_000 },
+    )
   }
 
   /** The subscription that gives the user a paid plan now; 404 NO_SUBSCRIPTION without one. */
@@ -152,22 +168,42 @@ export class BillingService {
     // Read from Stripe before the transaction: the network has no business inside one.
     const subscription = await this.subscriptionOf(event)
 
-    await this.db.$transaction(async (tx) => {
-      await tx.stripeEvent.create({ data: { id: event.id, type: event.type } })
-      if (subscription) await this.saveSubscription(tx, subscription)
-      if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
-        await this.savePayment(tx, event.data.object, event.type === 'invoice.paid')
-      }
-    })
+    try {
+      await this.db.$transaction(async (tx) => {
+        await tx.stripeEvent.create({ data: { id: event.id, type: event.type } })
+        if (subscription) await this.saveSubscription(tx, subscription)
+        if (event.type === 'checkout.session.completed') {
+          // Paid: a new checkout no longer has this one to expire.
+          const id = event.data.object.id
+          if (typeof id === 'string') {
+            await tx.user.updateMany({
+              where: { stripeCheckoutSessionId: id },
+              data: { stripeCheckoutSessionId: null },
+            })
+          }
+        }
+        if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
+          await this.savePayment(tx, event.data.object, event.type === 'invoice.paid')
+        }
+      })
+    } catch (error) {
+      // The same event delivered twice at once: the other delivery applied it.
+      if (await this.db.stripeEvent.findUnique({ where: { id: event.id } })) return
+      throw error
+    }
   }
 
-  /** The subscription an event is about, as Stripe has it now. */
+  /**
+   * The subscription an event is about, as Stripe has it now. Never the event's own copy:
+   * Stripe doesn't deliver events in order, and an old `updated` arriving after `deleted`
+   * would bring a cancelled subscription back to life.
+   */
   private async subscriptionOf(event: Stripe.Event): Promise<Stripe.Subscription | null> {
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted':
-        return event.data.object
+        return this.gateway.retrieveSubscription(event.data.object.id)
       case 'checkout.session.completed': {
         const id = idOf(event.data.object.subscription)
         return id ? this.gateway.retrieveSubscription(id) : null
@@ -208,6 +244,15 @@ export class BillingService {
       subscription?.userId ??
       (await tx.user.findFirst({ where: { stripeCustomerId: idOf(invoice.customer) ?? '' } }))?.id
     if (!userId || !invoice.id) return
+
+    // Events about the same invoice, one at a time: a paid invoice is final, so a failure
+    // arriving after it (out of order, or at the same moment) changes nothing.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${invoice.id}))`
+    const recorded = await tx.billingPayment.findUnique({
+      where: { stripeInvoiceId: invoice.id },
+      select: { status: true },
+    })
+    if (recorded?.status === 'paid') return
 
     await tx.billingPayment.upsert({
       where: { stripeInvoiceId: invoice.id },
