@@ -1,4 +1,4 @@
-import { CalendarDays, Home, type LucideIcon, Users } from 'lucide-react'
+import { CalendarDays, Home, type LucideIcon, ShieldCheck, Users } from 'lucide-react'
 
 export interface NavItem {
   title: string
@@ -12,6 +12,9 @@ export const NAV_ITEMS: NavItem[] = [
   { title: 'Imóveis', to: '/imoveis', icon: Home },
   { title: 'Intermediadores', to: '/intermediadores', icon: Users },
 ]
+
+/** The backoffice, shown only to administrators. */
+export const ADMIN_NAV_ITEM: NavItem = { title: 'Administração', to: '/admin', icon: ShieldCheck }
 
 /** What a route puts in the breadcrumb and the browser tab (`handle` in the route). */
 export interface RouteHandle {

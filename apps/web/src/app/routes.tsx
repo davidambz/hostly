@@ -1,4 +1,4 @@
-import type { RouteObject } from 'react-router'
+import { Navigate, type RouteObject } from 'react-router'
 
 import { AppLayout } from '@/components/layout/app-layout'
 import { RequireAuth, RequireGuest, RequireVisitor } from '@/features/auth/guards'
@@ -68,6 +68,21 @@ export const routes: RouteObject[] = [
                 lazy: async () => ({
                   Component: (await import('@/features/properties/properties-page')).PropertiesPage,
                 }),
+              },
+              {
+                lazy: async () => ({
+                  Component: (await import('@/features/admin/admin-layout')).AdminLayout,
+                }),
+                children: [
+                  { path: '/admin', element: <Navigate to="/admin/usuarios" replace /> },
+                  {
+                    path: '/admin/usuarios',
+                    handle: handle('Usuários · Administração'),
+                    lazy: async () => ({
+                      Component: (await import('@/features/admin/admin-users-page')).AdminUsersPage,
+                    }),
+                  },
+                ],
               },
               {
                 path: '/conta',
