@@ -19,6 +19,8 @@ function booking(id: string, guestName: string, checkIn: string, checkOut: strin
     property: casa,
     broker: null,
     guestName,
+    guestPhone: null,
+    notes: null,
     checkIn,
     checkOut,
     nights: 1,

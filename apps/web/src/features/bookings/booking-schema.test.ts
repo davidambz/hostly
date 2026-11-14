@@ -10,6 +10,7 @@ import {
   toBookingInput,
   toFormValues,
   toQuoteInput,
+  whatsAppLink,
 } from './booking-schema'
 
 const filled = emptyBookingForm({
@@ -92,6 +93,8 @@ describe('toBookingInput', () => {
       propertyId: 'p1',
       brokerId: 'b1',
       guestName: 'Rafael',
+      guestPhone: null,
+      notes: null,
       checkIn: '2026-11-10',
       checkOut: '2026-11-13',
       nightlyRate: 45000,
@@ -142,6 +145,8 @@ describe('toFormValues', () => {
     property: { id: 'p1', name: 'Casa' },
     broker: { id: 'b1', name: 'Carlos' },
     guestName: 'Rafael',
+    guestPhone: '48999990000',
+    notes: 'Chegam tarde.',
     checkIn: '2026-11-10',
     checkOut: '2026-11-13',
     nights: 3,
@@ -160,6 +165,8 @@ describe('toFormValues', () => {
       propertyId: 'p1',
       brokerId: 'b1',
       guestName: 'Rafael',
+      guestPhone: '(48) 99999-0000',
+      notes: 'Chegam tarde.',
       checkIn: '2026-11-10',
       checkOut: '2026-11-13',
       nightlyRate: 'R$ 450,00',
@@ -240,5 +247,29 @@ describe('booking defaults', () => {
         nextId: 'joao',
       }),
     ).toEqual({})
+  })
+})
+
+describe('guest contact', () => {
+  it('accepts a mobile or a landline, masked or not, and refuses anything else', () => {
+    expect(parse({ guestPhone: '(48) 99999-0000' }).success).toBe(true)
+    expect(parse({ guestPhone: '4833334444' }).success).toBe(true)
+    expect(firstIssue({ guestPhone: '9999-0000' })?.message).toBe('Telefone inválido.')
+  })
+
+  it('refuses notes past 2000 characters', () => {
+    expect(firstIssue({ notes: 'x'.repeat(2001) })?.message).toBe('Observações longas demais.')
+  })
+
+  it('sends the phone as digits and blank notes as nothing', () => {
+    const parsed = bookingFormSchema.parse({ ...valid, guestPhone: '(48) 99999-0000', notes: '  ' })
+
+    expect(toBookingInput(parsed)).toMatchObject({ guestPhone: '48999990000', notes: null })
+  })
+
+  it('links only a mobile to WhatsApp', () => {
+    expect(whatsAppLink('(48) 99999-0000')).toBe('https://wa.me/5548999990000')
+    expect(whatsAppLink('(48) 3333-4444')).toBeNull()
+    expect(whatsAppLink('')).toBeNull()
   })
 })

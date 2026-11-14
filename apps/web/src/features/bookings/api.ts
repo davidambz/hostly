@@ -133,6 +133,8 @@ export function bookingInputOf(booking: Booking): BookingInput {
     propertyId: booking.property.id,
     brokerId: booking.broker?.id ?? null,
     guestName: booking.guestName,
+    guestPhone: booking.guestPhone,
+    notes: booking.notes,
     checkIn: booking.checkIn,
     checkOut: booking.checkOut,
     nightlyRate: booking.nightlyRate,
