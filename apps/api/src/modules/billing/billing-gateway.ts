@@ -63,12 +63,18 @@ export interface BillingGateway {
   changePeriod(
     id: string,
     change: {
-      productName: string
+      /** The plan's product: the subscription's own may be an inactive one from an old checkout. */
+      productId: string
       amount: number
       period: BillingPeriod
       metadata: SubscriptionMetadata
     },
   ): Promise<Stripe.Subscription>
+  /** What changing the period would charge right now, in cents, without changing anything. */
+  previewPeriodChange(
+    id: string,
+    change: { productId: string; amount: number; period: BillingPeriod },
+  ): Promise<number>
   /** Starts saving a new card for the customer; the card form completes it with the secret. */
   createCardSetup(customerId: string): Promise<string>
   /**
@@ -159,7 +165,7 @@ export class StripeGateway implements BillingGateway {
   async changePeriod(
     id: string,
     change: {
-      productName: string
+      productId: string
       amount: number
       period: BillingPeriod
       metadata: SubscriptionMetadata
@@ -169,25 +175,55 @@ export class StripeGateway implements BillingGateway {
     const item = subscription.items.data[0]
     if (!item) throw new Error(`Subscription ${id} has no item`)
     const { interval, intervalCount } = RECURRENCE[change.period]
-    const product =
-      typeof item.price.product === 'string' ? item.price.product : item.price.product.id
     return this.stripe.subscriptions.update(id, {
       items: [
         {
           id: item.id,
           price_data: {
             currency: 'brl',
-            product,
+            product: change.productId,
             unit_amount: change.amount,
             recurring: { interval, interval_count: intervalCount },
           },
         },
       ],
-      // A new interval restarts the billing cycle now (Stripe does that on its own when the
-      // interval changes), with what was left of the old period credited.
+      // The new period starts now and is charged now, with what was left of the old one
+      // credited. Without restarting the cycle, Stripe would also charge the new price for
+      // the rest of the old period (in this API version it doesn't restart it on its own).
+      billing_cycle_anchor: { type: 'now' },
       proration_behavior: 'create_prorations',
       metadata: { ...change.metadata },
     })
+  }
+
+  async previewPeriodChange(
+    id: string,
+    change: { productId: string; amount: number; period: BillingPeriod },
+  ): Promise<number> {
+    const subscription = await this.stripe.subscriptions.retrieve(id)
+    const item = subscription.items.data[0]
+    if (!item) throw new Error(`Subscription ${id} has no item`)
+    const { interval, intervalCount } = RECURRENCE[change.period]
+    const preview = await this.stripe.invoices.createPreview({
+      subscription: id,
+      subscription_details: {
+        // The same change `changePeriod` makes.
+        billing_cycle_anchor: { type: 'now' },
+        proration_behavior: 'create_prorations',
+        items: [
+          {
+            id: item.id,
+            price_data: {
+              currency: 'brl',
+              product: change.productId,
+              unit_amount: change.amount,
+              recurring: { interval, interval_count: intervalCount },
+            },
+          },
+        ],
+      },
+    })
+    return preview.amount_due
   }
 
   async createCardSetup(customerId: string): Promise<string> {

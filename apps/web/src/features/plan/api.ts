@@ -92,6 +92,16 @@ export function useChangePeriod() {
 
 export type SavedCard = components['schemas']['SavedCard']
 
+/** What moving to `period` would charge now. Asked when the user is about to confirm. */
+export function usePeriodPreview() {
+  return useMutation({
+    mutationFn: async (period: BillingPeriod) =>
+      unwrap(
+        await api.GET('/billing/subscription/period/preview', { params: { query: { period } } }),
+      ),
+  })
+}
+
 /** The card the subscription is charged on: brand, last digits, expiry. */
 export function useSavedCard() {
   return useQuery({

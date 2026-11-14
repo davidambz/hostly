@@ -25,6 +25,21 @@ function isClientError(error: unknown): error is HttpError {
   return typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500
 }
 
+/**
+ * An error from Stripe's API. They carry a 4xx `statusCode` of their own, which must not
+ * pass for this API's client errors: they are the payment provider refusing what the API
+ * asked, so they're logged and answered as a bad gateway.
+ */
+function isStripeError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'type' in error &&
+    typeof error.type === 'string' &&
+    error.type.startsWith('Stripe')
+  )
+}
+
 /** `404` → `NOT_FOUND`, used when a client error carries no code of its own. */
 function codeFromStatus(statusCode: number) {
   return (STATUS_CODES[statusCode] ?? 'Client Error').toUpperCase().replace(/[^A-Z]+/g, '_')
@@ -55,6 +70,15 @@ const errorHandler: FastifyPluginAsync = async (app) => {
         code: 'VALIDATION_ERROR',
         message: 'The request is invalid',
         details,
+      })
+    }
+
+    if (isStripeError(error)) {
+      request.log.error({ err: error }, 'payment provider error')
+      return send(reply, {
+        statusCode: 502,
+        code: 'PAYMENT_PROVIDER_ERROR',
+        message: 'The payment provider refused the request',
       })
     }
 

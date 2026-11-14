@@ -458,6 +458,9 @@ describe('managing the subscription', () => {
         calls.push({ path: 'period', body: await request.json() })
         return new HttpResponse(null, { status: 204 })
       }),
+      http.get(url('/billing/subscription/period/preview'), () =>
+        HttpResponse.json({ amountDue: 34_310 }),
+      ),
       http.get(url('/billing/card'), () =>
         HttpResponse.json({ card: { brand: 'visa', last4: '4242', expMonth: 3, expYear: 2030 } }),
       ),
@@ -532,6 +535,14 @@ describe('managing the subscription', () => {
     ).toEqual(['Escolha', 'Anual · R$ 383,00 por ano'])
     await user.selectOptions(select, 'ANNUAL')
     await user.click(screen.getByRole('button', { name: 'Mudar' }))
+
+    // Nothing changes before the user sees what it charges now and confirms.
+    const confirm = await screen.findByRole('alertdialog', { name: 'Mudar para anual?' })
+    expect(confirm).toHaveTextContent(
+      'Será cobrado agora R$ 343,10: R$ 383,00 do novo período, menos o que sobrou do atual. Depois, R$ 383,00 por ano.',
+    )
+    expect(calls).toEqual([])
+    await user.click(within(confirm).getByRole('button', { name: 'Pagar R$ 343,10 e mudar' }))
 
     await vi.waitFor(() => {
       expect(calls).toEqual([{ path: 'period', body: { period: 'ANNUAL' } }])

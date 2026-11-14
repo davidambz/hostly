@@ -16,6 +16,7 @@ import {
   type Plan,
   useBillingPayments,
   useChangePeriod,
+  usePeriodPreview,
   useSavedCard,
   useSetRenewal,
 } from './api'
@@ -119,7 +120,20 @@ function PeriodChange({ plan, current }: { plan: Plan; current: BillingPeriod })
   const options = periodPrices(plan).filter((price) => price.period !== current)
   const [period, setPeriod] = useState<BillingPeriod | ''>('')
   const id = useId()
-  if (options.length === 0) return null
+
+  const preview = usePeriodPreview()
+  const [due, setDue] = useState<number | null>(null)
+  const chosen = options.find((option) => option.period === period)
+
+  // First what it would charge now, from Stripe; the change only after the user confirms.
+  const ask = async () => {
+    if (!period) return
+    try {
+      setDue((await preview.mutateAsync(period)).amountDue)
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
+  }
 
   const change = async () => {
     if (!period) return
@@ -129,8 +143,12 @@ function PeriodChange({ plan, current }: { plan: Plan; current: BillingPeriod })
       setPeriod('')
     } catch (error) {
       toast.error(errorMessage(error))
+    } finally {
+      setDue(null)
     }
   }
+
+  if (options.length === 0) return null
 
   return (
     <div className="grid gap-2">
@@ -154,18 +172,27 @@ function PeriodChange({ plan, current }: { plan: Plan; current: BillingPeriod })
             ))}
           </select>
         </div>
-        <Button
-          size="sm"
-          disabled={!period || changePeriod.isPending}
-          onClick={() => void change()}
-        >
-          {changePeriod.isPending && <Loader2 className="animate-spin" aria-hidden />}
+        <Button size="sm" disabled={!period || preview.isPending} onClick={() => void ask()}>
+          {preview.isPending && <Loader2 className="animate-spin" aria-hidden />}
           Mudar
         </Button>
       </div>
       <p className="text-muted-foreground text-xs">
         A nova periodicidade começa agora; o que sobrou do período atual vira crédito.
       </p>
+      {chosen && (
+        <ConfirmDialog
+          open={due !== null}
+          onOpenChange={(open) => {
+            if (!open) setDue(null)
+          }}
+          title={`Mudar para ${PERIOD_NAMES[chosen.period].toLowerCase()}?`}
+          description={`Será cobrado agora ${formatBRL(due ?? 0)}: ${formatBRL(chosen.price)} do novo período, menos o que sobrou do atual. Depois, ${formatBRL(chosen.price)} ${chosen.label}.`}
+          confirmLabel={`Pagar ${formatBRL(due ?? 0)} e mudar`}
+          pending={changePeriod.isPending}
+          onConfirm={() => void change()}
+        />
+      )}
     </div>
   )
 }

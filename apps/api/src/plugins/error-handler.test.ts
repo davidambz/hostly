@@ -58,6 +58,13 @@ async function buildTestApp() {
   instance.get('/errors/unexpected', () => {
     throw new Error('database password is hunter2')
   })
+  instance.get('/errors/stripe', () => {
+    // What Stripe's SDK throws: a 400 of its own, which is not the client's mistake.
+    throw Object.assign(new Error('The product prod_1 is marked as inactive'), {
+      type: 'StripeInvalidRequestError',
+      statusCode: 400,
+    })
+  })
   instance.get('/errors/service-unavailable', () => {
     throw Object.assign(new Error('upstream is down'), { statusCode: 503 })
   })
@@ -327,6 +334,26 @@ describe('error handler', () => {
           msg: 'unhandled error',
           reqId: expect.any(String) as string,
           err: expect.objectContaining({ message: 'database password is hunter2' }) as object,
+        }),
+      )
+    })
+
+    it("answers a Stripe refusal as a bad gateway, logged, without Stripe's message", async () => {
+      const response = await app.inject({ method: 'GET', url: '/errors/stripe' })
+
+      expect(response.statusCode).toBe(502)
+      expect(response.json()).toEqual({
+        statusCode: 502,
+        code: 'PAYMENT_PROVIDER_ERROR',
+        message: 'The payment provider refused the request',
+      })
+      expect(response.body).not.toContain('prod_1')
+      expect(logs).toContainEqual(
+        expect.objectContaining({
+          msg: 'payment provider error',
+          err: expect.objectContaining({
+            message: 'The product prod_1 is marked as inactive',
+          }) as object,
         }),
       )
     })

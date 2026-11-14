@@ -71,13 +71,31 @@ describe('renewal', () => {
 })
 
 describe('billing period', () => {
+  it('previews what the change would charge, changing nothing', async () => {
+    await subscribe()
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/billing/subscription/period/preview?period=ANNUAL',
+      headers: authHeader(app, user.id),
+    })
+
+    expect(response.json()).toEqual({ amountDue: 37_300 })
+    expect(billing.periodChanges).toEqual([])
+    expect((await subscription()).period).toBe('MONTHLY')
+  })
+
   it('moves the subscription to another period at its price', async () => {
     await subscribe()
 
     const response = await post('/billing/subscription/period', { period: 'ANNUAL' })
 
     expect(response.statusCode).toBe(204)
-    expect(billing.periodChanges).toEqual([{ id: 'sub_1', amount: 38300, period: 'ANNUAL' }])
+    // On the plan's own product, created once: never the subscription's old one.
+    expect(billing.periodChanges).toEqual([
+      { id: 'sub_1', productId: 'prod_1', amount: 38300, period: 'ANNUAL' },
+    ])
+    expect(billing.products).toEqual([{ id: premium.id, name: 'Premium' }])
     expect((await subscription()).period).toBe('ANNUAL')
   })
 

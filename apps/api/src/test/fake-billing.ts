@@ -70,7 +70,7 @@ export class FakeBilling implements BillingGateway {
     return Promise.resolve(subscription)
   }
 
-  readonly periodChanges: { id: string; amount: number; period: string }[] = []
+  readonly periodChanges: { id: string; productId: string; amount: number; period: string }[] = []
 
   setCancelAtPeriodEnd(id: string, cancel: boolean) {
     const subscription = this.subscriptions.get(id)
@@ -82,14 +82,24 @@ export class FakeBilling implements BillingGateway {
 
   changePeriod(
     id: string,
-    change: { amount: number; period: string; metadata: SubscriptionMetadata },
+    change: { productId: string; amount: number; period: string; metadata: SubscriptionMetadata },
   ) {
     const subscription = this.subscriptions.get(id)
     if (!subscription) return Promise.reject(new Error(`No subscription ${id}`))
-    this.periodChanges.push({ id, amount: change.amount, period: change.period })
+    this.periodChanges.push({
+      id,
+      productId: change.productId,
+      amount: change.amount,
+      period: change.period,
+    })
     const updated = { ...subscription, metadata: { ...change.metadata } }
     this.subscriptions.set(id, updated)
     return Promise.resolve(updated)
+  }
+
+  /** What a period change "would charge": the new amount, less a made-up 1 000 of credit. */
+  previewPeriodChange(_id: string, change: { amount: number }) {
+    return Promise.resolve(change.amount - 1_000)
   }
 
   /** Cards "saved" through the card form, by id, with whose they are. */

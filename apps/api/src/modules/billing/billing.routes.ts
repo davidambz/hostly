@@ -110,6 +110,33 @@ export const billingRoutes: FastifyPluginAsyncZod<BillingRoutesOptions> = async 
     },
   )
 
+  app.get(
+    '/subscription/period/preview',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        tags: ['billing'],
+        summary: 'What a period change would charge now',
+        description:
+          'In cents: the new period, less what is left of the current one. Changes nothing. ' +
+          '400 SAME_PERIOD, PERIOD_NOT_OFFERED; 404 NO_SUBSCRIPTION.',
+        security: [{ bearerAuth: [] }],
+        querystring: z.object({ period: periodSchema }),
+        response: {
+          200: z.object({ amountDue: z.number().int() }),
+          400: errorResponseSchema,
+          401: errorResponseSchema,
+          404: errorResponseSchema,
+          503: errorResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      if (!service) throw unavailable()
+      return service.previewPeriod(request.user.sub, request.query.period)
+    },
+  )
+
   app.post(
     '/subscription/period',
     {

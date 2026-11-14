@@ -140,8 +140,8 @@ export class BillingService {
     await this.db.$transaction((tx) => this.saveSubscription(tx, updated))
   }
 
-  /** Moves the subscription to another billing period, at that period's price. */
-  async changePeriod(userId: string, period: BillingPeriod): Promise<void> {
+  /** The subscription, its price in `period` and the plan's product, for a period change. */
+  private async periodChange(userId: string, period: BillingPeriod) {
     const subscription = await this.running(userId)
     if (subscription.period === period) {
       throw new BadRequestError('That is already the period', {
@@ -156,8 +156,31 @@ export class BillingService {
         details: { field: 'period' },
       })
     }
+    // Always the plan's own product: a subscription from the old Stripe Checkout carries an
+    // inline product Stripe marks inactive, and new prices can't be made on it.
+    const productId =
+      subscription.plan.stripeProductId ??
+      (await this.db.$transaction((tx) => this.productOf(tx, subscription.plan)))
+    return { subscription, amount, productId }
+  }
+
+  /** What moving to `period` would charge now: the new period, less what's left of this one. */
+  async previewPeriod(userId: string, period: BillingPeriod): Promise<{ amountDue: number }> {
+    const { subscription, amount, productId } = await this.periodChange(userId, period)
+    return {
+      amountDue: await this.gateway.previewPeriodChange(subscription.stripeSubscriptionId, {
+        productId,
+        amount,
+        period,
+      }),
+    }
+  }
+
+  /** Moves the subscription to another billing period, at that period's price, from now. */
+  async changePeriod(userId: string, period: BillingPeriod): Promise<void> {
+    const { subscription, amount, productId } = await this.periodChange(userId, period)
     const updated = await this.gateway.changePeriod(subscription.stripeSubscriptionId, {
-      productName: `Hostly ${subscription.plan.name}`,
+      productId,
       amount,
       period,
       metadata: { userId, planId: subscription.planId, period },
