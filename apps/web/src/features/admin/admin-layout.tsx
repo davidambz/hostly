@@ -5,7 +5,10 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '../auth/auth-context'
 
 /** The backoffice's sections, in tab order. */
-const ADMIN_SECTIONS = [{ title: 'Usuários', to: '/admin/usuarios' }]
+const ADMIN_SECTIONS = [
+  { title: 'Usuários', to: '/admin/usuarios' },
+  { title: 'Planos', to: '/admin/planos' },
+]
 
 /**
  * The backoffice: only for administrators (anyone else goes back to the bookings; the API

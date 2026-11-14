@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import { api } from '@/lib/api/client'
 import { unwrap } from '@/lib/api/errors'
-import type { components } from '@/lib/api/schema'
+import type { components, paths } from '@/lib/api/schema'
 
 export type AdminUser = components['schemas']['AdminUser']
 
@@ -43,6 +43,37 @@ export function useSetAdmin() {
           body: { isAdmin },
         }),
       ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+  })
+}
+
+export type Plan = components['schemas']['Plan']
+export type PlanInput = paths['/admin/plans']['post']['requestBody']['content']['application/json']
+export type PlanChanges = NonNullable<
+  paths['/admin/plans/{id}']['patch']['requestBody']
+>['content']['application/json']
+
+/** Every plan, Free first. */
+export function useAdminPlans() {
+  return useQuery({
+    queryKey: [...adminKeys.all, 'plans'],
+    queryFn: async () => unwrap(await api.GET('/admin/plans')),
+  })
+}
+
+export function useCreatePlan() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: PlanInput) => unwrap(await api.POST('/admin/plans', { body: input })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+  })
+}
+
+export function useUpdatePlan() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: PlanChanges }) =>
+      unwrap(await api.PATCH('/admin/plans/{id}', { params: { path: { id } }, body: input })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
   })
 }

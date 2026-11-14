@@ -127,11 +127,11 @@ describe('properties list', () => {
 
     expect(await screen.findByText('Página 2 de 3')).toBeInTheDocument()
     expect(screen.getByRole('searchbox')).toHaveValue('casa')
-    expect(Object.fromEntries(nth(queries, 0))).toEqual({
-      page: '2',
-      pageSize: '20',
-      search: 'casa',
-    })
+    // The list's query; the one for every property (pageSize 100) may come first or last.
+    const list = queries
+      .map((query) => Object.fromEntries(query))
+      .filter((q) => q.pageSize === '20')
+    expect(list).toEqual([{ page: '2', pageSize: '20', search: 'casa' }])
   })
 
   it('pages through the URL', async () => {

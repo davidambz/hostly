@@ -82,6 +82,13 @@ export const routes: RouteObject[] = [
                       Component: (await import('@/features/admin/admin-users-page')).AdminUsersPage,
                     }),
                   },
+                  {
+                    path: '/admin/planos',
+                    handle: handle('Planos · Administração'),
+                    lazy: async () => ({
+                      Component: (await import('@/features/admin/admin-plans-page')).AdminPlansPage,
+                    }),
+                  },
                 ],
               },
               {
