@@ -293,7 +293,7 @@ A cool chart of blues stepped by depth, one warm sand, and eight distinct proper
 ### Primary
 
 - **Sapphire** (`primary` in light): the action color on chart paper. Primary buttons, today's day number on the calendar, the selected-range ring, the active screen ring in the landing tour, the "Falta receber" figure, links.
-- **Carolina** (`primary` in dark, `ring` and `bar-active` in both): the action color at night, the focus ring everywhere, and the action on the Prussian bar (tab underline, the brand tile, "Criar conta").
+- **Carolina** (`primary` in dark, `bar-active` in both, `ring` at night; on paper the ring is a step deeper, `#1a8fd2`, to keep 3:1): the action color at night, the focus ring everywhere, and the action on the Prussian bar (tab underline, the brand tile, "Criar conta").
 
 ### Secondary
 
@@ -317,7 +317,8 @@ A cool chart of blues stepped by depth, one warm sand, and eight distinct proper
 - **Grid Line** (`grid-line`, equal to `border` in light): the color that shows through the 1px and 3px gaps between sounding cells and calendar days.
 - **Shoal** (`shoal`): days outside the current month, receding.
 - **Contour** (`contour`, a 7.5% Sapphire in light, 6% pale blue in dark): the ink of the contour lines and the graticule, never used as a fill.
-- **Mist Line / Mist Field** (`border`, `input`): hairline dividers and control strokes.
+- **Mist Line** (`border`): hairline dividers, decorative only.
+- **Field Stroke** (`input`): the edge of every control (inputs, selects, radios, the date field). It keeps at least 3:1 against both the paper and the card in each theme (WCAG 1.4.11), so a field reads as a field; never lighten it back to a hairline.
 - **Destructive, Success, Warning**: delete actions and errors, confirmations, the warning state. Each has a dark variant.
 
 ### Property inks
@@ -331,6 +332,8 @@ A cool chart of blues stepped by depth, one warm sand, and eight distinct proper
 **The Property Ink Rule.** Property inks identify a property (stay bars, the key dot on a sounding, list dots) and do nothing else, always with their paired foreground for text. Never use them for status or emphasis, and never let a property change ink between screens.
 
 **The Bar Rule.** The top bar is the brand field: the `bar` family (Prussian in light, a deeper `bar-dark` at night), Azure text, muted tabs in `bar-muted`, and Carolina as the only action color on it. The auth panel and the public header are the same field. Nothing else in the app is Prussian-filled.
+
+**The Contrast Rule.** Text never gets a translucent color or an `opacity-*` to look secondary: use `text-muted-foreground`, a lighter weight or the italic water label instead, so every text keeps 4.5:1 (3:1 when large) in both themes. Focus rings are drawn at full `ring` strength. Disabled controls are the only exception.
 
 **The Theme Token Rule.** Colors come from theme classes (`bg-primary`, `text-muted-foreground`, `bg-depth-4`, `bg-bar`), never loose hex values in components, and every combination must work in light and dark.
 

@@ -398,7 +398,7 @@ function StayBar({
     >
       {booking.guestName}
       {/* The property too, not only its color: it shows wherever the bar has room. */}
-      <span className="font-normal opacity-80"> · {booking.property.name}</span>
+      <span className="font-normal"> · {booking.property.name}</span>
     </button>
   )
 }

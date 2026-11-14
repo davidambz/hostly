@@ -93,7 +93,7 @@ export function OccupancySoundings({
                   <span className="font-wide text-3xl leading-none font-semibold tabular-nums">
                     {bookings.isPending ? '–' : booked}
                   </span>
-                  <span className="font-water text-xs opacity-80">de {days} noites</span>
+                  <span className="font-water text-xs">de {days} noites</span>
                 </span>
               </button>
             </li>

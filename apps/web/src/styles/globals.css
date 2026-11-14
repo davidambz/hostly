@@ -37,8 +37,10 @@
   --success: #1f7a52;
   --warning: #8a5a00;
   --border: #d2e1e5;
-  --input: #bdd2d9;
-  --ring: #1b98e0;
+  /* Control strokes: at least 3:1 against the paper and the card, so a field's edge reads. */
+  --input: #6d90a3;
+  /* Carolina a step deeper on paper, so the focus ring keeps 3:1 against it. */
+  --ring: #1a8fd2;
 
   /*
    * Depth tints, shallow to deep: how full a property is reads as how deep the water is.
@@ -126,7 +128,7 @@
   --success: #4fbf8a;
   --warning: #e3b755;
   --border: #22405a;
-  --input: #2b4d68;
+  --input: #4d7896;
   --ring: #1b98e0;
 
   --depth-1: #132b40;
