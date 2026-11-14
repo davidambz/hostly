@@ -19,6 +19,12 @@ import {
   updateBookingBodySchema,
 } from './bookings.schemas.js'
 import { BookingsService } from './bookings.service.js'
+import {
+  createPaymentBodySchema,
+  paymentParamsSchema,
+  paymentSchema,
+  toPublicPayment,
+} from './payments.schemas.js'
 
 const tags = ['bookings']
 const security = [{ bearerAuth: [] }]
@@ -169,6 +175,62 @@ export const bookingsRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       await service.delete(request.user.sub, request.params.id)
+      return reply.status(204).send(null)
+    },
+  )
+
+  app.get(
+    '/:id/payments',
+    {
+      schema: {
+        tags,
+        security,
+        summary: "A booking's payments",
+        description: "Oldest first. The booking's amountPaid is their sum.",
+        params: bookingIdParamsSchema,
+        response: { 200: z.array(paymentSchema), ...errors, 404: errorResponseSchema },
+      },
+    },
+    async (request) =>
+      (await service.payments(request.user.sub, request.params.id)).map(toPublicPayment),
+  )
+
+  app.post(
+    '/:id/payments',
+    {
+      schema: {
+        tags,
+        security,
+        summary: 'Record a payment',
+        description:
+          "Amount in cents, adding to the booking's amountPaid. 400 PAYMENT_EXCEEDS_BALANCE " +
+          'when it is more than what is still due.',
+        params: bookingIdParamsSchema,
+        body: createPaymentBodySchema,
+        response: { 201: paymentSchema, ...errors, 404: errorResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const payment = await service.addPayment(request.user.sub, request.params.id, request.body)
+      return reply.status(201).send(toPublicPayment(payment))
+    },
+  )
+
+  app.delete(
+    '/:id/payments/:paymentId',
+    {
+      schema: {
+        tags,
+        security,
+        summary: 'Delete a payment',
+        description:
+          "Takes it off the booking's amountPaid. 404 PAYMENT_NOT_FOUND for an unknown one.",
+        params: paymentParamsSchema,
+        response: { 204: z.null(), ...errors, 404: errorResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      await service.deletePayment(request.user.sub, request.params.id, request.params.paymentId)
       return reply.status(204).send(null)
     },
   )

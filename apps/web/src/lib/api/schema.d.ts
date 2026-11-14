@@ -1708,7 +1708,6 @@ export interface paths {
             nightlyRate?: number
             cleaningFee?: number
             discount?: number
-            amountPaid?: number
             brokerCommissionBps?: number
           }
         }
@@ -1761,6 +1760,204 @@ export interface paths {
         }
       }
     }
+    trace?: never
+  }
+  '/bookings/{id}/payments': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * A booking's payments
+     * @description Oldest first. The booking's amountPaid is their sum.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Payment'][]
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    /**
+     * Record a payment
+     * @description Amount in cents, adding to the booking's amountPaid. 400 PAYMENT_EXCEEDS_BALANCE when it is more than what is still due.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            amount: number
+            /** Format: date */
+            paidOn: string
+            note?: string | null
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        201: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Payment']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/bookings/{id}/payments/{paymentId}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete a payment
+     * @description Takes it off the booking's amountPaid. 404 PAYMENT_NOT_FOUND for an unknown one.
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          id: string
+          paymentId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': null
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    options?: never
+    head?: never
+    patch?: never
     trace?: never
   }
 }
@@ -1842,6 +2039,16 @@ export interface components {
       page: number
       pageSize: number
       total: number
+    }
+    PaymentInput: {
+      /** Format: uuid */
+      id: string
+      amount: number
+      /** Format: date */
+      paidOn: string
+      note: string | null
+      /** Format: date-time */
+      createdAt: string
     }
     BrokerInput: {
       /** Format: uuid */
@@ -1969,6 +2176,16 @@ export interface components {
       page: number
       pageSize: number
       total: number
+    }
+    Payment: {
+      /** Format: uuid */
+      id: string
+      amount: number
+      /** Format: date */
+      paidOn: string
+      note: string | null
+      /** Format: date-time */
+      createdAt: string
     }
     Broker: {
       /** Format: uuid */

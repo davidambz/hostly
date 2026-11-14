@@ -1,4 +1,4 @@
-import type { Booking, Prisma } from '../../generated/prisma/client.js'
+import type { Booking, Payment, Prisma } from '../../generated/prisma/client.js'
 import type { Database } from '../../shared/database.js'
 import { ExclusionConflictError, MissingReferenceError } from '../../shared/database-errors.js'
 import { parseDate } from '../../shared/dates.js'
@@ -101,13 +101,77 @@ export class BookingsRepository {
     })
   }
 
-  /** Throws ExclusionConflictError when the dates overlap another booking of the property. */
-  async create(userId: string, data: BookingData): Promise<BookingWithRefs> {
+  /**
+   * Throws ExclusionConflictError when the dates overlap another booking of the property.
+   * What the guest already paid is recorded as the booking's first payment, on `paidOn`.
+   */
+  async create(userId: string, data: BookingData, paidOn: Date): Promise<BookingWithRefs> {
+    const paid = data.amountPaid ?? 0
     try {
-      return await this.db.booking.create({ data: { ...data, userId }, include: withRefs })
+      return await this.db.booking.create({
+        data: {
+          ...data,
+          userId,
+          ...(paid > 0 ? { payments: { create: { amount: paid, paidOn, note: 'Sinal' } } } : {}),
+        },
+        include: withRefs,
+      })
     } catch (error) {
       rethrow(error)
     }
+  }
+
+  /** The booking's payments, oldest first. */
+  payments(userId: string, bookingId: string): Promise<Payment[]> {
+    return this.db.payment.findMany({
+      where: { userId, bookingId },
+      orderBy: [{ paidOn: 'asc' }, { createdAt: 'asc' }],
+    })
+  }
+
+  /**
+   * Records a payment and adds it to the booking's amountPaid, in one transaction with the
+   * booking locked. `check` sees the booking as it is and may refuse (by throwing). Returns
+   * null when the user has no such booking.
+   */
+  async addPayment(
+    userId: string,
+    bookingId: string,
+    data: { amount: number; paidOn: Date; note: string | null },
+    check: (booking: Booking) => void,
+  ): Promise<Payment | null> {
+    return this.db.$transaction(async (tx) => {
+      if (!(await lockOwnedRow(tx, 'bookings', bookingId, userId))) return null
+      check(await tx.booking.findUniqueOrThrow({ where: { id: bookingId } }))
+      const payment = await tx.payment.create({ data: { ...data, userId, bookingId } })
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { amountPaid: { increment: data.amount } },
+      })
+      return payment
+    })
+  }
+
+  /**
+   * Deletes a payment and takes it off the booking's amountPaid, in one transaction.
+   * Says which of the two the user doesn't have, if any.
+   */
+  async deletePayment(
+    userId: string,
+    bookingId: string,
+    paymentId: string,
+  ): Promise<'deleted' | 'no-booking' | 'no-payment'> {
+    return this.db.$transaction(async (tx) => {
+      if (!(await lockOwnedRow(tx, 'bookings', bookingId, userId))) return 'no-booking'
+      const payment = await tx.payment.findFirst({ where: { id: paymentId, bookingId, userId } })
+      if (!payment) return 'no-payment'
+      await tx.payment.delete({ where: { id: paymentId } })
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { amountPaid: { decrement: payment.amount } },
+      })
+      return 'deleted'
+    })
   }
 
   /**

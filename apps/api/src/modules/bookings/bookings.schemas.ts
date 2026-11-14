@@ -59,8 +59,10 @@ export const createBookingBodySchema = z.object({
 
 export type CreateBookingInput = z.infer<typeof createBookingBodySchema>
 
+/** What was paid only changes through the payments (POST /bookings/:id/payments). */
 export const updateBookingBodySchema = z
   .object(bookingFields)
+  .omit({ amountPaid: true })
   .partial()
   .refine((body) => Object.keys(body).length > 0, { message: 'Nothing to update' })
 

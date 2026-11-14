@@ -88,7 +88,7 @@ describe('BookingsService.list', () => {
 })
 
 describe('BookingsService.create', () => {
-  it('stores the dates as date-only values', async () => {
+  it('stores the dates as date-only values, a deposit as paid today', async () => {
     const { bookings, service } = setup()
 
     await service.create('u1', input)
@@ -99,6 +99,7 @@ describe('BookingsService.create', () => {
         checkIn: parseDate('2026-12-20'),
         checkOut: parseDate('2026-12-27'),
       }),
+      parseDate('2026-11-01'),
     )
   })
 

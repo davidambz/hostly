@@ -1,4 +1,4 @@
-import type { Booking } from '../../generated/prisma/client.js'
+import type { Booking, Payment } from '../../generated/prisma/client.js'
 import { ExclusionConflictError, MissingReferenceError } from '../../shared/database-errors.js'
 import { formatDate, nightsBetween, parseDate, today } from '../../shared/dates.js'
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js'
@@ -16,6 +16,7 @@ import {
   type QuoteInput,
   type UpdateBookingInput,
 } from './bookings.schemas.js'
+import type { CreatePaymentInput } from './payments.schemas.js'
 
 export interface BookingsServiceDeps {
   bookings: BookingsRepository
@@ -154,7 +155,7 @@ export class BookingsService {
     assertValid(data)
     await this.assertOwned(userId, input)
     try {
-      return await this.deps.bookings.create(userId, data)
+      return await this.deps.bookings.create(userId, data, parseDate(this.today()))
     } catch (error) {
       throw await this.translate(error, userId, data as Booking)
     }
@@ -186,6 +187,45 @@ export class BookingsService {
       return updated
     } catch (error) {
       throw final ? await this.translate(error, userId, final, id) : error
+    }
+  }
+
+  /** The booking's payments, oldest first; 404 for a booking the user doesn't have. */
+  async payments(userId: string, bookingId: string): Promise<Payment[]> {
+    await this.get(userId, bookingId)
+    return this.deps.bookings.payments(userId, bookingId)
+  }
+
+  /**
+   * Records a payment received, adding it to what was paid. 400 PAYMENT_EXCEEDS_BALANCE when
+   * it is more than what is still due.
+   */
+  async addPayment(userId: string, bookingId: string, input: CreatePaymentInput): Promise<Payment> {
+    const payment = await this.deps.bookings.addPayment(
+      userId,
+      bookingId,
+      { amount: input.amount, paidOn: parseDate(input.paidOn), note: input.note },
+      (booking) => {
+        const { balanceDue } = validatedFinancials(booking)
+        if (input.amount > balanceDue) {
+          throw invalid('The payment is more than what is due', 'PAYMENT_EXCEEDS_BALANCE', 'amount')
+        }
+      },
+    )
+    if (!payment) {
+      throw notFound()
+    }
+    return payment
+  }
+
+  /** Deletes a payment, taking it off what was paid. */
+  async deletePayment(userId: string, bookingId: string, paymentId: string): Promise<void> {
+    const result = await this.deps.bookings.deletePayment(userId, bookingId, paymentId)
+    if (result === 'no-booking') {
+      throw notFound()
+    }
+    if (result === 'no-payment') {
+      throw new NotFoundError('Payment not found', { code: 'PAYMENT_NOT_FOUND' })
     }
   }
 
