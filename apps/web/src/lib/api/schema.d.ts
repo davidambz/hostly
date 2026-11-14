@@ -592,6 +592,54 @@ export interface paths {
     }
     trace?: never
   }
+  '/me/plan': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * My plan
+     * @description The plan in force, where it comes from, and how many properties it allows.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['MyPlan']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/properties': {
     parameters: {
       query?: never
@@ -2891,6 +2939,22 @@ export interface components {
       /** Format: date-time */
       createdAt: string
     }
+    MyPlanInput: {
+      plan: {
+        /** Format: uuid */
+        id: string
+        code: string | null
+        name: string
+        description: string | null
+        maxProperties: number | null
+      }
+      /** @enum {string} */
+      source: 'FREE' | 'GRANT'
+      /** Format: date-time */
+      endsAt: string | null
+      propertyCount: number
+      canAddProperty: boolean
+    }
     AccessTokenInput: {
       accessToken: string
       /** @enum {string} */
@@ -3121,6 +3185,22 @@ export interface components {
       isAdmin: boolean
       /** Format: date-time */
       createdAt: string
+    }
+    MyPlan: {
+      plan: {
+        /** Format: uuid */
+        id: string
+        code: string | null
+        name: string
+        description: string | null
+        maxProperties: number | null
+      }
+      /** @enum {string} */
+      source: 'FREE' | 'GRANT'
+      /** Format: date-time */
+      endsAt: string | null
+      propertyCount: number
+      canAddProperty: boolean
     }
     AccessToken: {
       accessToken: string

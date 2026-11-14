@@ -34,8 +34,21 @@ export class PropertiesRepository {
     return this.db.property.findFirst({ where: { id, userId } })
   }
 
-  create(userId: string, data: PropertyData): Promise<Property> {
-    return this.db.property.create({ data: { ...data, userId } })
+  /**
+   * Creates the property after `check` has seen how many the user already has, with the
+   * user's row locked: two creations at once wait for each other, so a limit checked there
+   * can't be crossed by a race. Whatever `check` throws aborts the creation.
+   */
+  create(
+    userId: string,
+    data: PropertyData,
+    check: (tx: Prisma.TransactionClient, count: number) => Promise<void>,
+  ): Promise<Property> {
+    return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId}::uuid FOR UPDATE`
+      await check(tx, await tx.property.count({ where: { userId } }))
+      return tx.property.create({ data: { ...data, userId } })
+    })
   }
 
   /**

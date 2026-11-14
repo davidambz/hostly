@@ -5,6 +5,9 @@ import { FREE_PLAN } from './system-plans.js'
 /** What a user's plan comes from. */
 export type PlanSource = 'FREE' | 'GRANT'
 
+/** The database, or a transaction on it: anything that can read plans and grants. */
+export type PlanReader = Pick<Database, 'plan' | 'planGrant'>
+
 export interface CurrentPlan {
   plan: Plan
   source: PlanSource
@@ -17,7 +20,7 @@ export interface CurrentPlan {
  * it (paid subscriptions join here).
  */
 export async function currentPlans(
-  db: Database,
+  db: PlanReader,
   userIds: string[],
   now = new Date(),
 ): Promise<Map<string, CurrentPlan>> {
@@ -49,4 +52,15 @@ export async function currentPlans(
       ]
     }),
   )
+}
+
+/** The plan one user is on now. */
+export async function currentPlan(
+  db: PlanReader,
+  userId: string,
+  now = new Date(),
+): Promise<CurrentPlan> {
+  const plan = (await currentPlans(db, [userId], now)).get(userId)
+  if (!plan) throw new Error(`No plan for user ${userId}`)
+  return plan
 }

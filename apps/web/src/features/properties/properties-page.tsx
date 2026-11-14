@@ -44,6 +44,8 @@ import {
 } from './api'
 import { colorOf, propertyColors } from '../bookings/property-colors'
 import { apartmentLine, placeLine, streetLine } from './property-format'
+import { useMyPlan } from '../plan/api'
+import { PlanLimitDialog } from '../plan/plan-limit-dialog'
 import { PropertySheet } from './property-sheet'
 
 function PropertyName({ property, swatch }: { property: Property; swatch?: string }) {
@@ -115,9 +117,17 @@ export function PropertiesPage() {
     }
   }
 
+  const myPlan = useMyPlan()
+  const [limitOpen, setLimitOpen] = useState(false)
+
   const newButton = (
     <Button
       onClick={() => {
+        // A plan with no room left says so instead of opening a form that would be refused.
+        if (myPlan.data && !myPlan.data.canAddProperty) {
+          setLimitOpen(true)
+          return
+        }
         setDraftName(undefined)
         editing.show()
       }}
@@ -255,6 +265,8 @@ export function PropertiesPage() {
         draftName={draftName}
         onOpenChange={editing.setOpen}
       />
+
+      <PlanLimitDialog plan={myPlan.data} open={limitOpen} onOpenChange={setLimitOpen} />
 
       <ConfirmDialog
         open={deleting.open}

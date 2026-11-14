@@ -16,6 +16,7 @@ const MESSAGES: Record<string, string> = {
   EMAIL_TAKEN: 'Este e-mail já tem uma conta.',
   WRONG_PASSWORD: 'A senha atual não confere.',
   PAYMENT_EXCEEDS_BALANCE: 'O pagamento passa do que falta receber.',
+  PLAN_LIMIT_REACHED: 'Seu plano não permite mais imóveis. Veja Meu plano.',
   TOO_MANY_REQUESTS: 'Muitas tentativas. Espere um minuto e tente de novo.',
 }
 

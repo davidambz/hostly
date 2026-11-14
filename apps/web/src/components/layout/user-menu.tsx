@@ -1,4 +1,4 @@
-import { LogOut, Monitor, Moon, Sun, UserRound } from 'lucide-react'
+import { Gem, LogOut, Monitor, Moon, Sun, UserRound } from 'lucide-react'
 import { Link } from 'react-router'
 
 import type { Theme } from '@/components/theme/theme-context'
@@ -55,6 +55,12 @@ export function UserMenu() {
           <Link to="/conta">
             <UserRound className="size-4" />
             Minha conta
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/plano">
+            <Gem className="size-4" />
+            Meu plano
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSub>

@@ -92,6 +92,13 @@ export const routes: RouteObject[] = [
                 ],
               },
               {
+                path: '/plano',
+                handle: handle('Meu plano'),
+                lazy: async () => ({
+                  Component: (await import('@/features/plan/plan-page')).PlanPage,
+                }),
+              },
+              {
                 path: '/conta',
                 handle: handle('Conta'),
                 lazy: async () => ({

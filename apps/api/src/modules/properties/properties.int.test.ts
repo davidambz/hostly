@@ -220,7 +220,8 @@ it('answers the collection with or without a trailing slash', async () => {
   await createProperty(db, { userId: owner.id })
 
   expect((await request('GET', '/properties/')).json()).toMatchObject({ total: 1 })
-  expect((await request('POST', '/properties/', house)).statusCode).toBe(201)
+  // Another account: the owner's Free plan is already full with that one.
+  expect((await request('POST', '/properties/', house, other)).statusCode).toBe(201)
 })
 
 describe('GET /properties/:id', () => {
