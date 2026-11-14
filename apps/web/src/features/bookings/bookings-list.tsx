@@ -63,7 +63,8 @@ export function BookingsList({
   })
 
   return (
-    <div className="grid gap-4">
+    // minmax(0, 1fr): the table may scroll inside, but never widen the page on a phone.
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs
           value={status}
@@ -72,8 +73,12 @@ export function BookingsList({
           }}
         >
           <TabsList>
-            <TabsTrigger value="upcoming">Próximas</TabsTrigger>
-            <TabsTrigger value="past">Anteriores</TabsTrigger>
+            <TabsTrigger value="upcoming" className="data-[state=inactive]:text-muted-foreground">
+              Próximas
+            </TabsTrigger>
+            <TabsTrigger value="past" className="data-[state=inactive]:text-muted-foreground">
+              Anteriores
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         <SearchInput
@@ -111,7 +116,7 @@ export function BookingsList({
         )
       ) : (
         <>
-          <div className="rounded-lg border">
+          <div className="bg-card min-w-0 rounded-md border">
             <Table aria-label={status === 'upcoming' ? 'Próximas reservas' : 'Reservas anteriores'}>
               <TableHeader>
                 <TableRow>
@@ -127,7 +132,7 @@ export function BookingsList({
               <TableBody>
                 {bookings.data.items.map((booking) => (
                   <TableRow key={booking.id}>
-                    <TableCell>
+                    <TableCell className="whitespace-normal">
                       <button
                         type="button"
                         className="text-left font-medium hover:underline"
@@ -137,9 +142,9 @@ export function BookingsList({
                       >
                         {booking.guestName}
                       </button>
-                      <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                      <p className="text-muted-foreground flex items-start gap-1.5 text-xs">
                         <span
-                          className={`size-2 shrink-0 rounded-full ${colorOf(colors, booking.property.id).dot}`}
+                          className={`mt-[3px] size-2.5 shrink-0 rounded-[2px] ${colorOf(colors, booking.property.id).dot}`}
                           aria-hidden
                         />
                         {booking.property.name}
@@ -149,6 +154,12 @@ export function BookingsList({
                     <TableCell>
                       <p>{formatStay(booking.checkIn, booking.checkOut)}</p>
                       <p className="text-muted-foreground text-xs">{nightsLabel(booking.nights)}</p>
+                      {/* Phones have no money columns: what is still owed goes here. */}
+                      <p className="mt-1 text-xs font-medium tabular-nums sm:hidden">
+                        {booking.financials.balanceDue === 0
+                          ? 'Quitado'
+                          : `Falta receber ${formatBRL(booking.financials.balanceDue)}`}
+                      </p>
                     </TableCell>
                     <TableCell className="hidden text-right tabular-nums md:table-cell">
                       {formatBRL(booking.financials.total)}

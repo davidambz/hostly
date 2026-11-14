@@ -59,6 +59,8 @@ export function BookingForm({
   onDelete,
   properties,
   brokers,
+  bookingId,
+  fallbackMonth,
 }: {
   defaultValues: BookingFormValues
   /** The choices, loaded before the form: a native select drops a value it has no option for. */
@@ -69,6 +71,10 @@ export function BookingForm({
   onCancel: () => void
   /** Shown when editing. */
   onDelete?: () => void
+  /** The booking being edited, whose own nights don't count as taken. */
+  bookingId?: string
+  /** Where the date picker opens when there are no dates yet. */
+  fallbackMonth?: string
 }) {
   const form = useForm<BookingFormValues, unknown, ReturnType<typeof bookingFormSchema.parse>>({
     resolver: zodResolver(bookingFormSchema),
@@ -125,6 +131,9 @@ export function BookingForm({
           <DateRangeField
             checkIn={field.value}
             checkOut={values.checkOut}
+            propertyId={values.propertyId || undefined}
+            exceptBookingId={bookingId}
+            fallbackMonth={fallbackMonth}
             error={errors.checkIn?.message ?? errors.checkOut?.message}
             onChange={({ checkIn, checkOut }) => {
               field.onChange(checkIn)
@@ -139,28 +148,28 @@ export function BookingForm({
         <TextField
           label="Diária"
           inputMode="numeric"
-          placeholder="R$ 0,00"
+          placeholder="R$"
           error={errors.nightlyRate?.message}
           {...money('nightlyRate')}
         />
         <TextField
           label="Limpeza"
           inputMode="numeric"
-          placeholder="R$ 0,00"
+          placeholder="R$"
           error={errors.cleaningFee?.message}
           {...money('cleaningFee')}
         />
         <TextField
           label="Desconto"
           inputMode="numeric"
-          placeholder="R$ 0,00"
+          placeholder="R$"
           error={errors.discount?.message}
           {...money('discount')}
         />
         <TextField
           label="Valor já pago"
           inputMode="numeric"
-          placeholder="R$ 0,00"
+          placeholder="R$"
           error={errors.amountPaid?.message}
           {...money('amountPaid')}
         />

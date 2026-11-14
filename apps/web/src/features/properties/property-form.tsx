@@ -111,7 +111,7 @@ export function PropertyForm({
       <FormError message={errors.root?.message} />
       <TextField
         label="Nome"
-        placeholder="Casa da praia"
+        placeholder="ex.: Casa da praia"
         autoFocus
         error={errors.name?.message}
         {...form.register('name')}
@@ -146,7 +146,7 @@ export function PropertyForm({
           <TextField
             label="CEP"
             inputMode="numeric"
-            placeholder="00000-000"
+            placeholder="ex.: 88053-700"
             error={errors.zipCode?.message}
             hint={CEP_HINTS[cepStatus]}
             trailing={

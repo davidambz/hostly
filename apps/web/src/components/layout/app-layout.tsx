@@ -1,13 +1,7 @@
 import { Outlet, useNavigation } from 'react-router'
 
-import { useRouteTitle } from '@/app/route-title'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb'
-import { Separator } from '@/components/ui/separator'
+import { Brand } from '@/components/brand'
+import { ModeToggle } from '@/components/theme/mode-toggle'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 
 import { AppSidebar } from './app-sidebar'
@@ -30,25 +24,16 @@ function NavigationProgress() {
 
 /** The logged-in app: sidebar, header, and the page in the middle. */
 export function AppLayout() {
-  const title = useRouteTitle()
-
   return (
     <SidebarProvider defaultOpen={readSidebarOpen()}>
       <NavigationProgress />
       <AppSidebar />
       <SidebarInset>
-        <header className="bg-background/80 sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b px-4 backdrop-blur">
+        {/* The page title lives in the page itself (h1), so the bar holds only the controls. */}
+        <header className="bg-background/90 sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b px-4 backdrop-blur">
           <SidebarTrigger className="-ml-1" aria-label="Alternar menu" />
-          <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-          {title && (
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{title}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          )}
+          <Brand className="md:hidden" />
+          <ModeToggle className="ml-auto" />
         </header>
         <main id="conteudo" className="mx-auto w-full max-w-6xl flex-1 space-y-6 p-4 md:p-8">
           <Outlet />

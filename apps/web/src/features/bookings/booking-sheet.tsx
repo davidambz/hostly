@@ -27,12 +27,15 @@ export function BookingSheet({
   booking,
   draft,
   onDelete,
+  month,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   booking?: Booking
   draft?: BookingDraft
   onDelete: (booking: Booking) => void
+  /** The month the calendar shows, where a new booking's date picker opens. */
+  month?: string
 }) {
   const create = useCreateBooking()
   const update = useUpdateBooking()
@@ -69,6 +72,8 @@ export function BookingSheet({
               key={booking?.id ?? `new-${JSON.stringify(draft ?? {})}`}
               defaultValues={booking ? toFormValues(booking) : emptyBookingForm(draft)}
               submitLabel={booking ? 'Salvar' : 'Criar reserva'}
+              bookingId={booking?.id}
+              fallbackMonth={month}
               onCancel={() => {
                 onOpenChange(false)
               }}

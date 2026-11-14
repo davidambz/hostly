@@ -190,6 +190,18 @@ describe('brokers list', () => {
 })
 
 describe('creating a broker', () => {
+  it('describes the document format instead of faking a value in the field', async () => {
+    serveBrokers([])
+    const { user } = await openPage()
+
+    const sheet = await openNew(user)
+    const cpf = within(sheet).getByLabelText('CPF')
+    expect(cpf).not.toHaveAttribute('placeholder')
+    expect(cpf).toHaveAccessibleDescription('Com ou sem pontos e traço.')
+    // Examples are marked as examples.
+    expect(within(sheet).getByLabelText('Nome')).toHaveAttribute('placeholder', 'ex.: Maria Souza')
+  })
+
   it('creates a person with a masked CPF and phones', async () => {
     serveBrokers([])
     const sent = captureBody('post', '/brokers', person)

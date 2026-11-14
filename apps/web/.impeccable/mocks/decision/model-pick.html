@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Parede de azulejos</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        width: 1440px;
+        height: 900px;
+        font-family: Georgia, serif;
+        background: #f7fafb;
+        color: #13293d;
+        overflow: hidden;
+      }
+      .wall {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 820px;
+        height: 900px;
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        background: #cfdde3;
+        padding: 4px;
+      }
+      .t {
+        background: #fff;
+        position: relative;
+        border-radius: 2px;
+        background-image: radial-gradient(
+          circle at 50% 50%,
+          transparent 38%,
+          #e4eef2 39% 41%,
+          transparent 42%
+        );
+      }
+      .t.on {
+        background: #006494;
+        background-image:
+          radial-gradient(circle at 50% 50%, transparent 30%, #1b98e0 31% 34%, transparent 35%),
+          linear-gradient(45deg, transparent 46%, #e8f1f2 47% 53%, transparent 54%);
+      }
+      .t.on2 {
+        background: #13293d;
+        background-image: linear-gradient(
+          -45deg,
+          transparent 46%,
+          #1b98e0 47% 53%,
+          transparent 54%
+        );
+      }
+      .plate {
+        position: absolute;
+        top: 64px;
+        left: 64px;
+        border: 6px solid #006494;
+        padding: 18px 28px;
+        font-size: 30px;
+        background: #fff;
+        font-weight: 700;
+      }
+      h1 {
+        position: absolute;
+        top: 220px;
+        left: 64px;
+        width: 520px;
+        font-size: 68px;
+        line-height: 1.02;
+        letter-spacing: -0.02em;
+      }
+      p {
+        position: absolute;
+        top: 470px;
+        left: 64px;
+        width: 480px;
+        font-size: 22px;
+        font-family: system-ui;
+        color: #4a6378;
+      }
+      .cta {
+        position: absolute;
+        top: 580px;
+        left: 64px;
+        background: #006494;
+        color: #fff;
+        padding: 18px 28px;
+        font: 700 22px system-ui;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="plate">Hostly · nº 1</div>
+    <h1>Sua temporada, ladrilho por ladrilho.</h1>
+    <p>Cada noite um azulejo; cada reserva, um padrão pintado sobre eles.</p>
+    <div class="cta">Criar conta</div>
+    <div class="wall"></div>
+    <script>
+      const w = document.querySelector('.wall')
+      for (let i = 0; i < 42; i++) {
+        const d = document.createElement('div')
+        d.className =
+          't' +
+          ([3, 4, 5, 6, 7, 8, 9, 15, 16, 17, 18, 26, 27, 28, 29, 30, 31, 32].includes(i)
+            ? i > 14 && i < 19
+              ? ' on2'
+              : ' on'
+            : '')
+        w.appendChild(d)
+      }
+    </script>
+  </body>
+</html>

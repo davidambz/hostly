@@ -1,18 +1,25 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '@fontsource/young-serif/400.css';
+@import '@fontsource-variable/hanken-grotesk/index.css';
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Hostly palette
- *   Prussian Blue  #13293D   Sapphire Blue #006494   Celadon Blue #247BA0
- *   Carolina Blue  #1B98E0   Azure X11     #E8F1F2
- * Everything else is a tint or shade of these.
+ * Hostly: "Parede de azulejos" (redesign #45). The calendar is a tiled wall: every night a
+ * tile, every booking a band painted over them, every property a glaze.
+ *
+ * Blue family kept close to the original palette:
+ *   Prussian #13293D   Sapphire #006494 (cobalt ink)   Celadon #247BA0
+ *   Carolina #1B98E0 (light glaze)   Azure #E8F1F2 (grout)
+ * Property colors are the glazes of Portuguese pattern tiles: cobalt, ochre, copper green,
+ * manganese, antimony orange, turquoise, sky and wine, each with readable text on it.
  */
 :root {
-  --radius: 0.625rem;
+  --radius: 0.25rem;
 
-  --background: #f7fafb;
+  /* Ground: the grout between tiles; surfaces: the white enamel tiles. */
+  --background: #f3f7f8;
   --foreground: #13293d;
   --card: #ffffff;
   --card-foreground: #13293d;
@@ -23,91 +30,103 @@
   --secondary: #e8f1f2;
   --secondary-foreground: #13293d;
   --muted: #e8f1f2;
-  --muted-foreground: #4a6378;
-  --accent: #e8f1f2;
-  --accent-foreground: #006494;
-  --destructive: #c53030;
+  --muted-foreground: #46607a;
+  --accent: #e3eef2;
+  --accent-foreground: #00547d;
+  --destructive: #b42318;
   --destructive-foreground: #ffffff;
-  --success: #1f8a5b;
-  --warning: #b7791f;
+  --success: #1f7a52;
+  --warning: #a16207;
   --border: #d2e1e5;
-  --input: #c4d7dc;
+  --input: #bdd2d9;
   --ring: #1b98e0;
 
-  /* The public pages' Prussian band: the same in both themes. */
-  --band: #13293d;
-  --band-foreground: #e8f1f2;
-  --band-accent: #1d3a52;
-  --band-border: #2e5170;
-  /* Depth under the screenshot frame on public pages. */
-  --frame-shadow: rgb(8 19 29 / 0.5);
+  /* The tile language. */
+  --grout: #d9e6ea;
+  --glaze: #e6eff3;
+  --glaze-strong: #c9dce4;
+  --cobalt: #006494;
+  --cobalt-deep: #13293d;
+  --cobalt-light: #1b98e0;
+  --cobalt-light-foreground: #06131e;
+  --frame-shadow: rgb(8 19 29 / 0.28);
 
   --sidebar: #13293d;
   --sidebar-foreground: #e8f1f2;
   --sidebar-primary: #1b98e0;
-  --sidebar-primary-foreground: #ffffff;
+  --sidebar-primary-foreground: #06131e;
   --sidebar-accent: #1d3a52;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #24425a;
   --sidebar-ring: #1b98e0;
 
-  /* Event colors for the bookings calendar, one per property (cycled). */
   --chart-1: #006494;
   --chart-2: #1b98e0;
   --chart-3: #247ba0;
   --chart-4: #13293d;
   --chart-5: #5fa8d3;
-  /* Calendar colors that tell properties apart, each with readable text on it. */
-  --property-1: #0369a1;
+
+  /* Property glazes, each with readable text on it. */
+  --property-1: #1e4f9c;
   --property-1-foreground: #ffffff;
-  --property-2: #047857;
+  --property-2: #2f7d5b;
   --property-2-foreground: #ffffff;
-  --property-3: #fbbf24;
-  --property-3-foreground: #451a03;
-  --property-4: #be123c;
+  --property-3: #d9a63a;
+  --property-3-foreground: #2b1a00;
+  --property-4: #8e2e3b;
   --property-4-foreground: #ffffff;
-  --property-5: #6d28d9;
+  --property-5: #6b3e75;
   --property-5-foreground: #ffffff;
-  --property-6: #0f766e;
+  --property-6: #1d8a99;
   --property-6-foreground: #ffffff;
-  --property-7: #f97316;
-  --property-7-foreground: #431407;
-  --property-8: #4338ca;
-  --property-8-foreground: #ffffff;
+  --property-7: #d97b3a;
+  --property-7-foreground: #2a1300;
+  --property-8: #4c9ad6;
+  --property-8-foreground: #06213a;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dark {
-  --background: #0b1a27;
+  /* Night tiles: glazed Prussian with near-black grout. */
+  --background: #08141e;
   --foreground: #e8f1f2;
-  --card: #13293d;
+  --card: #0f2233;
   --card-foreground: #e8f1f2;
-  --popover: #13293d;
+  --popover: #0f2233;
   --popover-foreground: #e8f1f2;
   --primary: #1b98e0;
-  --primary-foreground: #0b1a27;
-  --secondary: #1d3a52;
+  --primary-foreground: #06131e;
+  --secondary: #17324a;
   --secondary-foreground: #e8f1f2;
-  --muted: #18324a;
+  --muted: #142b40;
   --muted-foreground: #9db6c4;
-  --accent: #1d3a52;
+  --accent: #17324a;
   --accent-foreground: #e8f1f2;
-  --destructive: #f56565;
-  --destructive-foreground: #0b1a27;
-  --success: #48bb78;
-  --warning: #ecc94b;
-  --border: #24425a;
+  --destructive: #f97066;
+  --destructive-foreground: #1a0503;
+  --success: #4fbf8a;
+  --warning: #e3b755;
+  --border: #22405a;
   --input: #2b4d68;
   --ring: #1b98e0;
 
-  --frame-shadow: rgb(0 0 0 / 0.6);
+  --grout: #050e15;
+  --glaze: #132a3f;
+  --glaze-strong: #1b3a55;
+  --cobalt: #1b98e0;
+  --cobalt-deep: #e8f1f2;
+  --cobalt-light: #1b98e0;
+  --cobalt-light-foreground: #06131e;
+  --frame-shadow: rgb(0 0 0 / 0.55);
 
-  --sidebar: #08131d;
+  --sidebar: #0b1a27;
   --sidebar-foreground: #e8f1f2;
   --sidebar-primary: #1b98e0;
-  --sidebar-primary-foreground: #0b1a27;
+  --sidebar-primary-foreground: #06131e;
   --sidebar-accent: #13293d;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #13293d;
+  --sidebar-border: #17324a;
   --sidebar-ring: #1b98e0;
 
   --chart-1: #1b98e0;
@@ -115,29 +134,32 @@
   --chart-3: #247ba0;
   --chart-4: #8ecae6;
   --chart-5: #006494;
-  /* Calendar colors that tell properties apart, each with readable text on it. */
-  --property-1: #38bdf8;
-  --property-1-foreground: #082f49;
-  --property-2: #34d399;
-  --property-2-foreground: #022c22;
-  --property-3: #fcd34d;
-  --property-3-foreground: #451a03;
-  --property-4: #fb7185;
-  --property-4-foreground: #4c0519;
-  --property-5: #a78bfa;
-  --property-5-foreground: #2e1065;
-  --property-6: #2dd4bf;
-  --property-6-foreground: #042f2e;
-  --property-7: #fb923c;
-  --property-7-foreground: #431407;
-  --property-8: #818cf8;
-  --property-8-foreground: #1e1b4b;
+
+  --property-1: #7aa2e8;
+  --property-1-foreground: #0a1a33;
+  --property-2: #66bf93;
+  --property-2-foreground: #062a1a;
+  --property-3: #e6bd5c;
+  --property-3-foreground: #2b1a00;
+  --property-4: #dc8994;
+  --property-4-foreground: #33090f;
+  --property-5: #b993c4;
+  --property-5-foreground: #24102a;
+  --property-6: #62c4d0;
+  --property-6-foreground: #04262b;
+  --property-7: #eba06a;
+  --property-7-foreground: #2a1300;
+  --property-8: #92c7ef;
+  --property-8-foreground: #06213a;
 }
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
+  --font-sans: 'Hanken Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Young Serif', ui-serif, Georgia, serif;
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 4px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -160,6 +182,13 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-grout: var(--grout);
+  --color-glaze: var(--glaze);
+  --color-glaze-strong: var(--glaze-strong);
+  --color-cobalt: var(--cobalt);
+  --color-cobalt-deep: var(--cobalt-deep);
+  --color-cobalt-light: var(--cobalt-light);
+  --color-cobalt-light-foreground: var(--cobalt-light-foreground);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -181,10 +210,6 @@
   --color-property-7-foreground: var(--property-7-foreground);
   --color-property-8: var(--property-8);
   --color-property-8-foreground: var(--property-8-foreground);
-  --color-band: var(--band);
-  --color-band-foreground: var(--band-foreground);
-  --color-band-accent: var(--band-accent);
-  --color-band-border: var(--band-border);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -193,14 +218,99 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --ease-out-expo: var(--ease-out-expo);
+
+  --animate-tile-settle: tile-settle 700ms var(--ease-out-expo) both;
+  --animate-paint: paint 900ms var(--ease-out-expo) both;
+  --animate-tile-flip: tile-flip 600ms var(--ease-out-expo) both;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    font-feature-settings: 'ss01';
+  }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  ::selection {
+    background: var(--cobalt-light);
+    color: var(--cobalt-light-foreground);
+  }
+  :focus-visible {
+    outline-offset: 2px;
+  }
+  /* Money and dates line up in columns. */
+  .tabular,
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/*
+ * The pattern tile: quarter circles in each corner meet at the grout crossings, so a grid
+ * of these reads as one continuous azulejo de padrão. Color comes from --tile-ink.
+ */
+@utility azulejo {
+  --tile-ink: var(--glaze);
+  background-color: var(--card);
+  background-image:
+    radial-gradient(circle at 50% 50%, transparent 0 30%, var(--tile-ink) 31% 34%, transparent 35%),
+    radial-gradient(circle at 0 0, var(--tile-ink) 0 17%, transparent 18%),
+    radial-gradient(circle at 100% 0, var(--tile-ink) 0 17%, transparent 18%),
+    radial-gradient(circle at 100% 100%, var(--tile-ink) 0 17%, transparent 18%),
+    radial-gradient(circle at 0 100%, var(--tile-ink) 0 17%, transparent 18%);
+}
+
+/* A field of small pattern tiles, for grounds and frames. */
+@utility azulejo-field {
+  --tile-ink: var(--glaze);
+  --tile-size: 48px;
+  background-color: var(--card);
+  background-image:
+    linear-gradient(var(--grout) 0 2px, transparent 2px),
+    linear-gradient(90deg, var(--grout) 0 2px, transparent 2px),
+    radial-gradient(circle at 50% 50%, transparent 0 30%, var(--tile-ink) 31% 34%, transparent 35%),
+    radial-gradient(circle at 0 0, var(--tile-ink) 0 17%, transparent 18%),
+    radial-gradient(circle at 100% 0, var(--tile-ink) 0 17%, transparent 18%),
+    radial-gradient(circle at 100% 100%, var(--tile-ink) 0 17%, transparent 18%),
+    radial-gradient(circle at 0 100%, var(--tile-ink) 0 17%, transparent 18%);
+  background-size: var(--tile-size) var(--tile-size);
+}
+
+/* Tiles settle into place: from a visible, slightly lifted state. */
+@keyframes tile-settle {
+  from {
+    opacity: 0.35;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A band painted from its start, like a brushstroke of glaze. */
+@keyframes paint {
+  from {
+    clip-path: inset(0 100% 0 0 round 3px);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 3px);
+  }
+}
+
+/* Screens change by turning a tile. */
+@keyframes tile-flip {
+  from {
+    opacity: 0.4;
+    transform: perspective(900px) rotateX(-8deg) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -210,5 +320,17 @@
   }
   to {
     transform: translateX(300%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -1,4 +1,4 @@
 {
-  "prompt": "Origin: real screenshot of the Hostly web app (brokers-light, phone layout), captured with Playwright (Chromium, 390x720 at 2x, WebP q82) from the local dev environment, logged in as a demo account seeded with made-up data (fictional properties, brokers and guests; no real people). Not generated.",
-  "createdAt": "2026-11-01T16:27:57.089Z"
+  "prompt": "Origin: real screenshot of the Hostly web app after the azulejo redesign (#45): brokers screen, light theme, phone layout 390x720 at 2x, captured with Playwright (Chromium) from the local dev environment, logged in as a demo account seeded with made-up data (fictional properties, brokers and guests; no real people). WebP q82. Not generated.",
+  "createdAt": "2026-11-03T14:45:05.547Z"
 }

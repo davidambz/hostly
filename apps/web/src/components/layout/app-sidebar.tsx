@@ -1,7 +1,7 @@
-import { CalendarDays } from 'lucide-react'
 import { Link, NavLink, useMatch } from 'react-router'
 
 import { NAV_ITEMS, type NavItem } from '@/app/navigation'
+import { BrandMark } from '@/components/brand'
 import {
   Sidebar,
   SidebarContent,
@@ -54,10 +54,8 @@ export function AppSidebar() {
             <SidebarMenuButton size="lg" asChild tooltip="Hostly">
               {/* A plain Link: the brand is not a section, so it is never "current". */}
               <Link to="/reservas" onClick={close} aria-label="Hostly, ir para o início">
-                <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
-                  <CalendarDays className="size-4" aria-hidden />
-                </span>
-                <span className="text-base font-semibold">Hostly</span>
+                <BrandMark inverted className="size-8 text-lg" />
+                <span className="font-display text-xl tracking-tight">Hostly</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

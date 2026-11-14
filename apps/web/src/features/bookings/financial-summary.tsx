@@ -98,11 +98,13 @@ function QuoteRows({
       <Row label="Você recebe" value={formatBRL(financials.net)} strong />
       <div className="my-1 border-t" />
       <Row label="Já pago" value={formatBRL(input.amountPaid ?? 0)} muted />
-      <Row
-        label="Falta receber"
-        value={financials.balanceDue === 0 ? 'Quitado' : formatBRL(financials.balanceDue)}
-        strong
-      />
+      {/* The figure the form exists for, set like the home page's. */}
+      <div className="flex items-baseline justify-between gap-4">
+        <dt className="font-medium">Falta receber</dt>
+        <dd className="font-display text-primary text-2xl tabular-nums">
+          {financials.balanceDue === 0 ? 'Quitado' : formatBRL(financials.balanceDue)}
+        </dd>
+      </div>
     </dl>
   )
 }

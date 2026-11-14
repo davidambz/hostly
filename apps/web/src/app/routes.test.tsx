@@ -15,7 +15,10 @@ describe('routes', () => {
     const { router } = renderRoute(routes, '/')
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: /Cada noite de cada imóvel/ }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: /Sua temporada, ladrilho por ladrilho/,
+      }),
     ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/')
     expect(document.title).toBe('Reservas de temporada organizadas · Hostly')
@@ -41,7 +44,10 @@ describe('routes', () => {
 
     try {
       expect(
-        await screen.findByRole('heading', { level: 1, name: /Cada noite de cada imóvel/ }),
+        await screen.findByRole('heading', {
+          level: 1,
+          name: /Sua temporada, ladrilho por ladrilho/,
+        }),
       ).toBeInTheDocument()
       expect(screen.queryByText('Carregando…')).not.toBeInTheDocument()
     } finally {
@@ -49,7 +55,7 @@ describe('routes', () => {
     }
     // Anonymous after all: the page stays.
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Já tenho conta' })).toBeInTheDocument()
+      expect(screen.getByLabelText('Comece pelo nome do seu imóvel')).toBeInTheDocument()
     })
   })
 
@@ -72,7 +78,7 @@ describe('routes', () => {
       const notice = await screen.findByText(/Não foi possível conectar ao servidor/)
       expect(notice).toHaveAttribute('role', 'status')
       expect(
-        screen.getByRole('heading', { level: 1, name: /Cada noite de cada imóvel/ }),
+        screen.getByRole('heading', { level: 1, name: /Sua temporada, ladrilho por ladrilho/ }),
       ).toBeInTheDocument()
 
       // It was a logged-in user after all: once the API is back, on to the app.
@@ -111,7 +117,7 @@ describe('routes', () => {
     await user.click(screen.getByRole('link', { name: 'Voltar ao início' }))
 
     // An anonymous visitor lands on the home page.
-    await screen.findByRole('heading', { level: 1, name: /Cada noite de cada imóvel/ })
+    await screen.findByRole('heading', { level: 1, name: /Sua temporada, ladrilho por ladrilho/ })
     expect(router.state.location.pathname).toBe('/')
   })
 })

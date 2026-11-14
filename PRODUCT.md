@@ -37,8 +37,10 @@ Feito para o aluguel de temporada brasileiro de quem tem poucos imóveis ou gere
 ## Brand Commitments
 
 - Nome: Hostly. Textos de interface em português do Brasil.
-- Paleta azul definida pelo dono do produto: Prussian `#13293D`, Sapphire `#006494`, Celadon `#247BA0`, Carolina `#1B98E0`, Azure `#E8F1F2`, com tema claro e escuro.
-- Nenhuma tela usa cards; listas, tabelas e o calendário.
+- Cores na família azul definida pelo dono do produto: Prussian `#13293D`, Sapphire `#006494`, Celadon `#247BA0`, Carolina `#1B98E0`, Azure `#E8F1F2`. Desde o redesign (#45, 2026-11-03) tons e papéis podem mudar, mas o resultado tem que ficar bem parecido com essas cores. Tema claro e escuro.
+- As reservas vivem num calendário (mês e semana, estadias marcadas por imóvel, no estilo Google Calendar), com o modo lista ao lado. O redesign não troca essa ideia.
+- Cards são permitidos (a regra "sem cards" caiu no redesign #45).
+- O dono quer movimento: animações com propósito no site todo, e a página inicial pública como a vitrine principal.
 
 ## Evidence on Hand
 

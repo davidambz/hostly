@@ -48,7 +48,7 @@ describe('app layout', () => {
     expect(within(nav).getByRole('link', { name: 'Reservas' })).not.toHaveAttribute('aria-current')
   })
 
-  it('navigates between sections, updating the breadcrumb and the tab title', async () => {
+  it('navigates between sections, updating the page title and the tab title', async () => {
     const user = userEvent.setup()
     const { router } = await renderApp('/reservas')
 
@@ -62,9 +62,6 @@ describe('app layout', () => {
       await screen.findByRole('heading', { level: 1, name: 'Intermediadores' }),
     ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/intermediadores')
-    expect(
-      within(screen.getByRole('navigation', { name: 'breadcrumb' })).getByText('Intermediadores'),
-    ).toBeInTheDocument()
     await waitFor(() => {
       expect(document.title).toBe('Intermediadores · Hostly')
     })

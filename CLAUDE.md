@@ -78,8 +78,11 @@ src/
   test/         # setup e helpers (renderRoute, renderWithProviders)
 ```
 
-- **Paleta**: Prussian `#13293D`, Sapphire `#006494`, Celadon `#247BA0`, Carolina `#1B98E0` e Azure `#E8F1F2`, como tokens em `globals.css`. Use as classes do tema (`bg-primary`, `text-muted-foreground`…), nunca cores soltas. Tudo tem que funcionar no claro e no escuro (`ThemeProvider` + script no `index.html` que evita o flash).
-- **Sem cards**: listas e tabelas. As reservas também têm a visão de calendário.
+- **Mundo visual "Parede de azulejos"** (redesign #45; detalhes em `apps/web/DESIGN.md`): o calendário é uma parede de ladrilhos, cada noite um ladrilho, cada reserva uma faixa pintada, cada imóvel um esmalte. Utilitários `azulejo` e `azulejo-field`, tokens `grout`/`glaze`/`cobalt` e os esmaltes `property-1…8` em `globals.css`.
+- **Cores**: família azul (Prussian `#13293D`, Sapphire `#006494`, Celadon `#247BA0`, Carolina `#1B98E0`, Azure `#E8F1F2`), como tokens em `globals.css`. Use as classes do tema (`bg-primary`, `text-muted-foreground`…), nunca cores soltas. Tudo tem que funcionar no claro e no escuro (`ThemeProvider` + script no `index.html` que evita o flash).
+- **Fontes**: Young Serif nos títulos (`font-display`) e Hanken Grotesk no texto, com algarismos tabulares em valores; as duas vêm do `@fontsource`, sem CDN.
+- **Movimento**: só o vocabulário do mundo (`animate-tile-settle`, `animate-paint`, `animate-tile-flip`), sempre partindo de um estado visível; `prefers-reduced-motion` desliga tudo.
+- **Calendário**: as reservas vivem num calendário (mês e semana, faixas por imóvel) com o modo lista ao lado; essa ideia não muda. Cards são permitidos.
 - **Contrato da API**: `apps/api/openapi.json` é gerado (`pnpm --filter @hostly/api openapi:export`) e os tipos do front saem dele (`pnpm --filter @hostly/web api:types`). Os dois arquivos são versionados, e o CI falha se estiverem desatualizados.
 - **Chamadas**: `api.GET('/rota')` (openapi-fetch, tipado) + `unwrap()`, que lança `ApiError` (`status`, `code`, `details`). O access token fica só em memória (`session.ts`); o `authFetch` faz o refresh no `TOKEN_EXPIRED` (um só, compartilhado) e repete a requisição.
 - Testes: Vitest + Testing Library + MSW (`*.test.tsx` ao lado do código). Os componentes de `components/ui` (shadcn) ficam fora da cobertura.

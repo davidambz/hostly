@@ -17,10 +17,13 @@ export function PropertySheet({
   open,
   onOpenChange,
   property,
+  draftName,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   property?: Property
+  /** For a new property: the name to start from. */
+  draftName?: string
 }) {
   const create = useCreateProperty()
   const update = useUpdateProperty()
@@ -38,8 +41,12 @@ export function PropertySheet({
         <div className="px-4 pb-6">
           {/* Remounted per property, so the form starts from that property's values. */}
           <PropertyForm
-            key={property?.id ?? 'new'}
-            defaultValues={property ? toFormValues(property) : EMPTY_PROPERTY_FORM}
+            key={property?.id ?? `new-${draftName ?? ''}`}
+            defaultValues={
+              property
+                ? toFormValues(property)
+                : { ...EMPTY_PROPERTY_FORM, name: draftName ?? EMPTY_PROPERTY_FORM.name }
+            }
             submitLabel={editing ? 'Salvar' : 'Cadastrar imóvel'}
             onCancel={() => {
               onOpenChange(false)

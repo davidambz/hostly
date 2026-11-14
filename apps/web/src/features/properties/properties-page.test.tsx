@@ -85,6 +85,17 @@ describe('properties list', () => {
     expect(within(nth(rows, 2)).getByText('Mar Azul · Unidade 1204')).toBeInTheDocument()
   })
 
+  it('marks each property with the color it has on the calendar', async () => {
+    serveProperties([house, apartment])
+    await openPage()
+
+    const rows = within(await screen.findByRole('table', { name: 'Imóveis' })).getAllByRole('row')
+    await waitFor(() => {
+      expect(nth(rows, 1).querySelector('.bg-property-1')).not.toBeNull()
+    })
+    expect(nth(rows, 2).querySelector('.bg-property-2')).not.toBeNull()
+  })
+
   it('invites to create the first one when there are none', async () => {
     serveProperties([])
     await openPage()
@@ -159,6 +170,23 @@ describe('properties list', () => {
 })
 
 describe('creating a property', () => {
+  it('opens the form with the name brought from the home page, once', async () => {
+    serveProperties([])
+    const user = userEvent.setup()
+    // The sheet opens at once, so the page behind it (and its heading) is hidden from the start.
+    const { router } = renderRoute(routes, '/imoveis?novo=%20Casa%20Azul%20')
+
+    const sheet = await screen.findByRole('dialog', { name: 'Novo imóvel' })
+    expect(within(sheet).getByLabelText('Nome')).toHaveValue('Casa Azul')
+    expect(router.state.location.search).toBe('')
+
+    // A new property started from the button starts empty.
+    await user.click(within(sheet).getByRole('button', { name: 'Cancelar' }))
+    await user.click(nth(await screen.findAllByRole('button', { name: 'Novo imóvel' }), 0))
+    const fresh = await screen.findByRole('dialog', { name: 'Novo imóvel' })
+    expect(within(fresh).getByLabelText('Nome')).toHaveValue('')
+  })
+
   it('fills the address from the CEP and sends only what was filled', async () => {
     serveProperties([])
     server.use(
