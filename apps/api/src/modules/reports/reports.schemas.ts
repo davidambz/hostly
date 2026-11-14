@@ -37,6 +37,20 @@ export const figuresSchema = z
   })
   .meta({ id: 'ReportFigures' })
 
+export const monthlyQuerySchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2100),
+  /** Only this property; all of them without it. */
+  propertyId: z.uuid().optional(),
+})
+
+export const monthlySchema = z
+  .object({
+    year: z.number().int(),
+    months: z.array(figuresSchema.extend({ month: z.string().describe('`YYYY-MM`') })),
+    total: figuresSchema,
+  })
+  .meta({ id: 'MonthlyReport' })
+
 export const performanceSchema = z
   .object({
     from: z.iso.date(),

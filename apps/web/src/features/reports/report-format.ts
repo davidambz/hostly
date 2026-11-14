@@ -30,3 +30,15 @@ export function change(now: number | null, before: number | null, points = false
   const value = Math.round((Math.abs(now - before) / Math.abs(before)) * 1000) / 10
   return { direction, text: `${sign}${value.toLocaleString('pt-BR')}%` }
 }
+
+/**
+ * Axis ticks from zero: a clean step (1, 2 or 5 times a power of ten) and at most five
+ * ticks, the last one at or above `max`.
+ */
+export function niceTicks(max: number): number[] {
+  if (max <= 0) return [0, 1]
+  const power = 10 ** Math.floor(Math.log10(max / 4))
+  const step =
+    [1, 2, 5, 10].map((factor) => factor * power).find((size) => max / size <= 4) ?? 10 * power
+  return Array.from({ length: Math.ceil(max / step - 1e-9) + 1 }, (_, index) => index * step)
+}

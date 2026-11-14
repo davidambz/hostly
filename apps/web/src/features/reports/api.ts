@@ -23,3 +23,15 @@ export function usePerformance({ from, to }: Period) {
     placeholderData: keepPreviousData,
   })
 }
+
+export type MonthlyReport = components['schemas']['MonthlyReport']
+
+/** Each month of the year, for one property or all of them. */
+export function useMonthly({ year, propertyId }: { year: number; propertyId?: string }) {
+  return useQuery({
+    queryKey: ['reports', 'monthly', year, propertyId ?? 'all'] as const,
+    queryFn: async () =>
+      unwrap(await api.GET('/reports/monthly', { params: { query: { year, propertyId } } })),
+    placeholderData: keepPreviousData,
+  })
+}

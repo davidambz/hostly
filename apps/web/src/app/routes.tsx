@@ -106,6 +106,13 @@ export const routes: RouteObject[] = [
                 }),
               },
               {
+                path: '/relatorios/ano',
+                handle: handle('Ano mês a mês · Relatórios'),
+                lazy: async () => ({
+                  Component: (await import('@/features/reports/year-page')).YearPage,
+                }),
+              },
+              {
                 path: '/plano',
                 handle: handle('Meu plano'),
                 lazy: async () => ({
