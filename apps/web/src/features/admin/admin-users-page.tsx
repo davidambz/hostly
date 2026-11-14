@@ -1,4 +1,4 @@
-import { MoreHorizontal, SearchX, ShieldCheck, ShieldOff } from 'lucide-react'
+import { Gift, MoreHorizontal, SearchX, ShieldCheck, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -28,6 +28,8 @@ import { errorMessage } from '@/lib/api/form-errors'
 
 import { useAuth } from '../auth/auth-context'
 import { ADMIN_PAGE_SIZE, type AdminUser, useAdminUsers, useSetAdmin } from './api'
+import { untilLabel } from './grant-labels'
+import { GrantsSheet } from './grants-sheet'
 
 /** Every account: its plan, its properties, and the administrator role. */
 export function AdminUsersPage() {
@@ -36,6 +38,7 @@ export function AdminUsersPage() {
   const users = useAdminUsers({ search, page })
   const setAdmin = useSetAdmin()
   const changing = useOverlay<AdminUser>()
+  const granting = useOverlay<AdminUser>()
   const pastTheEnd = useClampedPage({
     page,
     pageSize: ADMIN_PAGE_SIZE,
@@ -108,21 +111,32 @@ export function AdminUsersPage() {
                       {user.propertyCount}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{user.plan.name}</Badge>
+                      <Badge variant={user.planSource === 'GRANT' ? 'default' : 'secondary'}>
+                        {user.plan.name}
+                      </Badge>
+                      {user.grant && (
+                        <div className="text-muted-foreground mt-1 text-xs">
+                          cortesia até {untilLabel(user.grant.endsAt)}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
-                      {user.id !== me?.id && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`Ações de ${user.name}`}
-                            >
-                              <MoreHorizontal />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" aria-label={`Ações de ${user.name}`}>
+                            <MoreHorizontal />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              granting.show(user)
+                            }}
+                          >
+                            <Gift className="size-4" />
+                            Plano e concessões
+                          </DropdownMenuItem>
+                          {user.id !== me?.id && (
                             <DropdownMenuItem
                               onSelect={() => {
                                 changing.show(user)
@@ -135,9 +149,9 @@ export function AdminUsersPage() {
                               )}
                               {user.isAdmin ? 'Remover administrador' : 'Tornar administrador'}
                             </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -152,6 +166,8 @@ export function AdminUsersPage() {
           />
         </>
       )}
+
+      <GrantsSheet user={granting.item} open={granting.open} onOpenChange={granting.setOpen} />
 
       <ConfirmDialog
         open={changing.open}

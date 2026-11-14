@@ -27,12 +27,15 @@ export class AdminService {
     return {
       ...page,
       items: page.items.map((user) => {
-        const plan = plans.get(user.id)
-        if (!plan) throw new Error(`No plan for user ${user.id}`)
+        const current = plans.get(user.id)
+        if (!current) throw new Error(`No plan for user ${user.id}`)
+        const { plan, source, grant } = current
         return {
           ...user,
           createdAt: user.createdAt.toISOString(),
           plan: { id: plan.id, code: plan.code, name: plan.name },
+          planSource: source,
+          grant: grant && { id: grant.id, endsAt: grant.endsAt?.toISOString() ?? null },
         }
       }),
     }
