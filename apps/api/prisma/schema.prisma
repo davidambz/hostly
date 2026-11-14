@@ -44,28 +44,32 @@ enum PropertyType {
 }
 
 model Property {
-  id           String       @id @default(uuid(7)) @db.Uuid
-  userId       String       @map("user_id") @db.Uuid
+  id                 String       @id @default(uuid(7)) @db.Uuid
+  userId             String       @map("user_id") @db.Uuid
   /// How the owner identifies the property, e.g. "Casa da praia".
-  name         String       @db.VarChar(255)
-  type         PropertyType
+  name               String       @db.VarChar(255)
+  type               PropertyType
   /// CEP, 8 digits.
-  zipCode      String?      @map("zip_code") @db.Char(8)
+  zipCode            String?      @map("zip_code") @db.Char(8)
   /// UF, e.g. "SC".
-  state        String?      @db.Char(2)
-  city         String?      @db.VarChar(255)
-  neighborhood String?      @db.VarChar(255)
-  street       String?      @db.VarChar(255)
-  number       String?      @db.VarChar(20)
-  complement   String?      @db.VarChar(255)
+  state              String?      @db.Char(2)
+  city               String?      @db.VarChar(255)
+  neighborhood       String?      @db.VarChar(255)
+  street             String?      @db.VarChar(255)
+  number             String?      @db.VarChar(20)
+  complement         String?      @db.VarChar(255)
   /// Apartment only.
-  building     String?      @db.VarChar(255)
+  building           String?      @db.VarChar(255)
   /// Apartment only.
-  block        String?      @db.VarChar(50)
+  block              String?      @db.VarChar(50)
   /// Apartment only.
-  unit         String?      @db.VarChar(20)
-  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  unit               String?      @db.VarChar(20)
+  /// Cents per night a new booking of this property starts with.
+  defaultNightlyRate Int?         @map("default_nightly_rate")
+  /// Cleaning fee, in cents, a new booking of this property starts with.
+  defaultCleaningFee Int?         @map("default_cleaning_fee")
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings Booking[]
@@ -83,17 +87,19 @@ enum BrokerType {
 }
 
 model Broker {
-  id            String     @id @default(uuid(7)) @db.Uuid
-  userId        String     @map("user_id") @db.Uuid
-  type          BrokerType
-  name          String     @db.VarChar(255)
-  email         String?    @db.VarChar(255)
+  id                   String     @id @default(uuid(7)) @db.Uuid
+  userId               String     @map("user_id") @db.Uuid
+  type                 BrokerType
+  name                 String     @db.VarChar(255)
+  email                String?    @db.VarChar(255)
   /// CPF (11 digits) for INDIVIDUAL, CNPJ (14 characters, may be alphanumeric) for COMPANY.
-  document      String?    @db.VarChar(14)
-  mobilePhone   String?    @map("mobile_phone") @db.VarChar(11)
-  landlinePhone String?    @map("landline_phone") @db.VarChar(10)
-  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  document             String?    @db.VarChar(14)
+  mobilePhone          String?    @map("mobile_phone") @db.VarChar(11)
+  landlinePhone        String?    @map("landline_phone") @db.VarChar(10)
+  /// Commission, in basis points, a new booking with this broker starts with.
+  defaultCommissionBps Int?       @map("default_commission_bps")
+  createdAt            DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings Booking[]

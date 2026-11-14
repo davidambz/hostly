@@ -4,19 +4,17 @@ import type { Booking } from '../../generated/prisma/client.js'
 import { formatDate, nightsBetween, parseDate } from '../../shared/dates.js'
 import { pageSchema, paginationQuerySchema } from '../../shared/pagination.js'
 import { nameSchema } from '../../shared/validation/fields.js'
+import { bpsSchema, centsSchema } from '../../shared/validation/money.js'
+
+export { MAX_AMOUNT_CENTS } from '../../shared/validation/money.js'
 import { computeFinancials } from './booking-financials.js'
 
 /** Longest stay accepted: a year. */
 export const MAX_NIGHTS = 365
 /** Longest window the calendar asks for at once (a year view). */
 export const MAX_CALENDAR_DAYS = 366
-/** R$ 10 million, in cents: far above any real stay, well inside a 32-bit integer. */
-export const MAX_AMOUNT_CENTS = 1_000_000_000
 
 const dateSchema = z.iso.date()
-const centsSchema = z.number().int().min(0).max(MAX_AMOUNT_CENTS)
-/** Basis points: 1000 = 10%. */
-const bpsSchema = z.number().int().min(0).max(10_000)
 
 const bookingFields = {
   propertyId: z.uuid(),

@@ -515,6 +515,8 @@ export interface paths {
             building?: string | null
             block?: string | null
             unit?: string | null
+            defaultNightlyRate?: number | null
+            defaultCleaningFee?: number | null
           }
         }
       }
@@ -735,6 +737,8 @@ export interface paths {
             building?: string | null
             block?: string | null
             unit?: string | null
+            defaultNightlyRate?: number | null
+            defaultCleaningFee?: number | null
           }
         }
       }
@@ -854,6 +858,7 @@ export interface paths {
             document?: string | null
             mobilePhone?: string | null
             landlinePhone?: string | null
+            defaultCommissionBps?: number | null
           }
         }
       }
@@ -1039,6 +1044,7 @@ export interface paths {
             document?: string | null
             mobilePhone?: string | null
             landlinePhone?: string | null
+            defaultCommissionBps?: number | null
           }
         }
       }
@@ -1654,6 +1660,7 @@ export interface components {
       document: string | null
       mobilePhone: string | null
       landlinePhone: string | null
+      defaultCommissionBps: number | null
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
@@ -1681,6 +1688,8 @@ export interface components {
       building: string | null
       block: string | null
       unit: string | null
+      defaultNightlyRate: number | null
+      defaultCleaningFee: number | null
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
@@ -1776,6 +1785,7 @@ export interface components {
       document: string | null
       mobilePhone: string | null
       landlinePhone: string | null
+      defaultCommissionBps: number | null
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
@@ -1803,6 +1813,8 @@ export interface components {
       building: string | null
       block: string | null
       unit: string | null
+      defaultNightlyRate: number | null
+      defaultCleaningFee: number | null
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */

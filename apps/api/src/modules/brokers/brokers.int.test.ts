@@ -69,6 +69,7 @@ describe('POST /brokers', () => {
       document: '12ABC34501DE35',
       mobilePhone: '48988776655',
       landlinePhone: '4833221100',
+      defaultCommissionBps: null,
       createdAt: expect.any(String) as string,
       updatedAt: expect.any(String) as string,
     })
@@ -94,7 +95,37 @@ describe('POST /brokers', () => {
       email: null,
       mobilePhone: null,
       landlinePhone: null,
+      defaultCommissionBps: null,
     })
+  })
+
+  it('keeps the commission new bookings start with', async () => {
+    const response = await request('POST', '/brokers', {
+      ...individual,
+      defaultCommissionBps: 1000,
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(response.json()).toMatchObject({ defaultCommissionBps: 1000 })
+  })
+
+  it.each([
+    ['a negative commission', -1],
+    ['a commission above 100%', 10_001],
+    ['a fraction of a basis point', 12.5],
+  ])('answers 400 for %s', async (_case, defaultCommissionBps) => {
+    const response = await request('POST', '/brokers', { ...individual, defaultCommissionBps })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('refuses, in the database, a commission above 100%', async () => {
+    const created = await request('POST', '/brokers', individual)
+    const { id } = created.json<{ id: string }>()
+
+    await expect(
+      db.broker.update({ where: { id }, data: { defaultCommissionBps: 10_001 } }),
+    ).rejects.toThrow()
   })
 
   it.each([

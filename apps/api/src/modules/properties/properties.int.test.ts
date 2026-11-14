@@ -76,11 +76,42 @@ describe('POST /properties', () => {
       building: null,
       block: null,
       unit: null,
+      defaultNightlyRate: null,
+      defaultCleaningFee: null,
       createdAt: expect.any(String) as string,
       updatedAt: expect.any(String) as string,
     })
     const stored = await db.property.findFirstOrThrow()
     expect(stored.userId).toBe(owner.id)
+  })
+
+  it('keeps the rate and cleaning fee new bookings start with', async () => {
+    const response = await request('POST', '/properties', {
+      ...house,
+      defaultNightlyRate: 45000,
+      defaultCleaningFee: 18000,
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(response.json()).toMatchObject({ defaultNightlyRate: 45000, defaultCleaningFee: 18000 })
+  })
+
+  it.each([
+    ['a negative rate', { defaultNightlyRate: -1 }],
+    ['a rate in reais, not cents', { defaultNightlyRate: 450.5 }],
+    ['a fee above the cap', { defaultCleaningFee: 1_000_000_001 }],
+  ])('answers 400 for %s', async (_case, defaults) => {
+    const response = await request('POST', '/properties', { ...house, ...defaults })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('refuses, in the database, a negative default', async () => {
+    const property = await createProperty(db, { userId: owner.id })
+
+    await expect(
+      db.property.update({ where: { id: property.id }, data: { defaultNightlyRate: -1 } }),
+    ).rejects.toThrow()
   })
 
   it('creates an apartment with its apartment fields', async () => {
@@ -251,6 +282,18 @@ describe('PATCH /properties/:id', () => {
       complement: null,
       neighborhood: null,
     })
+  })
+
+  it('changes and clears the defaults', async () => {
+    const created = await request('POST', '/properties', { ...house, defaultNightlyRate: 45000 })
+    const { id } = created.json<{ id: string }>()
+
+    const changed = await request('PATCH', `/properties/${id}`, {
+      defaultNightlyRate: null,
+      defaultCleaningFee: 15000,
+    })
+
+    expect(changed.json()).toMatchObject({ defaultNightlyRate: null, defaultCleaningFee: 15000 })
   })
 
   it('bumps updatedAt', async () => {

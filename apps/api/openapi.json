@@ -356,6 +356,12 @@
             "nullable": true,
             "type": "string"
           },
+          "defaultCommissionBps": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -375,6 +381,7 @@
           "document",
           "mobilePhone",
           "landlinePhone",
+          "defaultCommissionBps",
           "createdAt",
           "updatedAt"
         ]
@@ -469,6 +476,18 @@
             "nullable": true,
             "type": "string"
           },
+          "defaultNightlyRate": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "defaultCleaningFee": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -494,6 +513,8 @@
           "building",
           "block",
           "unit",
+          "defaultNightlyRate",
+          "defaultCleaningFee",
           "createdAt",
           "updatedAt"
         ]
@@ -881,6 +902,12 @@
             "nullable": true,
             "type": "string"
           },
+          "defaultCommissionBps": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -900,6 +927,7 @@
           "document",
           "mobilePhone",
           "landlinePhone",
+          "defaultCommissionBps",
           "createdAt",
           "updatedAt"
         ],
@@ -996,6 +1024,18 @@
             "nullable": true,
             "type": "string"
           },
+          "defaultNightlyRate": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "defaultCleaningFee": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -1021,6 +1061,8 @@
           "building",
           "block",
           "unit",
+          "defaultNightlyRate",
+          "defaultCleaningFee",
           "createdAt",
           "updatedAt"
         ],
@@ -1633,6 +1675,18 @@
                     "nullable": true,
                     "type": "string",
                     "maxLength": 20
+                  },
+                  "defaultNightlyRate": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000000000
+                  },
+                  "defaultCleaningFee": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000000000
                   }
                 },
                 "required": [
@@ -1850,6 +1904,18 @@
                     "nullable": true,
                     "type": "string",
                     "maxLength": 20
+                  },
+                  "defaultNightlyRate": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000000000
+                  },
+                  "defaultCleaningFee": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000000000
                   }
                 }
               }
@@ -2118,6 +2184,12 @@
                     "nullable": true,
                     "type": "string",
                     "pattern": "^[\\d\\s().+-]*$"
+                  },
+                  "defaultCommissionBps": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000
                   }
                 },
                 "required": [
@@ -2276,6 +2348,12 @@
                     "nullable": true,
                     "type": "string",
                     "pattern": "^[\\d\\s().+-]*$"
+                  },
+                  "defaultCommissionBps": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000
                   }
                 }
               }
