@@ -107,7 +107,9 @@ export function BookingSheet({
               }
               onSubmit={async (input) => {
                 if (booking) {
-                  await update.mutateAsync({ id: booking.id, input })
+                  // What was paid changes only through the payments.
+                  const { amountPaid: _paid, ...changes } = input
+                  await update.mutateAsync({ id: booking.id, input: changes })
                   toast.success('Reserva atualizada.')
                 } else {
                   await create.mutateAsync(input)

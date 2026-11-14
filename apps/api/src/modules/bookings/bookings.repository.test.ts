@@ -30,9 +30,9 @@ describe('BookingsRepository.create errors', () => {
   it('reports an overlap as an ExclusionConflictError', async () => {
     const error = driverError('P2039', { originalCode: '23P01' })
 
-    await expect(repositoryWhoseCreateFailsWith(error).create('u1', data)).rejects.toBeInstanceOf(
-      ExclusionConflictError,
-    )
+    await expect(
+      repositoryWhoseCreateFailsWith(error).create('u1', data, new Date()),
+    ).rejects.toBeInstanceOf(ExclusionConflictError)
   })
 
   it.each([
@@ -41,7 +41,9 @@ describe('BookingsRepository.create errors', () => {
   ])('reports %s as a missing %s', async (index, field) => {
     const error = driverError('P2003', { constraint: { index } })
 
-    await expect(repositoryWhoseCreateFailsWith(error).create('u1', data)).rejects.toMatchObject({
+    await expect(
+      repositoryWhoseCreateFailsWith(error).create('u1', data, new Date()),
+    ).rejects.toMatchObject({
       name: 'MissingReferenceError',
       field,
     })
@@ -51,9 +53,11 @@ describe('BookingsRepository.create errors', () => {
     const unknownKey = driverError('P2003', { constraint: { index: 'bookings_user_id_fkey' } })
     const other = new Error('connection reset')
 
-    await expect(repositoryWhoseCreateFailsWith(unknownKey).create('u1', data)).rejects.toBe(
-      unknownKey,
+    await expect(
+      repositoryWhoseCreateFailsWith(unknownKey).create('u1', data, new Date()),
+    ).rejects.toBe(unknownKey)
+    await expect(repositoryWhoseCreateFailsWith(other).create('u1', data, new Date())).rejects.toBe(
+      other,
     )
-    await expect(repositoryWhoseCreateFailsWith(other).create('u1', data)).rejects.toBe(other)
   })
 })

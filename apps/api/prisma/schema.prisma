@@ -31,6 +31,7 @@ model User {
   properties    Property[]
   brokers       Broker[]
   bookings      Booking[]
+  payments      Payment[]
   refreshTokens RefreshToken[]
 
   @@map("users")
@@ -127,7 +128,7 @@ model Booking {
   cleaningFee         Int      @default(0) @map("cleaning_fee")
   /// Cents, taken off the lodging total.
   discount            Int      @default(0)
-  /// Cents already paid by the guest.
+  /// Cents already paid by the guest: always the sum of the booking's payments.
   amountPaid          Int      @default(0) @map("amount_paid")
   /// Basis points (1000 = 10%); only meaningful with a broker.
   brokerCommissionBps Int      @default(0) @map("broker_commission_bps")
@@ -141,6 +142,9 @@ model Booking {
   property Property @relation(fields: [propertyId, userId], references: [id, userId], onDelete: NoAction)
   broker   Broker?  @relation(fields: [brokerId, userId], references: [id, userId], onDelete: NoAction)
 
+  payments Payment[]
+
+  @@unique([id, userId])
   @@index([userId, checkOut])
   @@index([propertyId, checkIn])
   @@index([brokerId])
@@ -182,4 +186,25 @@ model RefreshToken {
   @@index([familyId])
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+/// A payment received for a booking. The booking's amountPaid is the sum of these.
+model Payment {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  bookingId String   @map("booking_id") @db.Uuid
+  /// Cents, more than zero.
+  amount    Int
+  /// The day it was received.
+  paidOn    DateTime @map("paid_on") @db.Date
+  /// E.g. "Sinal", "Pix", "Restante".
+  note      String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Deleting a booking deletes its payments.
+  booking Booking @relation(fields: [bookingId, userId], references: [id, userId], onDelete: Cascade)
+
+  @@index([bookingId, paidOn])
+  @@map("payments")
 }

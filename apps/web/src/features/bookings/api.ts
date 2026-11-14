@@ -109,11 +109,57 @@ export function useCreateBooking() {
   })
 }
 
+/** What an edit can change: what was paid changes only through the payments. */
+export type BookingChanges = Omit<BookingInput, 'amountPaid'>
+
 export function useUpdateBooking() {
   const invalidate = useInvalidateBookings()
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: BookingInput }) =>
+    mutationFn: async ({ id, input }: { id: string; input: BookingChanges }) =>
       unwrap(await api.PATCH('/bookings/{id}', { params: { path: { id } }, body: input })),
+    onSuccess: invalidate,
+  })
+}
+
+export type Payment = components['schemas']['Payment']
+export type PaymentInput =
+  paths['/bookings/{id}/payments']['post']['requestBody']['content']['application/json']
+
+/** Under the bookings key: whatever refreshes the bookings refreshes the payments too. */
+const paymentKeys = (bookingId: string) => [...bookingKeys.all, 'payments', bookingId] as const
+
+/** A booking's payments, oldest first. */
+export function usePayments(bookingId: string) {
+  return useQuery({
+    queryKey: paymentKeys(bookingId),
+    queryFn: async () =>
+      unwrap(await api.GET('/bookings/{id}/payments', { params: { path: { id: bookingId } } })),
+  })
+}
+
+export function useAddPayment(bookingId: string) {
+  const invalidate = useInvalidateBookings()
+  return useMutation({
+    mutationFn: async (input: PaymentInput) =>
+      unwrap(
+        await api.POST('/bookings/{id}/payments', {
+          params: { path: { id: bookingId } },
+          body: input,
+        }),
+      ),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeletePayment(bookingId: string) {
+  const invalidate = useInvalidateBookings()
+  return useMutation({
+    mutationFn: async (paymentId: string) =>
+      unwrap(
+        await api.DELETE('/bookings/{id}/payments/{paymentId}', {
+          params: { path: { id: bookingId, paymentId } },
+        }),
+      ),
     onSuccess: invalidate,
   })
 }
