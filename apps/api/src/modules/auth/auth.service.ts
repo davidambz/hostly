@@ -2,10 +2,16 @@ import { randomUUID } from 'node:crypto'
 
 import type { User } from '../../generated/prisma/client.js'
 import { UniqueFieldError } from '../../shared/database-errors.js'
-import { BadRequestError, ConflictError, UnauthorizedError } from '../../shared/errors.js'
+import {
+  BadRequestError,
+  ConflictError,
+  TooManyRequestsError,
+  UnauthorizedError,
+} from '../../shared/errors.js'
 import type { UsersRepository } from '../users/users.repository.js'
 import type { ChangePasswordInput, LoginInput, RegisterInput } from './auth.schemas.js'
 import { generateRefreshToken, hashRefreshToken } from './refresh-token.js'
+import type { LoginAttemptsRepository } from './login-attempts.repository.js'
 import type { NewRefreshToken, RefreshTokensRepository } from './refresh-tokens.repository.js'
 
 /**
@@ -13,6 +19,10 @@ import type { NewRefreshToken, RefreshTokensRepository } from './refresh-tokens.
  * than stolen: two tabs or a retried request refreshing with the same cookie land here.
  */
 export const ROTATION_GRACE_MS = 30_000
+
+/** Logins allowed per e-mail in a window, from any number of IP addresses. */
+export const LOGIN_MAX_ATTEMPTS = 5
+export const LOGIN_WINDOW_MS = 15 * 60 * 1000
 
 export interface AuthServiceDeps {
   users: Pick<
@@ -23,6 +33,7 @@ export interface AuthServiceDeps {
     RefreshTokensRepository,
     'create' | 'findByHash' | 'replace' | 'revokeFamily' | 'revokeAllBut' | 'deleteExpired'
   >
+  loginAttempts: Pick<LoginAttemptsRepository, 'register' | 'clear'>
   hashPassword: (password: string) => Promise<string>
   verifyPassword: (passwordHash: string, password: string) => Promise<boolean>
   signAccessToken: (userId: string) => string
@@ -93,6 +104,21 @@ export class AuthService {
    * take the same time, so the answer doesn't reveal which accounts exist.
    */
   async login({ email, password }: LoginInput): Promise<{ user: User; session: Session }> {
+    // Counted before the password is checked, and for unknown e-mails too: the limit holds
+    // for attempts made at the same moment, and it says nothing about which accounts exist.
+    const started = this.now()
+    const attempts = await this.deps.loginAttempts.register(
+      email,
+      started,
+      new Date(started.getTime() - LOGIN_WINDOW_MS),
+    )
+    if (attempts > LOGIN_MAX_ATTEMPTS) {
+      throw new TooManyRequestsError('Too many login attempts for this e-mail', {
+        code: 'LOGIN_LOCKED',
+        details: { retryAfterSeconds: LOGIN_WINDOW_MS / 1000 },
+      })
+    }
+
     const user = await this.deps.users.findByEmail(email)
     if (!user) {
       await this.deps.verifyPassword(await this.getDummyHash(), password)
@@ -102,6 +128,7 @@ export class AuthService {
       throw invalidCredentials()
     }
 
+    await this.deps.loginAttempts.clear(email)
     const now = this.now()
     await this.deps.refreshTokens.deleteExpired(user.id, now)
     const next = this.newRefreshToken(

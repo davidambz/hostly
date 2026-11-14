@@ -193,7 +193,7 @@ export interface paths {
     put?: never
     /**
      * Log in
-     * @description Returns a short-lived access token (send it as `Authorization: Bearer`) and sets the refresh token in an httpOnly cookie. Wrong e-mail and wrong password both answer 401 INVALID_CREDENTIALS.
+     * @description Returns a short-lived access token (send it as `Authorization: Bearer`) and sets the refresh token in an httpOnly cookie. Wrong e-mail and wrong password both answer 401 INVALID_CREDENTIALS. More than 5 attempts for one e-mail in 15 minutes, from anywhere, answer 429 LOGIN_LOCKED until the window ends.
      */
     post: {
       parameters: {

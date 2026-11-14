@@ -57,6 +57,12 @@ export class ConflictError extends AppError {
   }
 }
 
+export class TooManyRequestsError extends AppError {
+  constructor(message: string, options?: AppErrorOptions) {
+    super(429, 'TOO_MANY_REQUESTS', message, options)
+  }
+}
+
 /** Something the API depends on isn't configured or reachable (e.g. payments without Stripe). */
 export class ServiceUnavailableError extends AppError {
   constructor(message: string, options?: AppErrorOptions) {

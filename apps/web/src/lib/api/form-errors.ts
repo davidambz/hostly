@@ -17,6 +17,7 @@ const MESSAGES: Record<string, string> = {
   WRONG_PASSWORD: 'A senha atual não confere.',
   PAYMENT_EXCEEDS_BALANCE: 'O pagamento passa do que falta receber.',
   PLAN_LIMIT_REACHED: 'Seu plano não permite mais imóveis. Veja Meu plano.',
+  LOGIN_LOCKED: 'Muitas tentativas de entrar com este e-mail. Espere 15 minutos e tente de novo.',
   TOO_MANY_REQUESTS: 'Muitas tentativas. Espere um minuto e tente de novo.',
 }
 

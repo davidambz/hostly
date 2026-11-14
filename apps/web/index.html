@@ -13,18 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="Hostly" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Hostly</title>
-    <script>
-      // Applies the saved theme before the first paint, so dark mode never flashes white.
-      try {
-        const saved = localStorage.getItem('hostly-theme')
-        // Anything but an explicit light or dark (missing, "system", garbage) follows the
-        // system, exactly as ThemeProvider reads it.
-        const dark =
-          saved === 'dark' ||
-          (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-        document.documentElement.classList.toggle('dark', dark)
-      } catch {}
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

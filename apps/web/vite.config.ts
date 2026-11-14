@@ -2,11 +2,32 @@ import { fileURLToPath } from 'node:url'
 
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defaultClientConditions } from 'vite'
+import { defaultClientConditions, loadEnv, type Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
 
+import { contentSecurityPolicy } from './src/lib/csp'
+
+/** Puts the Content-Security-Policy in the built index.html (not in dev: Vite's HMR is inline). */
+function csp(): Plugin {
+  let apiUrl = 'http://localhost:3333'
+  return {
+    name: 'hostly-csp',
+    apply: 'build',
+    configResolved(config) {
+      apiUrl = loadEnv(config.mode, process.cwd(), 'VITE_').VITE_API_URL ?? apiUrl
+    },
+    transformIndexHtml: () => [
+      {
+        tag: 'meta',
+        attrs: { 'http-equiv': 'Content-Security-Policy', content: contentSecurityPolicy(apiUrl) },
+        injectTo: 'head-prepend',
+      },
+    ],
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), csp()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     // Workspace packages straight from their source, so an edit there shows up without a build.

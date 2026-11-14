@@ -175,6 +175,7 @@ jobs:
           docker run -d --name api-prod --network "$NETWORK" -p 3333:3333 \
             -e DATABASE_URL=postgresql://hostly:hostly@postgres:5432/hostly \
             -e JWT_SECRET=ci-secret-that-is-at-least-32-characters-long \
+            -e TRUST_PROXY=false \
             hostly-api:prod
           for _ in $(seq 1 30); do
             if [ "$(docker inspect -f '{{.State.Health.Status}}' api-prod)" = healthy ]; then
