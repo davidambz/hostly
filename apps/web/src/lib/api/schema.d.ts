@@ -1167,6 +1167,8 @@ export interface paths {
              */
             brokerId?: string | null
             guestName: string
+            guestPhone?: string | null
+            notes?: string | null
             /** Format: date */
             checkIn: string
             /** Format: date */
@@ -1510,6 +1512,8 @@ export interface paths {
             /** Format: uuid */
             brokerId?: string | null
             guestName?: string
+            guestPhone?: string | null
+            notes?: string | null
             /** Format: date */
             checkIn?: string
             /** Format: date */
@@ -1628,6 +1632,8 @@ export interface components {
         name: string
       } | null
       guestName: string
+      guestPhone: string | null
+      notes: string | null
       /** Format: date */
       checkIn: string
       /** Format: date */
@@ -1753,6 +1759,8 @@ export interface components {
         name: string
       } | null
       guestName: string
+      guestPhone: string | null
+      notes: string | null
       /** Format: date */
       checkIn: string
       /** Format: date */

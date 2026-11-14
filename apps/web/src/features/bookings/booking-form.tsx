@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, Trash2 } from 'lucide-react'
+import { Loader2, MessageCircle, Trash2 } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 
@@ -7,11 +7,13 @@ import { FormError } from '@/components/form/form-error'
 import { withMask } from '@/components/form/mask'
 import { SelectField } from '@/components/form/select-field'
 import { TextField } from '@/components/form/text-field'
+import { TextareaField } from '@/components/form/textarea-field'
 import { Button } from '@/components/ui/button'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { ApiError } from '@/lib/api/errors'
 import { applyApiError } from '@/lib/api/form-errors'
 import { maskMoney, maskPercent } from '@/lib/money'
+import { maskPhone } from '@hostly/validation'
 
 import type { BookingInput, QuoteInput } from './api'
 import {
@@ -19,6 +21,7 @@ import {
   bookingFormSchema,
   toBookingInput,
   toQuoteInput,
+  whatsAppLink,
   type BookingDefaults,
   defaultsToFill,
 } from './booking-schema'
@@ -35,6 +38,8 @@ const API_FIELD_MESSAGES = {
   propertyId: 'Imóvel inválido.',
   brokerId: 'Intermediador inválido.',
   guestName: 'Nome inválido.',
+  guestPhone: 'Telefone inválido.',
+  notes: 'Observações inválidas.',
   checkIn: 'Data inválida.',
   checkOut: 'Data inválida.',
   nightlyRate: 'Diária inválida.',
@@ -87,6 +92,7 @@ export function BookingForm({
   })
   const { errors, isSubmitting } = form.formState
   const values = useWatch({ control: form.control }) as BookingFormValues
+  const whatsApp = whatsAppLink(values.guestPhone)
 
   // The quote follows the form, once it stops changing. Compared as text: the values
   // object is new on every render.
@@ -157,6 +163,27 @@ export function BookingForm({
         error={errors.guestName?.message}
         {...form.register('guestName')}
       />
+
+      <div className="grid gap-2">
+        <TextField
+          label="Telefone do hóspede"
+          type="tel"
+          placeholder="ex.: (48) 99999-0000"
+          error={errors.guestPhone?.message}
+          {...withMask(form.register('guestPhone'), maskPhone)}
+        />
+        {whatsApp && (
+          <a
+            href={whatsApp}
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary inline-flex w-fit items-center gap-1.5 text-sm font-medium underline-offset-4 hover:underline"
+          >
+            <MessageCircle className="size-4" aria-hidden />
+            Abrir no WhatsApp
+          </a>
+        )}
+      </div>
 
       <Controller
         control={form.control}
@@ -232,6 +259,14 @@ export function BookingForm({
           {...withMask(form.register('brokerCommissionBps'), maskPercent)}
         />
       </div>
+
+      <TextareaField
+        label="Observações"
+        placeholder="Horário de chegada, quantas pessoas, pet…"
+        maxLength={2000}
+        error={errors.notes?.message}
+        {...form.register('notes')}
+      />
 
       <FinancialSummary input={quoteInput} />
 

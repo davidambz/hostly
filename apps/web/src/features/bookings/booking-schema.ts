@@ -1,9 +1,24 @@
 import { z } from 'zod'
 
+import {
+  isValidLandlinePhone,
+  isValidMobilePhone,
+  maskPhone,
+  normalizePhone,
+} from '@hostly/validation'
+
 import { bpsToPercent, formatBRL, parseMoney, percentToBps } from '@/lib/money'
 
 import type { Booking, BookingInput, QuoteInput } from './api'
 import { nightsBetween } from './dates'
+
+const isPhone = (digits: string) => isValidMobilePhone(digits) || isValidLandlinePhone(digits)
+
+/** A WhatsApp link for a guest's mobile phone as typed, or null when it isn't a mobile. */
+export function whatsAppLink(phone: string): string | null {
+  const digits = normalizePhone(phone)
+  return isValidMobilePhone(digits) ? `https://wa.me/55${digits}` : null
+}
 
 /** Longest stay the API accepts. */
 export const MAX_NIGHTS = 365
@@ -17,6 +32,11 @@ export const bookingFormSchema = z
     propertyId: z.string().min(1, 'Escolha o imóvel.'),
     brokerId: z.string(),
     guestName: z.string().trim().min(1, 'Informe o hóspede.').max(255, 'Nome longo demais.'),
+    guestPhone: z
+      .string()
+      .trim()
+      .refine((value) => value === '' || isPhone(normalizePhone(value)), 'Telefone inválido.'),
+    notes: z.string().trim().max(2000, 'Observações longas demais.'),
     checkIn: z.string(),
     checkOut: z.string(),
     nightlyRate: z.string().refine((value) => parseMoney(value) !== null, 'Informe a diária.'),
@@ -65,6 +85,8 @@ export function emptyBookingForm(
     propertyId: '',
     brokerId: '',
     guestName: '',
+    guestPhone: '',
+    notes: '',
     checkIn: '',
     checkOut: '',
     nightlyRate: '',
@@ -83,6 +105,8 @@ export function toFormValues(booking: Booking): BookingFormValues {
     propertyId: booking.property.id,
     brokerId: booking.broker?.id ?? '',
     guestName: booking.guestName,
+    guestPhone: booking.guestPhone ? maskPhone(booking.guestPhone) : '',
+    notes: booking.notes ?? '',
     checkIn: booking.checkIn,
     checkOut: booking.checkOut,
     nightlyRate: formatBRL(booking.nightlyRate),
@@ -118,6 +142,8 @@ export function toBookingInput(values: z.output<typeof bookingFormSchema>): Requ
     propertyId: values.propertyId,
     brokerId: values.brokerId || null,
     guestName: values.guestName,
+    guestPhone: values.guestPhone ? normalizePhone(values.guestPhone) : null,
+    notes: values.notes || null,
     checkIn: values.checkIn,
     checkOut: values.checkOut,
     nightlyRate: parseMoney(values.nightlyRate) ?? 0,

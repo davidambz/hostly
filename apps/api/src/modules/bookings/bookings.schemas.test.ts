@@ -14,6 +14,8 @@ const PROPERTY = '018f0000-0000-7000-8000-000000000001'
 const valid = {
   propertyId: PROPERTY,
   guestName: ' Mariana Costa ',
+  guestPhone: null,
+  notes: null,
   checkIn: '2026-12-20',
   checkOut: '2026-12-27',
   nightlyRate: 45_000,
@@ -24,6 +26,8 @@ describe('createBookingBodySchema', () => {
     expect(createBookingBodySchema.parse(valid)).toEqual({
       ...valid,
       guestName: 'Mariana Costa',
+      guestPhone: null,
+      notes: null,
       brokerId: null,
       cleaningFee: 0,
       discount: 0,
@@ -105,6 +109,8 @@ describe('toPublicBooking', () => {
     propertyId: PROPERTY,
     brokerId: null,
     guestName: 'Mariana',
+    guestPhone: null,
+    notes: null,
     checkIn: new Date('2026-12-20T00:00:00Z'),
     checkOut: new Date('2026-12-27T00:00:00Z'),
     nightlyRate: 45_000,
