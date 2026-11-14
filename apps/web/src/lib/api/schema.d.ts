@@ -2200,6 +2200,286 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/billing/subscription/renewal': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Cancel or resume the renewal
+     * @description `renew: false` cancels the renewal: the plan lasts until the end of the period paid. `renew: true` undoes it. 404 NO_SUBSCRIPTION without a paid plan.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            renew: boolean
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': null
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        503: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/billing/subscription/period': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Change the billing period
+     * @description From now, at that period's price, with what was left of the current one credited. 400 SAME_PERIOD, PERIOD_NOT_OFFERED; 404 NO_SUBSCRIPTION.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            period: 'MONTHLY' | 'SEMIANNUAL' | 'ANNUAL'
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': null
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        503: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/billing/portal': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Stripe's portal, to change the card
+     * @description Answers its address. 404 NO_CUSTOMER for an account that never paid.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              /** Format: uri */
+              url: string
+            }
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        503: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/billing/payments': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * My charges
+     * @description Newest first: amount in cents, paid or failed, and for which plan and period.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['BillingPayment'][]
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/billing/webhook': {
     parameters: {
       query?: never
@@ -3430,6 +3710,18 @@ export interface components {
       pageSize: number
       total: number
     }
+    BillingPaymentInput: {
+      /** Format: uuid */
+      id: string
+      amount: number
+      /** @enum {string} */
+      status: 'paid' | 'failed'
+      /** Format: date-time */
+      at: string
+      plan: string | null
+      /** @enum {string|null} */
+      period: 'MONTHLY' | 'SEMIANNUAL' | 'ANNUAL' | null
+    }
     ErrorResponse: {
       statusCode: number
       code: string
@@ -3736,6 +4028,18 @@ export interface components {
       page: number
       pageSize: number
       total: number
+    }
+    BillingPayment: {
+      /** Format: uuid */
+      id: string
+      amount: number
+      /** @enum {string} */
+      status: 'paid' | 'failed'
+      /** Format: date-time */
+      at: string
+      plan: string | null
+      /** @enum {string|null} */
+      period: 'MONTHLY' | 'SEMIANNUAL' | 'ANNUAL' | null
     }
   }
   responses: never

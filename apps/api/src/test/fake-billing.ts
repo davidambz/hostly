@@ -36,6 +36,34 @@ export class FakeBilling implements BillingGateway {
     return Promise.resolve(subscription)
   }
 
+  readonly periodChanges: { id: string; amount: number; period: string }[] = []
+
+  setCancelAtPeriodEnd(id: string, cancel: boolean) {
+    const subscription = this.subscriptions.get(id)
+    if (!subscription) return Promise.reject(new Error(`No subscription ${id}`))
+    const updated = { ...subscription, cancel_at_period_end: cancel }
+    this.subscriptions.set(id, updated)
+    return Promise.resolve(updated)
+  }
+
+  changePeriod(
+    id: string,
+    change: { amount: number; period: string; metadata: Record<string, string> },
+  ) {
+    const subscription = this.subscriptions.get(id)
+    if (!subscription) return Promise.reject(new Error(`No subscription ${id}`))
+    this.periodChanges.push({ id, amount: change.amount, period: change.period })
+    const updated = { ...subscription, metadata: change.metadata }
+    this.subscriptions.set(id, updated)
+    return Promise.resolve(updated)
+  }
+
+  createPortal(customerId: string, returnUrl: string) {
+    return Promise.resolve(
+      `https://billing.stripe.com/p/session/test_${customerId}?return=${encodeURIComponent(returnUrl)}`,
+    )
+  }
+
   /** Signs `payload` the way Stripe signs its webhooks. */
   sign(payload: string): string {
     return this.stripe.webhooks.generateTestHeaderString({ payload, secret: TEST_WEBHOOK_SECRET })

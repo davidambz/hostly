@@ -1,0 +1,221 @@
+import { format } from 'date-fns'
+import { CreditCard, Loader2 } from 'lucide-react'
+import { useId, useState } from 'react'
+import { toast } from 'sonner'
+
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { errorMessage } from '@/lib/api/form-errors'
+import { formatBRL } from '@/lib/money'
+import { leaveTo } from '@/lib/navigate'
+
+import {
+  type BillingPeriod,
+  type MyPlan,
+  type Plan,
+  useBillingPayments,
+  useChangePeriod,
+  usePortal,
+  useSetRenewal,
+} from './api'
+import { periodPrices } from './plan-labels'
+
+const PERIOD_NAMES: Record<BillingPeriod, string> = {
+  MONTHLY: 'Mensal',
+  SEMIANNUAL: 'Semestral',
+  ANNUAL: 'Anual',
+}
+
+/**
+ * The paid subscription, as the user runs it: the renewal, the billing period, the card
+ * (in Stripe's portal) and every charge.
+ */
+export function ManageSubscription({ myPlan, plan }: { myPlan: MyPlan; plan?: Plan }) {
+  const subscription = myPlan.subscription
+  if (!subscription) return null
+
+  return (
+    <section
+      aria-labelledby="subscription-title"
+      className="bg-card grid max-w-2xl gap-5 rounded-md border p-5"
+    >
+      <h2 id="subscription-title" className="font-wide text-xl font-semibold">
+        Sua assinatura
+      </h2>
+      <Renewal cancelled={subscription.cancelAtPeriodEnd} end={subscription.currentPeriodEnd} />
+      {plan && !subscription.cancelAtPeriodEnd && (
+        <PeriodChange plan={plan} current={subscription.period} />
+      )}
+      <Card />
+      <Payments />
+    </section>
+  )
+}
+
+function Renewal({ cancelled, end }: { cancelled: boolean; end: string | null }) {
+  const setRenewal = useSetRenewal()
+  const [confirming, setConfirming] = useState(false)
+  const day = end ? format(new Date(end), 'dd/MM/yyyy') : ''
+
+  const change = async (renew: boolean) => {
+    try {
+      await setRenewal.mutateAsync(renew)
+      toast.success(renew ? 'Renovação retomada.' : `Renovação cancelada. O plano vale até ${day}.`)
+    } catch (error) {
+      toast.error(errorMessage(error))
+    } finally {
+      setConfirming(false)
+    }
+  }
+
+  return (
+    <div className="grid gap-2">
+      <h3 className="text-sm font-medium">Renovação</h3>
+      {cancelled ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm">Cancelada: o plano vale até {day}.</p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={setRenewal.isPending}
+            onClick={() => void change(true)}
+          >
+            Retomar renovação
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm">Automática{day && `, próxima cobrança em ${day}`}.</p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setConfirming(true)
+            }}
+          >
+            Cancelar renovação
+          </Button>
+        </div>
+      )}
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Cancelar a renovação?"
+        description={`Você não será mais cobrado. O plano continua até ${day}, e depois a conta volta ao Free sem perder nenhum imóvel.`}
+        confirmLabel="Cancelar renovação"
+        pending={setRenewal.isPending}
+        onConfirm={() => void change(false)}
+      />
+    </div>
+  )
+}
+
+function PeriodChange({ plan, current }: { plan: Plan; current: BillingPeriod }) {
+  const changePeriod = useChangePeriod()
+  const options = periodPrices(plan).filter((price) => price.period !== current)
+  const [period, setPeriod] = useState<BillingPeriod | ''>('')
+  const id = useId()
+  if (options.length === 0) return null
+
+  const change = async () => {
+    if (!period) return
+    try {
+      await changePeriod.mutateAsync(period)
+      toast.success(`Assinatura ${PERIOD_NAMES[period].toLowerCase()} a partir de agora.`)
+      setPeriod('')
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
+  }
+
+  return (
+    <div className="grid gap-2">
+      <h3 className="text-sm font-medium">Periodicidade: {PERIOD_NAMES[current]}</h3>
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="grid gap-1.5">
+          <Label htmlFor={id}>Mudar para</Label>
+          <select
+            id={id}
+            value={period}
+            onChange={(event) => {
+              setPeriod(event.target.value as BillingPeriod | '')
+            }}
+            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-9 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+          >
+            <option value="">Escolha</option>
+            {options.map((option) => (
+              <option key={option.period} value={option.period}>
+                {PERIOD_NAMES[option.period]} · {formatBRL(option.price)} {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Button
+          size="sm"
+          disabled={!period || changePeriod.isPending}
+          onClick={() => void change()}
+        >
+          {changePeriod.isPending && <Loader2 className="animate-spin" aria-hidden />}
+          Mudar
+        </Button>
+      </div>
+      <p className="text-muted-foreground text-xs">
+        A nova periodicidade começa agora; o que sobrou do período atual vira crédito.
+      </p>
+    </div>
+  )
+}
+
+function Card() {
+  const portal = usePortal()
+  const open = async () => {
+    try {
+      leaveTo((await portal.mutateAsync()).url)
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
+  }
+  return (
+    <div className="grid gap-2">
+      <h3 className="text-sm font-medium">Forma de pagamento</h3>
+      <div>
+        <Button size="sm" variant="outline" disabled={portal.isPending} onClick={() => void open()}>
+          <CreditCard aria-hidden />
+          Atualizar forma de pagamento
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function Payments() {
+  const payments = useBillingPayments()
+  return (
+    <div className="grid gap-2">
+      <h3 className="text-sm font-medium">Pagamentos</h3>
+      {!payments.data || payments.data.length === 0 ? (
+        <p className="text-muted-foreground text-sm">Nenhuma cobrança ainda.</p>
+      ) : (
+        <ul aria-label="Pagamentos" className="divide-y rounded-md border text-sm">
+          {payments.data.map((payment) => (
+            <li key={payment.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
+              <span className="tabular-nums">{format(new Date(payment.at), 'dd/MM/yyyy')}</span>
+              <span className="text-muted-foreground">
+                {payment.plan ?? 'Assinatura'}
+                {payment.period && ` · ${PERIOD_NAMES[payment.period].toLowerCase()}`}
+              </span>
+              <span className="font-medium tabular-nums">{formatBRL(payment.amount)}</span>
+              {payment.status === 'paid' ? (
+                <Badge variant="secondary">Pago</Badge>
+              ) : (
+                <Badge variant="destructive">Falhou</Badge>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
