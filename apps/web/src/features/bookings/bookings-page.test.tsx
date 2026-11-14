@@ -183,6 +183,29 @@ afterEach(() => {
 })
 
 describe('calendar', () => {
+  it("saves the month's bookings as a spreadsheet", async () => {
+    serve()
+    const blobs: Blob[] = []
+    const createObjectURL = vi.fn((blob: Blob) => {
+      blobs.push(blob)
+      return 'blob:hostly'
+    })
+    Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() })
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+    const { user } = await openPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Exportar novembro' }))
+
+    await waitFor(() => {
+      expect(click).toHaveBeenCalled()
+    })
+    const link = nth(click.mock.contexts, 0) as HTMLAnchorElement
+    expect(link.download).toBe('hostly-reservas-2026-11.csv')
+    const csv = await nth(blobs, 0).text()
+    expect(csv).toContain('Rafael Mendes;;Casa da Praia;;10/11/2026;13/11/2026;3;')
+    expect(csv).toContain('Pedro Alves;;Apê Centro;Carlos Lima;20/11/2026;24/11/2026;4;')
+  })
+
   it("adds up the money of the month's bookings beside the occupancy", async () => {
     serve()
     await openPage()
