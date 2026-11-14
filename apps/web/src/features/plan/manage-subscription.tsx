@@ -37,20 +37,22 @@ export function ManageSubscription({ myPlan, plan }: { myPlan: MyPlan; plan?: Pl
   if (!subscription) return null
 
   return (
-    <section
-      aria-labelledby="subscription-title"
-      className="bg-card grid max-w-2xl gap-5 rounded-md border p-5"
-    >
-      <h2 id="subscription-title" className="font-wide text-xl font-semibold">
-        Sua assinatura
-      </h2>
-      <Renewal cancelled={subscription.cancelAtPeriodEnd} end={subscription.currentPeriodEnd} />
-      {plan && !subscription.cancelAtPeriodEnd && (
-        <PeriodChange plan={plan} current={subscription.period} />
-      )}
-      <Card />
+    <div className="grid gap-4 lg:grid-cols-2">
+      <section
+        aria-labelledby="subscription-title"
+        className="bg-card grid content-start gap-5 rounded-md border p-5"
+      >
+        <h2 id="subscription-title" className="font-wide text-xl font-semibold">
+          Sua assinatura
+        </h2>
+        <Renewal cancelled={subscription.cancelAtPeriodEnd} end={subscription.currentPeriodEnd} />
+        {plan && !subscription.cancelAtPeriodEnd && (
+          <PeriodChange plan={plan} current={subscription.period} />
+        )}
+        <Card />
+      </section>
       <Payments />
-    </section>
+    </div>
   )
 }
 
@@ -193,29 +195,41 @@ function Card() {
 function Payments() {
   const payments = useBillingPayments()
   return (
-    <div className="grid gap-2">
-      <h3 className="text-sm font-medium">Pagamentos</h3>
+    <section
+      aria-labelledby="payments-title"
+      className="bg-card grid content-start gap-3 rounded-md border p-5"
+    >
+      <h2 id="payments-title" className="font-wide text-xl font-semibold">
+        Pagamentos
+      </h2>
       {!payments.data || payments.data.length === 0 ? (
         <p className="text-muted-foreground text-sm">Nenhuma cobrança ainda.</p>
       ) : (
-        <ul aria-label="Pagamentos" className="divide-y rounded-md border text-sm">
+        <ul aria-label="Pagamentos" className="divide-y text-sm">
           {payments.data.map((payment) => (
-            <li key={payment.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
+            <li
+              key={payment.id}
+              className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0 sm:grid-cols-[6rem_1fr_auto_4.5rem]"
+            >
               <span className="tabular-nums">{format(new Date(payment.at), 'dd/MM/yyyy')}</span>
-              <span className="text-muted-foreground">
+              <span className="text-muted-foreground truncate">
                 {payment.plan ?? 'Assinatura'}
                 {payment.period && ` · ${PERIOD_NAMES[payment.period].toLowerCase()}`}
               </span>
-              <span className="font-medium tabular-nums">{formatBRL(payment.amount)}</span>
-              {payment.status === 'paid' ? (
-                <Badge variant="secondary">Pago</Badge>
-              ) : (
-                <Badge variant="destructive">Falhou</Badge>
-              )}
+              <span className="text-right font-medium tabular-nums">
+                {formatBRL(payment.amount)}
+              </span>
+              <span className="col-start-3 justify-self-end sm:col-start-auto">
+                {payment.status === 'paid' ? (
+                  <Badge variant="secondary">Pago</Badge>
+                ) : (
+                  <Badge variant="destructive">Falhou</Badge>
+                )}
+              </span>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </section>
   )
 }
