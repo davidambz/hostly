@@ -79,6 +79,8 @@ function me(accessToken?: string) {
   })
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
 describe('POST /auth/login', () => {
   it('answers 200 with an access token and the user', async () => {
     const response = await login()
@@ -206,6 +208,7 @@ describe('RefreshTokensRepository.replace', () => {
         familyId: current.familyId,
         tokenHash: current.tokenHash,
         expiresAt: current.expiresAt,
+        sessionExpiresAt: current.sessionExpiresAt,
       },
       new Date(),
     )
@@ -373,15 +376,44 @@ describe('POST /auth/refresh', () => {
     expect((await refresh(first)).statusCode).toBe(200)
   })
 
-  it("never extends the session: every rotated cookie keeps the login's expiry", async () => {
+  it('slides the session on refresh, up to the end fixed at login', async () => {
     const loginResponse = await login()
-    const loginExpiry = refreshCookie(loginResponse)?.expires?.getTime()
+    const stored = await db.refreshToken.findFirstOrThrow()
+    // As if the login was long ago: little left of the token, a few days left of the session.
+    const sessionEnd = new Date(Date.now() + 3 * DAY_MS)
+    await db.refreshToken.update({
+      where: { id: stored.id },
+      data: { expiresAt: new Date(Date.now() + DAY_MS), sessionExpiresAt: sessionEnd },
+    })
 
     const rotated = refreshCookie(await refresh(refreshCookie(loginResponse)?.value))
 
-    expect(rotated?.expires?.getTime()).toBe(loginExpiry)
-    const stored = await db.refreshToken.findMany({ select: { expiresAt: true } })
-    expect(new Set(stored.map((t) => t.expiresAt.getTime())).size).toBe(1)
+    // Pushed ahead, but only to the session's end, not a whole TTL (cookies keep whole seconds).
+    expect(rotated?.expires?.getTime()).toBe(Math.floor(sessionEnd.getTime() / 1000) * 1000)
+    const tokens = await db.refreshToken.findMany({ select: { sessionExpiresAt: true } })
+    expect(tokens.every((t) => t.sessionExpiresAt.getTime() === sessionEnd.getTime())).toBe(true)
+  })
+
+  it('pushes the expiry a whole idle TTL ahead while the session has room', async () => {
+    const loginResponse = await login()
+    await db.refreshToken.updateMany({ data: { expiresAt: new Date(Date.now() + DAY_MS) } })
+    const before = Date.now()
+
+    const rotated = refreshCookie(await refresh(refreshCookie(loginResponse)?.value))
+
+    expect(rotated?.expires?.getTime()).toBeGreaterThanOrEqual(before + 30 * DAY_MS - 1000)
+  })
+
+  it('refuses, in the database, a token that outlives its session', async () => {
+    await login()
+    const stored = await db.refreshToken.findFirstOrThrow()
+
+    await expect(
+      db.refreshToken.update({
+        where: { id: stored.id },
+        data: { expiresAt: new Date(stored.sessionExpiresAt.getTime() + 1000) },
+      }),
+    ).rejects.toThrow()
   })
 
   it('is rate limited per client with the auth limit', async () => {

@@ -25,6 +25,7 @@ export interface AuthRoutesOptions {
   rateLimitMax: number
   accessTokenTtlSeconds: number
   refreshTokenTtlDays: number
+  refreshSessionMaxDays: number
   cookieSecure: boolean
 }
 
@@ -38,6 +39,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
     verifyPassword,
     signAccessToken: (userId) => app.jwt.sign({ sub: userId }),
     refreshTokenTtlMs: options.refreshTokenTtlDays * DAY_MS,
+    refreshSessionMaxMs: options.refreshSessionMaxDays * DAY_MS,
   })
   const rateLimit = { max: options.rateLimitMax, timeWindow: '1 minute' }
   const cookieOptions = {

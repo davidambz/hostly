@@ -152,17 +152,20 @@ enum RefreshTokenRevocation {
 /// with a new token in the same family; presenting a ROTATED token again means it leaked,
 /// so the whole family is revoked.
 model RefreshToken {
-  id            String                  @id @default(uuid(7)) @db.Uuid
-  userId        String                  @map("user_id") @db.Uuid
+  id               String                  @id @default(uuid(7)) @db.Uuid
+  userId           String                  @map("user_id") @db.Uuid
   /// SHA-256 of the token, hex.
-  tokenHash     String                  @unique @map("token_hash") @db.Char(64)
+  tokenHash        String                  @unique @map("token_hash") @db.Char(64)
   /// Shared by every token issued from the same login.
-  familyId      String                  @map("family_id") @db.Uuid
-  expiresAt     DateTime                @map("expires_at") @db.Timestamptz(3)
-  revokedAt     DateTime?               @map("revoked_at") @db.Timestamptz(3)
+  familyId         String                  @map("family_id") @db.Uuid
+  /// When this token stops working: a while after it was issued, never past the session's end.
+  expiresAt        DateTime                @map("expires_at") @db.Timestamptz(3)
+  /// The session's hard end, fixed at login and shared by the whole family.
+  sessionExpiresAt DateTime                @map("session_expires_at") @db.Timestamptz(3)
+  revokedAt        DateTime?               @map("revoked_at") @db.Timestamptz(3)
   /// Set together with revokedAt.
-  revokedReason RefreshTokenRevocation? @map("revoked_reason")
-  createdAt     DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  revokedReason    RefreshTokenRevocation? @map("revoked_reason")
+  createdAt        DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

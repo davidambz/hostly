@@ -20,6 +20,7 @@ import { BookingsList } from './bookings-list'
 import { formatStay, todayISO, validDateOrNull } from './dates'
 import { OccupancySoundings } from './occupancy-soundings'
 import { propertyColors } from './property-colors'
+import { useRememberedView } from './use-remembered-view'
 
 interface SheetState {
   booking?: Booking
@@ -32,6 +33,7 @@ interface SheetState {
  * `?q=` and `?page=`.
  */
 export function BookingsPage() {
+  useRememberedView()
   const { params, page, search, set, update, setSearch, setPage } = useSearchParamState()
   const properties = useAllProperties()
   const propertyId = params.get('imovel') ?? ''

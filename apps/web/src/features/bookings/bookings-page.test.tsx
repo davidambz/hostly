@@ -9,6 +9,7 @@ import { renderRoute } from '@/test/render'
 import { apiError, loggedInHandlers, server, url } from '@/test/server'
 
 import type { Booking } from './api'
+import { BOOKINGS_VIEW_KEY } from './use-remembered-view'
 
 const casa = { id: '018f0000-0000-7000-8000-0000000000a1', name: 'Casa da Praia' }
 const ape = { id: '018f0000-0000-7000-8000-0000000000a2', name: 'Apê Centro' }
@@ -801,5 +802,37 @@ describe('list', () => {
     await user.click(await screen.findByRole('button', { name: 'Rafael Mendes' }))
 
     expect(await screen.findByRole('dialog', { name: 'Editar reserva' })).toBeInTheDocument()
+  })
+})
+
+describe('remembered view', () => {
+  it('opens where the user left off when arriving with no view in the URL', async () => {
+    serve()
+    const first = await openPage('/reservas?data=2026-11-15')
+    await first.user.click(await screen.findByRole('radio', { name: 'Lista' }))
+    await waitFor(() => {
+      expect(first.router.state.location.search).toContain('modo=lista')
+    })
+    first.unmount()
+
+    const { router } = await openPage('/reservas')
+
+    await waitFor(() => {
+      expect(new URLSearchParams(router.state.location.search).get('modo')).toBe('lista')
+    })
+    expect(new URLSearchParams(router.state.location.search).get('data')).toBe('2026-11-15')
+  })
+
+  it('follows a link that says what to show, over the saved view', async () => {
+    serve()
+    localStorage.setItem(BOOKINGS_VIEW_KEY, 'modo=lista&data=2026-10-01')
+
+    const { router } = await openPage('/reservas?data=2026-11-15')
+
+    expect(await screen.findByRole('heading', { name: 'novembro de 2026' })).toBeInTheDocument()
+    expect(router.state.location.search).not.toContain('modo=lista')
+    await waitFor(() => {
+      expect(localStorage.getItem(BOOKINGS_VIEW_KEY)).toBe('data=2026-11-15')
+    })
   })
 })

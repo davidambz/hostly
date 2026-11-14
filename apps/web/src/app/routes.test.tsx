@@ -7,6 +7,7 @@ import { renderRoute } from '@/test/render'
 import { apiError, loggedInHandlers, server, testUser, url } from '@/test/server'
 
 import { RESUME_RETRY_DELAYS_MS } from '@/features/auth/auth-context'
+import { SESSION_HINT_KEY } from '@/features/auth/session-hint'
 
 import { routes } from '@/test/app-routes'
 
@@ -57,6 +58,57 @@ describe('routes', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Comece pelo nome do seu imóvel')).toBeInTheDocument()
     })
+  })
+
+  it('waits instead of flashing the home page when this browser was logged in last time', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1')
+    let answer: () => void = () => undefined
+    // The held refresh goes first: the first matching handler answers.
+    server.use(
+      http.post(
+        url('/auth/refresh'),
+        () =>
+          new Promise<Response>((resolve) => {
+            answer = () => {
+              resolve(
+                HttpResponse.json({ accessToken: 'token', tokenType: 'Bearer', expiresIn: 900 }),
+              )
+            }
+          }),
+      ),
+      ...loggedInHandlers,
+    )
+
+    const { router } = renderRoute(routes, '/')
+
+    try {
+      // Give the home page's code time to load: it still must not show.
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      expect(screen.getByText('Carregando…')).toBeInTheDocument()
+      expect(screen.queryByLabelText('Comece pelo nome do seu imóvel')).not.toBeInTheDocument()
+    } finally {
+      answer()
+    }
+    expect(await screen.findByRole('heading', { level: 1, name: 'Reservas' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/reservas')
+  })
+
+  it('shows the home page after the wait when the old session is gone, forgetting the hint', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1')
+
+    renderRoute(routes, '/')
+
+    expect(await screen.findByLabelText('Comece pelo nome do seu imóvel')).toBeInTheDocument()
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull()
+  })
+
+  it('remembers the session for next time once logged in', async () => {
+    server.use(...loggedInHandlers)
+
+    renderRoute(routes, '/')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Reservas' })).toBeInTheDocument()
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1')
   })
 
   it('keeps the home page up when the API is unreachable, with a way to try again', async () => {

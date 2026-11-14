@@ -6,6 +6,7 @@ export interface NewRefreshToken {
   tokenHash: string
   familyId: string
   expiresAt: Date
+  sessionExpiresAt: Date
 }
 
 export class RefreshTokensRepository {

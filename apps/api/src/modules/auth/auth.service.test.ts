@@ -35,6 +35,7 @@ function storedToken(overrides: Partial<RefreshToken> = {}): RefreshToken {
     tokenHash: hashRefreshToken('the-token'),
     familyId: 'family-1',
     expiresAt: new Date(NOW.getTime() + DAY_MS),
+    sessionExpiresAt: new Date(NOW.getTime() + 90 * DAY_MS),
     revokedAt: null,
     revokedReason: null,
     createdAt: NOW,
@@ -80,6 +81,7 @@ function setup() {
     verifyPassword,
     signAccessToken,
     refreshTokenTtlMs: 30 * DAY_MS,
+    refreshSessionMaxMs: 90 * DAY_MS,
     now: () => NOW,
   })
   return { users, refreshTokens, hashPassword, verifyPassword, signAccessToken, service }
@@ -168,7 +170,7 @@ describe('AuthService.register', () => {
 describe('AuthService.login', () => {
   const credentials = { email: 'ana@hostly.dev', password: 'correct horse' }
 
-  it('starts a session in a new family, valid for the configured TTL', async () => {
+  it('starts a session in a new family, valid for the idle TTL and ending at the max', async () => {
     const { refreshTokens, signAccessToken, service } = setup()
 
     const { user, session } = await service.login(credentials)
@@ -183,6 +185,7 @@ describe('AuthService.login', () => {
       familyId: expect.stringMatching(/^[0-9a-f-]{36}$/) as string,
       tokenHash: hashRefreshToken(session.refreshToken),
       expiresAt: session.refreshTokenExpiresAt,
+      sessionExpiresAt: new Date(NOW.getTime() + 90 * DAY_MS),
     })
   })
 
@@ -262,6 +265,7 @@ describe('AuthService.login', () => {
       verifyPassword,
       signAccessToken: () => 'a',
       refreshTokenTtlMs: DAY_MS,
+      refreshSessionMaxMs: DAY_MS,
       now: () => NOW,
     })
     // Let the eager attempt from the constructor fail.
@@ -289,7 +293,8 @@ describe('AuthService.refresh', () => {
         userId: 'u1',
         familyId: 'family-1',
         tokenHash: hashRefreshToken(session.refreshToken),
-        expiresAt: storedToken().expiresAt,
+        expiresAt: new Date(NOW.getTime() + 30 * DAY_MS),
+        sessionExpiresAt: storedToken().sessionExpiresAt,
       },
       NOW,
     )
@@ -298,14 +303,32 @@ describe('AuthService.refresh', () => {
     expect(session.refreshToken).not.toBe('the-token')
   })
 
-  it("keeps the login's expiry, so refreshing never extends a session", async () => {
+  it('slides the session: a refresh pushes the expiry a whole idle TTL ahead', async () => {
     const { refreshTokens, service } = setup()
-    const loginExpiry = new Date(NOW.getTime() + 2 * DAY_MS)
-    refreshTokens.findByHash.mockResolvedValue(storedToken({ expiresAt: loginExpiry }))
+    refreshTokens.findByHash.mockResolvedValue(
+      storedToken({ expiresAt: new Date(NOW.getTime() + 2 * DAY_MS) }),
+    )
 
     const session = await service.refresh('the-token')
 
-    expect(session.refreshTokenExpiresAt).toEqual(loginExpiry)
+    expect(session.refreshTokenExpiresAt).toEqual(new Date(NOW.getTime() + 30 * DAY_MS))
+  })
+
+  it("never slides past the session's end, fixed at login", async () => {
+    const { refreshTokens, service } = setup()
+    const sessionEnd = new Date(NOW.getTime() + 5 * DAY_MS)
+    refreshTokens.findByHash.mockResolvedValue(
+      storedToken({ expiresAt: new Date(NOW.getTime() + DAY_MS), sessionExpiresAt: sessionEnd }),
+    )
+
+    const session = await service.refresh('the-token')
+
+    expect(session.refreshTokenExpiresAt).toEqual(sessionEnd)
+    expect(refreshTokens.replace).toHaveBeenCalledWith(
+      'rt1',
+      expect.objectContaining({ expiresAt: sessionEnd, sessionExpiresAt: sessionEnd }),
+      NOW,
+    )
   })
 
   it.each([
@@ -446,6 +469,7 @@ it('defaults the clock to the current time', async () => {
     verifyPassword: () => Promise.resolve(true),
     signAccessToken: () => 'a',
     refreshTokenTtlMs: 1000,
+    refreshSessionMaxMs: 2000,
   })
   const before = Date.now()
 

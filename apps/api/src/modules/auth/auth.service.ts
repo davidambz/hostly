@@ -23,8 +23,10 @@ export interface AuthServiceDeps {
   hashPassword: (password: string) => Promise<string>
   verifyPassword: (passwordHash: string, password: string) => Promise<boolean>
   signAccessToken: (userId: string) => string
-  /** How long a login lasts. Fixed at login: refreshing doesn't extend it. */
+  /** How long a session lasts without use: each refresh pushes its end this far ahead. */
   refreshTokenTtlMs: number
+  /** The most a session lasts from its login, however much it's used. */
+  refreshSessionMaxMs: number
   now?: () => Date
 }
 
@@ -102,7 +104,8 @@ export class AuthService {
     const next = this.newRefreshToken(
       user.id,
       randomUUID(),
-      now.getTime() + this.deps.refreshTokenTtlMs,
+      now,
+      new Date(now.getTime() + this.deps.refreshSessionMaxMs),
     )
     await this.deps.refreshTokens.create(next.record)
     return { user, session: this.session(user.id, next) }
@@ -140,8 +143,8 @@ export class AuthService {
       throw new UnauthorizedError('Refresh token expired', { code: 'REFRESH_TOKEN_EXPIRED' })
     }
 
-    // The successor keeps the login's expiry, so a session can't be stretched forever.
-    const next = this.newRefreshToken(stored.userId, stored.familyId, stored.expiresAt.getTime())
+    // The session slides with use, but never past the end fixed at login.
+    const next = this.newRefreshToken(stored.userId, stored.familyId, now, stored.sessionExpiresAt)
     if (!(await this.deps.refreshTokens.replace(stored.id, next.record, now))) {
       // A concurrent refresh with the same token got there first.
       throw justRotated()
@@ -167,13 +170,16 @@ export class AuthService {
     return this.dummyHash
   }
 
-  private newRefreshToken(userId: string, familyId: string, expiresAtMs: number) {
+  /** A token valid for the idle TTL from `now`, cut short by the session's end. */
+  private newRefreshToken(userId: string, familyId: string, now: Date, sessionExpiresAt: Date) {
     const token = generateRefreshToken()
+    const idleEnd = now.getTime() + this.deps.refreshTokenTtlMs
     const record: NewRefreshToken = {
       userId,
       familyId,
       tokenHash: hashRefreshToken(token),
-      expiresAt: new Date(expiresAtMs),
+      expiresAt: new Date(Math.min(idleEnd, sessionExpiresAt.getTime())),
+      sessionExpiresAt,
     }
     return { token, record }
   }
