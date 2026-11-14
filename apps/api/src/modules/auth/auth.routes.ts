@@ -15,6 +15,7 @@ import {
   registerBodySchema,
 } from './auth.schemas.js'
 import { AuthService, type Session } from './auth.service.js'
+import { LoginAttemptsRepository } from './login-attempts.repository.js'
 import { RefreshTokensRepository } from './refresh-tokens.repository.js'
 
 export const REFRESH_COOKIE = 'hostly_refresh_token'
@@ -36,6 +37,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
   const service = new AuthService({
     users: new UsersRepository(app.db),
     refreshTokens: new RefreshTokensRepository(app.db),
+    loginAttempts: new LoginAttemptsRepository(app.db),
     hashPassword,
     verifyPassword,
     signAccessToken: (userId) => app.jwt.sign({ sub: userId }),
@@ -102,7 +104,8 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
         description:
           'Returns a short-lived access token (send it as `Authorization: Bearer`) and ' +
           'sets the refresh token in an httpOnly cookie. Wrong e-mail and wrong password ' +
-          'both answer 401 INVALID_CREDENTIALS.',
+          'both answer 401 INVALID_CREDENTIALS. More than 5 attempts for one e-mail in 15 minutes, ' +
+          'from anywhere, answer 429 LOGIN_LOCKED until the window ends.',
         body: loginBodySchema,
         response: {
           200: loginResponseSchema,

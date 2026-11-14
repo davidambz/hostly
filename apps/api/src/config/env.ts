@@ -1,3 +1,5 @@
+import { isIP } from 'node:net'
+
 import { z } from 'zod'
 
 // `.env.example` ships every key with an empty value, so an empty string means "not set".
@@ -13,6 +15,39 @@ const origin = z.url({ protocol: /^https?$/ }).refine(isBareOrigin, {
 })
 
 const booleanString = z.enum(['true', 'false']).transform((value) => value === 'true')
+
+/** proxy-addr's names for address ranges, accepted in a TRUST_PROXY list. */
+const PROXY_RANGES = new Set(['loopback', 'linklocal', 'uniquelocal'])
+
+const isProxyAddress = (value: string) => {
+  if (PROXY_RANGES.has(value)) return true
+  const [address = '', prefix, ...rest] = value.split('/')
+  const version = isIP(address)
+  if (version === 0 || rest.length > 0) return false
+  if (prefix === undefined) return true
+  const bits = Number(prefix)
+  return /^\d+$/.test(prefix) && bits <= (version === 4 ? 32 : 128)
+}
+
+/**
+ * Which proxies to believe about the client's address (x-forwarded-for): `false` (none),
+ * a number of hops (`1` behind one load balancer), or the proxies' addresses and CIDRs
+ * (`10.0.0.0/8,loopback`). `true` believes anyone, so anyone can pick their IP and slip
+ * past the rate limits: only behind a proxy that overwrites the header.
+ */
+const trustProxy = z.union([
+  booleanString,
+  z
+    .string()
+    .regex(/^[1-9]\d{0,1}$/)
+    .transform(Number),
+  z
+    .string()
+    .transform((value) => value.split(',').map((item) => item.trim()))
+    .pipe(
+      z.array(z.string().refine(isProxyAddress, 'Expected an IP address, a CIDR or a range name')),
+    ),
+])
 
 /** docker-compose's default JWT secret starts with this; production refuses it. */
 export const DEV_JWT_SECRET_PREFIX = 'dev-only-'
@@ -40,9 +75,10 @@ const envSchema = z
     RATE_LIMIT_MAX: optional(z.coerce.number().int().positive().default(100)),
     /** Stricter per-minute limit for the auth routes (signup, login), against brute force. */
     AUTH_RATE_LIMIT_MAX: optional(z.coerce.number().int().positive().default(10)),
-    // Turn on behind a load balancer so rate limiting and logs see the client IP
-    // (from x-forwarded-for) instead of the proxy's.
-    TRUST_PROXY: optional(booleanString.default(false)),
+    // Behind a load balancer, set it so rate limiting and logs see the client's IP instead
+    // of the proxy's. Required in production: both wrong ways (trusting no one behind a
+    // proxy, or everyone without one) break the per-IP limits.
+    TRUST_PROXY: optional(trustProxy.optional()),
     DOCS_ENABLED: optional(booleanString.optional()),
     /** Signs the access tokens (HS256). Generate with `openssl rand -base64 48`. */
     JWT_SECRET: z.string().min(32, 'Must have at least 32 characters'),
@@ -77,8 +113,14 @@ const envSchema = z
       message: 'The development JWT secret must not be used in production',
     },
   )
-  .transform(({ DOCS_ENABLED, COOKIE_SECURE, APP_URL, ...env }) => ({
+  .refine((env) => env.NODE_ENV !== 'production' || env.TRUST_PROXY !== undefined, {
+    path: ['TRUST_PROXY'],
+    message:
+      'Required in production: false without a proxy, the number of proxies (e.g. 1), or their addresses',
+  })
+  .transform(({ DOCS_ENABLED, COOKIE_SECURE, APP_URL, TRUST_PROXY, ...env }) => ({
     ...env,
+    TRUST_PROXY: TRUST_PROXY ?? false,
     DOCS_ENABLED: DOCS_ENABLED ?? env.NODE_ENV !== 'production',
     COOKIE_SECURE: COOKIE_SECURE ?? env.NODE_ENV === 'production',
     APP_URL: APP_URL ?? env.CORS_ORIGINS[0] ?? 'http://localhost:5173',

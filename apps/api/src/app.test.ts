@@ -289,6 +289,35 @@ describe('rate limit', () => {
 
       expect(statuses).toEqual([200, 429])
     })
+
+    it('with one hop, believes only the address the proxy added, not a forged one before it', async () => {
+      const api = await start({ RATE_LIMIT_MAX: '1', TRUST_PROXY: '1' })
+      api.get('/limited', () => ({ ok: true }))
+
+      const statuses = [
+        await hitThroughProxy(api, '198.51.100.1, 203.0.113.1'),
+        await hitThroughProxy(api, '198.51.100.2, 203.0.113.1'),
+        await hitThroughProxy(api, '203.0.113.2'),
+      ]
+
+      expect(statuses).toEqual([200, 429, 200])
+    })
+
+    it('with a list, believes only those proxies', async () => {
+      const trusted = await start({ RATE_LIMIT_MAX: '1', TRUST_PROXY: '10.0.0.0/24' })
+      trusted.get('/limited', () => ({ ok: true }))
+      const stranger = await start({ RATE_LIMIT_MAX: '1', TRUST_PROXY: '192.168.0.1' })
+      stranger.get('/limited', () => ({ ok: true }))
+
+      expect([
+        await hitThroughProxy(trusted, '203.0.113.1'),
+        await hitThroughProxy(trusted, '203.0.113.2'),
+      ]).toEqual([200, 200])
+      expect([
+        await hitThroughProxy(stranger, '203.0.113.1'),
+        await hitThroughProxy(stranger, '203.0.113.2'),
+      ]).toEqual([200, 429])
+    })
   })
 })
 

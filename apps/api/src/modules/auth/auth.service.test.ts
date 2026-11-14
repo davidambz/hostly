@@ -87,9 +87,14 @@ function setup() {
     Promise.resolve(hash === '$argon2id$real-hash' && password === 'correct horse'),
   )
   const signAccessToken = vi.fn((userId: string) => `access-for-${userId}`)
+  const loginAttempts = {
+    register: vi.fn<() => Promise<number>>().mockResolvedValue(1),
+    clear: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  }
   const service = new AuthService({
     users,
     refreshTokens,
+    loginAttempts,
     hashPassword,
     verifyPassword,
     signAccessToken,
@@ -97,7 +102,15 @@ function setup() {
     refreshSessionMaxMs: 90 * DAY_MS,
     now: () => NOW,
   })
-  return { users, refreshTokens, hashPassword, verifyPassword, signAccessToken, service }
+  return {
+    users,
+    refreshTokens,
+    loginAttempts,
+    hashPassword,
+    verifyPassword,
+    signAccessToken,
+    service,
+  }
 }
 
 async function rejectionOf(promise: Promise<unknown>) {
@@ -202,6 +215,31 @@ describe('AuthService.login', () => {
     })
   })
 
+  it('refuses past the attempts for the e-mail, before looking at the password', async () => {
+    const { loginAttempts, verifyPassword, service } = setup()
+    loginAttempts.register.mockResolvedValue(6)
+
+    const error = await rejectionOf(service.login(credentials))
+
+    expect(error).toMatchObject({ statusCode: 429, code: 'LOGIN_LOCKED' })
+    expect(verifyPassword).not.toHaveBeenCalled()
+    expect(loginAttempts.register).toHaveBeenCalledWith(
+      'ana@hostly.dev',
+      NOW,
+      new Date(NOW.getTime() - 15 * 60 * 1000),
+    )
+  })
+
+  it('starts the count over after a successful login, and only then', async () => {
+    const { loginAttempts, service } = setup()
+
+    await rejectionOf(service.login({ ...credentials, password: 'wrong' }))
+    expect(loginAttempts.clear).not.toHaveBeenCalled()
+    await service.login(credentials)
+
+    expect(loginAttempts.clear).toHaveBeenCalledWith('ana@hostly.dev')
+  })
+
   it('stores only the hash of the refresh token', async () => {
     const { refreshTokens, service } = setup()
 
@@ -264,7 +302,7 @@ describe('AuthService.login', () => {
   })
 
   it('retries the dummy hash after a failure instead of failing every unknown e-mail', async () => {
-    const { users, refreshTokens } = setup()
+    const { users, refreshTokens, loginAttempts } = setup()
     users.findByEmail.mockResolvedValue(null)
     const hashPassword = vi
       .fn<(password: string) => Promise<string>>()
@@ -274,6 +312,7 @@ describe('AuthService.login', () => {
     const service = new AuthService({
       users,
       refreshTokens,
+      loginAttempts,
       hashPassword,
       verifyPassword,
       signAccessToken: () => 'a',
@@ -474,10 +513,11 @@ describe('AuthService.logout', () => {
 })
 
 it('defaults the clock to the current time', async () => {
-  const { users, refreshTokens } = setup()
+  const { users, refreshTokens, loginAttempts } = setup()
   const service = new AuthService({
     users,
     refreshTokens,
+    loginAttempts,
     hashPassword: () => Promise.resolve('h'),
     verifyPassword: () => Promise.resolve(true),
     signAccessToken: () => 'a',

@@ -370,3 +370,14 @@ model StripeEvent {
 
   @@map("stripe_events")
 }
+
+/// Login attempts per e-mail, known or not, in the current window: against guessing one
+/// account's password from many IP addresses. A successful login clears its row.
+model LoginAttempt {
+  email           String   @id @db.VarChar(254)
+  attempts        Int
+  windowStartedAt DateTime @map("window_started_at") @db.Timestamptz(3)
+
+  @@index([windowStartedAt])
+  @@map("login_attempts")
+}

@@ -49,7 +49,11 @@ export interface BuildAppOptions {
 export async function buildApp(env: Env, options: BuildAppOptions = {}) {
   const app = Fastify({
     logger: loggerOptions(env),
-    trustProxy: env.TRUST_PROXY,
+    // A number of hops becomes proxy-addr's function form: trust the first N addresses.
+    trustProxy:
+      typeof env.TRUST_PROXY === 'number'
+        ? (_address: string, hop: number) => hop < (env.TRUST_PROXY as number)
+        : env.TRUST_PROXY,
     // /properties and /properties/ are the same route.
     routerOptions: { ignoreTrailingSlash: true },
     // Reuse the caller's request id (e.g. from a proxy) only when it is safe to log.

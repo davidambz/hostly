@@ -4,7 +4,7 @@ import { DEV_JWT_SECRET_PREFIX, InvalidEnvError, loadEnv } from './env.js'
 
 const DATABASE_URL = 'postgresql://hostly:hostly@localhost:5432/hostly'
 const JWT_SECRET = 'a-real-secret-that-is-at-least-32-characters'
-const base = { DATABASE_URL, JWT_SECRET }
+const base = { DATABASE_URL, JWT_SECRET, TRUST_PROXY: 'false' }
 
 describe('loadEnv', () => {
   it('applies safe production defaults when nothing is set', () => {
@@ -38,7 +38,6 @@ describe('loadEnv', () => {
       CORS_ORIGINS: '',
       RATE_LIMIT_MAX: '',
       AUTH_RATE_LIMIT_MAX: '',
-      TRUST_PROXY: '',
       DOCS_ENABLED: '',
       ACCESS_TOKEN_TTL_SECONDS: '',
       REFRESH_TOKEN_TTL_DAYS: '',
@@ -214,8 +213,30 @@ describe('loadEnv', () => {
       expect(loadEnv({ ...base, TRUST_PROXY: value }).TRUST_PROXY).toBe(expected)
     })
 
-    it.each(['yes', '1', 'TRUE'])('rejects %s', (value) => {
-      expect(() => loadEnv({ ...base, TRUST_PROXY: value })).toThrow(InvalidEnvError)
+    it.each([
+      ['1', 1],
+      ['2', 2],
+      ['10.0.0.1', ['10.0.0.1']],
+      ['10.0.0.0/8, loopback', ['10.0.0.0/8', 'loopback']],
+      ['fd00::/8', ['fd00::/8']],
+    ])('reads %s as %o', (value, expected) => {
+      expect(loadEnv({ ...base, TRUST_PROXY: value }).TRUST_PROXY).toEqual(expected)
+    })
+
+    it.each(['yes', 'TRUE', '0', '10.0.0.0/33', '300.1.1.1', 'example.com', '10.0.0.1/8/2'])(
+      'rejects %s',
+      (value) => {
+        expect(() => loadEnv({ ...base, TRUST_PROXY: value })).toThrow(InvalidEnvError)
+      },
+    )
+
+    it('is required in production, where a wrong default breaks the rate limits', () => {
+      expect(() => loadEnv({ DATABASE_URL, JWT_SECRET })).toThrow(/TRUST_PROXY/)
+      expect(() => loadEnv({ DATABASE_URL, JWT_SECRET, TRUST_PROXY: '' })).toThrow(/TRUST_PROXY/)
+    })
+
+    it('defaults to false outside production', () => {
+      expect(loadEnv({ DATABASE_URL, JWT_SECRET, NODE_ENV: 'development' }).TRUST_PROXY).toBe(false)
     })
   })
 
