@@ -11,6 +11,7 @@ export const testUser = {
   email: 'ana@hostly.dev',
   cpf: null,
   phone: null,
+  isAdmin: false,
   createdAt: '2026-10-31T12:00:00.000Z',
 }
 

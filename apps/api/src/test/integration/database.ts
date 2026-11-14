@@ -1,3 +1,4 @@
+import { seedSystemPlans } from '../../modules/plans/system-plans.js'
 import { createDatabase, type Database } from '../../shared/database.js'
 import { testDatabaseUrl } from './database-url.js'
 
@@ -15,7 +16,10 @@ export async function disconnectTestDatabase() {
   db = undefined
 }
 
-/** Empties every table (keeping the migrations history) so each test starts clean. */
+/**
+ * Empties every table (keeping the migrations history) so each test starts clean, then puts
+ * back the system plans the migrations created.
+ */
 export async function resetTestDatabase() {
   const database = testDatabase()
   // The tables don't change during a run, so the statement is built once per file.
@@ -23,6 +27,7 @@ export async function resetTestDatabase() {
   if (truncateStatement) {
     await database.$executeRawUnsafe(truncateStatement)
   }
+  await seedSystemPlans(database)
 }
 
 async function buildTruncateStatement(database: Database) {

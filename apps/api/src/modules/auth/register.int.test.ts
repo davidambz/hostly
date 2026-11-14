@@ -39,6 +39,7 @@ describe('POST /auth/register', () => {
         email: 'ana@hostly.dev',
         cpf: null,
         phone: null,
+        isAdmin: false,
         createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) as string,
       })
     })

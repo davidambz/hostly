@@ -31,7 +31,7 @@ Feito para o aluguel de temporada brasileiro de quem tem poucos imóveis ou gere
 
 - Funciona hoje: cadastro e login, imóveis, intermediadores, reservas com calendário e lista, cálculo do resumo financeiro, tema claro e escuro.
 - Fora por enquanto: contratos.
-- Vai ter planos pagos; preços e planos ainda não definidos. Não publicar preços, limites de plano nem período de teste.
+- Planos: **Free** (até 1 imóvel, de graça, sem prazo) e **Premium** (imóveis ilimitados), cobrado por mês, semestre ou ano. Não há período de teste: o Free é o jeito de conhecer. Os preços ainda não foram definidos (ficam no backoffice): não publicar preços até lá. Um administrador pode dar um plano de cortesia por 1 mês, 6 meses, 1 ano ou vitalício.
 - Código aberto em github.com/davidambz/hostly.
 
 ## Brand Commitments

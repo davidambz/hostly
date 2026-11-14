@@ -25,6 +25,8 @@ model User {
   /// DDD + number, 10 or 11 digits. Optional, like the CPF.
   phone        String?  @db.VarChar(11)
   passwordHash String   @map("password_hash")
+  /// Can use the backoffice. Granted with `pnpm admin:grant <e-mail>` or by another admin.
+  isAdmin      Boolean  @default(false) @map("is_admin")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -207,4 +209,25 @@ model Payment {
 
   @@index([bookingId, paidOn])
   @@map("payments")
+}
+
+/// A commercial plan: what it allows and what it costs per billing period.
+model Plan {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  /// Stable key of the plans the system relies on ("free", "premium"); null for plans an admin adds.
+  code            String?  @unique @db.VarChar(50)
+  name            String   @db.VarChar(100)
+  description     String?  @db.VarChar(1000)
+  /// Inactive plans can't be granted or bought; who has one keeps it until it ends.
+  active          Boolean  @default(true)
+  /// Properties a user on this plan may have; null means unlimited.
+  maxProperties   Int?     @map("max_properties")
+  /// Cents per month, per six months and per year; null while the period isn't offered.
+  monthlyPrice    Int?     @map("monthly_price")
+  semiannualPrice Int?     @map("semiannual_price")
+  annualPrice     Int?     @map("annual_price")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("plans")
 }
