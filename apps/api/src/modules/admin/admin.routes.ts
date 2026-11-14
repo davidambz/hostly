@@ -2,6 +2,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 
 import { errorResponseSchema } from '../../shared/error-response.js'
+import { grantsRoutes } from '../grants/grants.routes.js'
 import { plansAdminRoutes } from '../plans/plans-admin.routes.js'
 import { AdminRepository } from './admin.repository.js'
 import {
@@ -29,6 +30,7 @@ export const adminRoutes: FastifyPluginAsyncZod = async (app) => {
   })
 
   await app.register(plansAdminRoutes)
+  await app.register(grantsRoutes)
 
   app.get(
     '/users',

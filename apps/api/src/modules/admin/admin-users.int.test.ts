@@ -71,6 +71,8 @@ describe('GET /admin/users', () => {
         createdAt: expect.any(String) as string,
         propertyCount: 2,
         plan: { id: expect.any(String) as string, code: 'free', name: 'Free' },
+        planSource: 'FREE',
+        grant: null,
       },
       expect.objectContaining({ id: admin.id, isAdmin: true, propertyCount: 0 }),
     ])

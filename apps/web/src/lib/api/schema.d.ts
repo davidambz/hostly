@@ -2177,6 +2177,443 @@ export interface paths {
     }
     trace?: never
   }
+  '/admin/users/{id}/grants': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * A user's plan grants
+     * @description Newest first, each with its history (who, when, what and why).
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['PlanGrant'][]
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    /**
+     * Give a user a plan
+     * @description For 1 month, 6 months, 1 year or LIFETIME, from now, free of charge. 409 ACTIVE_GRANT_EXISTS when one is in force; 400 CANNOT_GRANT_FREE, PLAN_INACTIVE.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: uuid */
+            planId: string
+            /** @enum {string} */
+            duration: 'ONE_MONTH' | 'SIX_MONTHS' | 'ONE_YEAR' | 'LIFETIME'
+            reason: string
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        201: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['PlanGrant']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/grants/{id}/renew': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Renew a grant
+     * @description Extends it by the duration, from its end (or from now, if it is over).
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            duration: 'ONE_MONTH' | 'SIX_MONTHS' | 'ONE_YEAR' | 'LIFETIME'
+            reason: string
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['PlanGrant']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/grants/{id}/plan': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Change a grant's plan
+     * @description Keeps its dates. 409 GRANT_REVOKED for a revoked grant.
+     */
+    patch: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: uuid */
+            planId: string
+            reason: string
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['PlanGrant']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    trace?: never
+  }
+  '/admin/grants/{id}/revoke': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Revoke a grant
+     * @description Ends it now. 409 GRANT_REVOKED when it already was.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            reason: string
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['PlanGrant']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/admin/users': {
     parameters: {
       query?: never
@@ -2349,22 +2786,6 @@ export interface components {
       message: string
       details?: unknown
     }
-    PlanInput: {
-      /** Format: uuid */
-      id: string
-      code: string | null
-      name: string
-      description: string | null
-      active: boolean
-      maxProperties: number | null
-      monthlyPrice: number | null
-      semiannualPrice: number | null
-      annualPrice: number | null
-      /** Format: date-time */
-      createdAt: string
-      /** Format: date-time */
-      updatedAt: string
-    }
     AdminUserInput: {
       /** Format: uuid */
       id: string
@@ -2380,12 +2801,83 @@ export interface components {
         code: string | null
         name: string
       }
+      /** @enum {string} */
+      planSource: 'FREE' | 'GRANT'
+      grant: {
+        /** Format: uuid */
+        id: string
+        /** Format: date-time */
+        endsAt: string | null
+      } | null
     }
     AdminUserPageInput: {
       items: components['schemas']['AdminUserInput'][]
       page: number
       pageSize: number
       total: number
+    }
+    PlanGrantInput: {
+      /** Format: uuid */
+      id: string
+      plan: {
+        /** Format: uuid */
+        id: string
+        code: string | null
+        name: string
+      }
+      /** @enum {string} */
+      duration: 'ONE_MONTH' | 'SIX_MONTHS' | 'ONE_YEAR' | 'LIFETIME'
+      /** Format: date-time */
+      startsAt: string
+      /** Format: date-time */
+      endsAt: string | null
+      reason: string
+      /** Format: date-time */
+      revokedAt: string | null
+      inForce: boolean
+      grantedBy: {
+        /** Format: uuid */
+        id: string
+        name: string
+      } | null
+      events: {
+        /** @enum {string} */
+        action: 'GRANTED' | 'RENEWED' | 'PLAN_CHANGED' | 'REVOKED'
+        plan: {
+          /** Format: uuid */
+          id: string
+          code: string | null
+          name: string
+        }
+        /** Format: date-time */
+        endsAt: string | null
+        /** @enum {string|null} */
+        duration: 'ONE_MONTH' | 'SIX_MONTHS' | 'ONE_YEAR' | 'LIFETIME' | null
+        reason: string
+        /** Format: date-time */
+        at: string
+        actor: {
+          /** Format: uuid */
+          id: string
+          name: string
+        } | null
+      }[]
+    }
+    PlanInput: {
+      /** Format: uuid */
+      id: string
+      code: string | null
+      name: string
+      description: string | null
+      active: boolean
+      maxProperties: number | null
+      monthlyPrice: number | null
+      semiannualPrice: number | null
+      annualPrice: number | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
     }
     UserInput: {
       /** Format: uuid */
@@ -2525,22 +3017,6 @@ export interface components {
       message: string
       details?: unknown
     }
-    Plan: {
-      /** Format: uuid */
-      id: string
-      code: string | null
-      name: string
-      description: string | null
-      active: boolean
-      maxProperties: number | null
-      monthlyPrice: number | null
-      semiannualPrice: number | null
-      annualPrice: number | null
-      /** Format: date-time */
-      createdAt: string
-      /** Format: date-time */
-      updatedAt: string
-    }
     AdminUser: {
       /** Format: uuid */
       id: string
@@ -2556,12 +3032,83 @@ export interface components {
         code: string | null
         name: string
       }
+      /** @enum {string} */
+      planSource: 'FREE' | 'GRANT'
+      grant: {
+        /** Format: uuid */
+        id: string
+        /** Format: date-time */
+        endsAt: string | null
+      } | null
     }
     AdminUserPage: {
       items: components['schemas']['AdminUser'][]
       page: number
       pageSize: number
       total: number
+    }
+    PlanGrant: {
+      /** Format: uuid */
+      id: string
+      plan: {
+        /** Format: uuid */
+        id: string
+        code: string | null
+        name: string
+      }
+      /** @enum {string} */
+      duration: 'ONE_MONTH' | 'SIX_MONTHS' | 'ONE_YEAR' | 'LIFETIME'
+      /** Format: date-time */
+      startsAt: string
+      /** Format: date-time */
+      endsAt: string | null
+      reason: string
+      /** Format: date-time */
+      revokedAt: string | null
+      inForce: boolean
+      grantedBy: {
+        /** Format: uuid */
+        id: string
+        name: string
+      } | null
+      events: {
+        /** @enum {string} */
+        action: 'GRANTED' | 'RENEWED' | 'PLAN_CHANGED' | 'REVOKED'
+        plan: {
+          /** Format: uuid */
+          id: string
+          code: string | null
+          name: string
+        }
+        /** Format: date-time */
+        endsAt: string | null
+        /** @enum {string|null} */
+        duration: 'ONE_MONTH' | 'SIX_MONTHS' | 'ONE_YEAR' | 'LIFETIME' | null
+        reason: string
+        /** Format: date-time */
+        at: string
+        actor: {
+          /** Format: uuid */
+          id: string
+          name: string
+        } | null
+      }[]
+    }
+    Plan: {
+      /** Format: uuid */
+      id: string
+      code: string | null
+      name: string
+      description: string | null
+      active: boolean
+      maxProperties: number | null
+      monthlyPrice: number | null
+      semiannualPrice: number | null
+      annualPrice: number | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
     }
     User: {
       /** Format: uuid */

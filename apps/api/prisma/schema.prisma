@@ -35,6 +35,11 @@ model User {
   bookings      Booking[]
   payments      Payment[]
   refreshTokens RefreshToken[]
+  /// Plans given to this user by an administrator.
+  planGrants    PlanGrant[]      @relation("GrantBeneficiary")
+  /// Grants this administrator made, and the actions they took on grants.
+  grantsMade    PlanGrant[]      @relation("GrantAdmin")
+  grantEvents   PlanGrantEvent[]
 
   @@map("users")
 }
@@ -229,5 +234,70 @@ model Plan {
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  grants      PlanGrant[]
+  grantEvents PlanGrantEvent[]
+
   @@map("plans")
+}
+
+/// How long a plan given by an administrator lasts.
+enum GrantDuration {
+  ONE_MONTH
+  SIX_MONTHS
+  ONE_YEAR
+  LIFETIME
+}
+
+enum GrantAction {
+  GRANTED
+  RENEWED
+  PLAN_CHANGED
+  REVOKED
+}
+
+/// A plan an administrator gave a user, free of charge: a courtesy, never a payment.
+model PlanGrant {
+  id          String        @id @default(uuid(7)) @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  planId      String        @map("plan_id") @db.Uuid
+  /// The administrator who granted it; null if that account was deleted.
+  grantedById String?       @map("granted_by_id") @db.Uuid
+  duration    GrantDuration
+  startsAt    DateTime      @map("starts_at") @db.Timestamptz(3)
+  /// When it ends; null for a lifetime grant.
+  endsAt      DateTime?     @map("ends_at") @db.Timestamptz(3)
+  reason      String        @db.VarChar(500)
+  revokedAt   DateTime?     @map("revoked_at") @db.Timestamptz(3)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user      User             @relation("GrantBeneficiary", fields: [userId], references: [id], onDelete: Cascade)
+  plan      Plan             @relation(fields: [planId], references: [id], onDelete: Restrict)
+  grantedBy User?            @relation("GrantAdmin", fields: [grantedById], references: [id], onDelete: SetNull)
+  events    PlanGrantEvent[]
+
+  @@index([userId, revokedAt])
+  @@map("plan_grants")
+}
+
+/// What happened to a grant, by whom and why: the backoffice's history.
+model PlanGrantEvent {
+  id       String         @id @default(uuid(7)) @db.Uuid
+  grantId  String         @map("grant_id") @db.Uuid
+  /// The administrator who acted; null if that account was deleted.
+  actorId  String?        @map("actor_id") @db.Uuid
+  action   GrantAction
+  /// The plan and the end date as they were left by this action.
+  planId   String         @map("plan_id") @db.Uuid
+  endsAt   DateTime?      @map("ends_at") @db.Timestamptz(3)
+  duration GrantDuration?
+  reason   String         @db.VarChar(500)
+  at       DateTime       @default(now()) @db.Timestamptz(3)
+
+  grant PlanGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  actor User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  plan  Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([grantId, at])
+  @@map("plan_grant_events")
 }

@@ -19,6 +19,8 @@ const me: AdminUser = {
   createdAt: testUser.createdAt,
   propertyCount: 1,
   plan: free,
+  planSource: 'FREE',
+  grant: null,
 }
 const carlos: AdminUser = {
   id: '018f0000-0000-7000-8000-000000000002',
@@ -28,6 +30,8 @@ const carlos: AdminUser = {
   createdAt: '2026-11-01T12:00:00.000Z',
   propertyCount: 3,
   plan: free,
+  planSource: 'FREE',
+  grant: null,
 }
 
 /** Logged in as an administrator, with the accounts the backoffice lists. */
@@ -108,7 +112,10 @@ describe('backoffice', () => {
     const { user } = await openPage()
 
     expect(await screen.findByText('Carlos Lima')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Ações de Ana Souza' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ações de Ana Souza' }))
+    expect(await screen.findByRole('menuitem', { name: 'Plano e concessões' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /administrador/ })).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
 
     await user.click(screen.getByRole('button', { name: 'Ações de Carlos Lima' }))
     await user.click(await screen.findByRole('menuitem', { name: 'Tornar administrador' }))

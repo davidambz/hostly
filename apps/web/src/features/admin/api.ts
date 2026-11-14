@@ -77,3 +77,59 @@ export function useUpdatePlan() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
   })
 }
+
+export type PlanGrant = components['schemas']['PlanGrant']
+export type GrantDuration = PlanGrant['duration']
+
+const grantKeys = (userId: string) => [...adminKeys.all, 'grants', userId] as const
+
+/** A user's grants, newest first, each with its history. */
+export function useUserGrants(userId: string) {
+  return useQuery({
+    queryKey: grantKeys(userId),
+    queryFn: async () =>
+      unwrap(await api.GET('/admin/users/{id}/grants', { params: { path: { id: userId } } })),
+  })
+}
+
+/** Every grant action refreshes the backoffice (the accounts' plans change with it). */
+function useGrantMutation<T>(run: (input: T) => Promise<unknown>) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: run,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+  })
+}
+
+export function useGrantPlan(userId: string) {
+  return useGrantMutation(
+    async (input: { planId: string; duration: GrantDuration; reason: string }) =>
+      unwrap(
+        await api.POST('/admin/users/{id}/grants', {
+          params: { path: { id: userId } },
+          body: input,
+        }),
+      ),
+  )
+}
+
+export function useRenewGrant() {
+  return useGrantMutation(
+    async ({ id, ...body }: { id: string; duration: GrantDuration; reason: string }) =>
+      unwrap(await api.POST('/admin/grants/{id}/renew', { params: { path: { id } }, body })),
+  )
+}
+
+export function useChangeGrantPlan() {
+  return useGrantMutation(async ({ id, ...body }: { id: string; planId: string; reason: string }) =>
+    unwrap(await api.PATCH('/admin/grants/{id}/plan', { params: { path: { id } }, body })),
+  )
+}
+
+export function useRevokeGrant() {
+  return useGrantMutation(async ({ id, reason }: { id: string; reason: string }) =>
+    unwrap(
+      await api.POST('/admin/grants/{id}/revoke', { params: { path: { id } }, body: { reason } }),
+    ),
+  )
+}
