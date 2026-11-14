@@ -7,35 +7,35 @@
  */
 const COLORS = [
   {
-    bar: 'bg-property-1 text-property-1-foreground hover:bg-property-1/85',
+    bar: 'bg-property-1 text-property-1-foreground hover:bg-property-1/90',
     dot: 'bg-property-1',
   },
   {
-    bar: 'bg-property-2 text-property-2-foreground hover:bg-property-2/85',
+    bar: 'bg-property-2 text-property-2-foreground hover:bg-property-2/90',
     dot: 'bg-property-2',
   },
   {
-    bar: 'bg-property-3 text-property-3-foreground hover:bg-property-3/85',
+    bar: 'bg-property-3 text-property-3-foreground hover:bg-property-3/90',
     dot: 'bg-property-3',
   },
   {
-    bar: 'bg-property-4 text-property-4-foreground hover:bg-property-4/85',
+    bar: 'bg-property-4 text-property-4-foreground hover:bg-property-4/90',
     dot: 'bg-property-4',
   },
   {
-    bar: 'bg-property-5 text-property-5-foreground hover:bg-property-5/85',
+    bar: 'bg-property-5 text-property-5-foreground hover:bg-property-5/90',
     dot: 'bg-property-5',
   },
   {
-    bar: 'bg-property-6 text-property-6-foreground hover:bg-property-6/85',
+    bar: 'bg-property-6 text-property-6-foreground hover:bg-property-6/90',
     dot: 'bg-property-6',
   },
   {
-    bar: 'bg-property-7 text-property-7-foreground hover:bg-property-7/85',
+    bar: 'bg-property-7 text-property-7-foreground hover:bg-property-7/90',
     dot: 'bg-property-7',
   },
   {
-    bar: 'bg-property-8 text-property-8-foreground hover:bg-property-8/85',
+    bar: 'bg-property-8 text-property-8-foreground hover:bg-property-8/90',
     dot: 'bg-property-8',
   },
 ] as const

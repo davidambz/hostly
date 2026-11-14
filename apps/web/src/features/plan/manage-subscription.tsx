@@ -142,7 +142,7 @@ function PeriodChange({ plan, current }: { plan: Plan; current: BillingPeriod })
             onChange={(event) => {
               setPeriod(event.target.value as BillingPeriod | '')
             }}
-            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-9 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+            className="border-input focus-visible:border-ring focus-visible:ring-ring dark:bg-input/30 h-9 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:ring-2"
           >
             <option value="">Escolha</option>
             {options.map((option) => (

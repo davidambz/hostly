@@ -77,7 +77,10 @@ export function AdminPlansPage() {
             </TableHeader>
             <TableBody>
               {plans.data.map((plan) => (
-                <TableRow key={plan.id} className={plan.active ? undefined : 'opacity-60'}>
+                <TableRow
+                  key={plan.id}
+                  className={plan.active ? undefined : 'text-muted-foreground'}
+                >
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{plan.name}</span>
