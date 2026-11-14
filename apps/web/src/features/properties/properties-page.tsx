@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/page-header'
 import { PaginationBar } from '@/components/pagination-bar'
 import { SearchInput } from '@/components/search-input'
 import { EmptyState, ErrorState, LoadingState } from '@/components/states'
+import { toastDeleted } from '@/components/undo-toast'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,7 +36,9 @@ import {
   PAGE_SIZE,
   type Property,
   PROPERTY_TYPE_LABELS,
+  propertyInputOf,
   useAllProperties,
+  useCreateProperty,
   useDeleteProperty,
   useProperties,
 } from './api'
@@ -62,6 +65,7 @@ export function PropertiesPage() {
   const { params, page, search, set, setSearch, setPage } = useSearchParamState()
   const properties = useProperties({ search, page })
   const remove = useDeleteProperty()
+  const create = useCreateProperty()
   const editing = useOverlay<Property>()
   const deleting = useOverlay<Property>()
   // Colors come from the whole (name-sorted) list, as on the calendar, not from this page.
@@ -96,7 +100,10 @@ export function PropertiesPage() {
     if (!property) return
     try {
       await remove.mutateAsync(property.id)
-      toast.success(`"${property.name}" foi excluído.`)
+      toastDeleted(`"${property.name}" foi excluído.`, {
+        restore: () => create.mutateAsync(propertyInputOf(property)),
+        restored: `"${property.name}" voltou.`,
+      })
     } catch (error) {
       toast.error(
         error instanceof ApiError && error.code === 'PROPERTY_HAS_BOOKINGS'
@@ -253,7 +260,7 @@ export function PropertiesPage() {
         open={deleting.open}
         onOpenChange={deleting.setOpen}
         title="Excluir imóvel?"
-        description={`"${deleting.item?.name ?? ''}" será excluído. Isso não pode ser desfeito.`}
+        description={`"${deleting.item?.name ?? ''}" será excluído.`}
         confirmLabel="Excluir"
         pending={remove.isPending}
         onConfirm={() => void confirmDelete()}

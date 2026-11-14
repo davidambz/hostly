@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/page-header'
 import { PaginationBar } from '@/components/pagination-bar'
 import { SearchInput } from '@/components/search-input'
 import { EmptyState, ErrorState, LoadingState } from '@/components/states'
+import { toastDeleted } from '@/components/undo-toast'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,8 +34,10 @@ import {
   BROKER_TYPE_BADGES,
   BROKER_TYPE_LABELS,
   type Broker,
+  brokerInputOf,
   PAGE_SIZE,
   useBrokers,
+  useCreateBroker,
   useDeleteBroker,
 } from './api'
 import { documentLine, phonesLine } from './broker-format'
@@ -44,6 +47,7 @@ export function BrokersPage() {
   const { page, search, setSearch, setPage } = useSearchParamState()
   const brokers = useBrokers({ search, page })
   const remove = useDeleteBroker()
+  const create = useCreateBroker()
   const editing = useOverlay<Broker>()
   const deleting = useOverlay<Broker>()
   const pastTheEnd = useClampedPage({
@@ -59,7 +63,10 @@ export function BrokersPage() {
     if (!broker) return
     try {
       await remove.mutateAsync(broker.id)
-      toast.success(`"${broker.name}" foi excluído.`)
+      toastDeleted(`"${broker.name}" foi excluído.`, {
+        restore: () => create.mutateAsync(brokerInputOf(broker)),
+        restored: `"${broker.name}" voltou.`,
+      })
     } catch (error) {
       toast.error(
         error instanceof ApiError && error.code === 'BROKER_HAS_BOOKINGS'
@@ -203,7 +210,7 @@ export function BrokersPage() {
         open={deleting.open}
         onOpenChange={deleting.setOpen}
         title="Excluir intermediador?"
-        description={`"${deleting.item?.name ?? ''}" será excluído. Isso não pode ser desfeito.`}
+        description={`"${deleting.item?.name ?? ''}" será excluído.`}
         confirmLabel="Excluir"
         pending={remove.isPending}
         onConfirm={() => void confirmDelete()}

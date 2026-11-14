@@ -126,3 +126,19 @@ export function useDeleteBooking() {
     onSuccess: invalidate,
   })
 }
+
+/** What it takes to create `booking` again, e.g. to undo its deletion. */
+export function bookingInputOf(booking: Booking): BookingInput {
+  return {
+    propertyId: booking.property.id,
+    brokerId: booking.broker?.id ?? null,
+    guestName: booking.guestName,
+    checkIn: booking.checkIn,
+    checkOut: booking.checkOut,
+    nightlyRate: booking.nightlyRate,
+    cleaningFee: booking.cleaningFee,
+    discount: booking.discount,
+    amountPaid: booking.amountPaid,
+    brokerCommissionBps: booking.brokerCommissionBps,
+  }
+}

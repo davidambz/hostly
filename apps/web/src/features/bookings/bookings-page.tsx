@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageHeader } from '@/components/page-header'
 import { EmptyState, ErrorState, LoadingState } from '@/components/states'
+import { toastDeleted } from '@/components/undo-toast'
 import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useOverlay } from '@/hooks/use-overlay'
@@ -13,7 +14,7 @@ import { useSearchParamState } from '@/hooks/use-search-param-state'
 import { errorMessage } from '@/lib/api/form-errors'
 
 import { useAllProperties } from '../properties/api'
-import { type Booking, useDeleteBooking } from './api'
+import { type Booking, bookingInputOf, useCreateBooking, useDeleteBooking } from './api'
 import { type BookingDraft, BookingSheet } from './booking-sheet'
 import { BookingsCalendar, type CalendarView } from './bookings-calendar'
 import { BookingsList } from './bookings-list'
@@ -45,6 +46,7 @@ export function BookingsPage() {
   const sheet = useOverlay<SheetState>()
   const deleting = useOverlay<Booking>()
   const remove = useDeleteBooking()
+  const create = useCreateBooking()
 
   const colors = useMemo(
     () => propertyColors((properties.data ?? []).map((property) => property.id)),
@@ -85,7 +87,10 @@ export function BookingsPage() {
     if (!booking) return
     try {
       await remove.mutateAsync(booking.id)
-      toast.success(`A reserva de ${booking.guestName} foi excluída.`)
+      toastDeleted(`A reserva de ${booking.guestName} foi excluída.`, {
+        restore: () => create.mutateAsync(bookingInputOf(booking)),
+        restored: `A reserva de ${booking.guestName} voltou.`,
+      })
     } catch (error) {
       toast.error(errorMessage(error))
     } finally {
@@ -242,7 +247,7 @@ export function BookingsPage() {
         title="Excluir reserva?"
         description={
           deleting.item
-            ? `A reserva de ${deleting.item.guestName} em ${deleting.item.property.name} (${formatStay(deleting.item.checkIn, deleting.item.checkOut)}) será excluída. Isso não pode ser desfeito.`
+            ? `A reserva de ${deleting.item.guestName} em ${deleting.item.property.name} (${formatStay(deleting.item.checkIn, deleting.item.checkOut)}) será excluída.`
             : ''
         }
         confirmLabel="Excluir"

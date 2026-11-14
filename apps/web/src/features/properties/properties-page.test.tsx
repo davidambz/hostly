@@ -373,6 +373,28 @@ describe('deleting a property', () => {
     expect(await screen.findByText('Nenhum imóvel ainda')).toBeInTheDocument()
   })
 
+  it('puts a deleted property back from the notice', async () => {
+    serveProperties([house])
+    let created: unknown = null
+    server.use(
+      http.delete(url(`/properties/${house.id}`), () => new HttpResponse(null, { status: 204 })),
+      http.post(url('/properties'), async ({ request }) => {
+        created = await request.json()
+        return HttpResponse.json({ ...house, id: 'new-id' }, { status: 201 })
+      }),
+    )
+    const { user } = await openPage()
+
+    await openActions(user, house.name, 'Excluir')
+    const dialog = await screen.findByRole('alertdialog', { name: 'Excluir imóvel?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await user.click(await screen.findByRole('button', { name: 'Desfazer' }))
+
+    expect(await screen.findByText('"Casa da Praia" voltou.')).toBeInTheDocument()
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...input } = house
+    expect(created).toEqual(input)
+  })
+
   it('does nothing when cancelled', async () => {
     serveProperties([house])
     const { user } = await openPage()

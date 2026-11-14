@@ -98,3 +98,15 @@ export function useAllProperties() {
       ),
   })
 }
+
+/** What it takes to create `property` again, e.g. to undo its deletion. */
+export function propertyInputOf({
+  id: _id,
+  createdAt: _createdAt,
+  updatedAt: _updatedAt,
+  state,
+  ...input
+}: Property): PropertyInput {
+  // The API only ever stores a valid UF, but reads it back as a plain string.
+  return { ...input, state: state as PropertyInput['state'] }
+}

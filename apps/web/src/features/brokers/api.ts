@@ -102,3 +102,13 @@ export function useAllBrokers() {
       ),
   })
 }
+
+/** What it takes to create `broker` again, e.g. to undo its deletion. */
+export function brokerInputOf({
+  id: _id,
+  createdAt: _c,
+  updatedAt: _u,
+  ...input
+}: Broker): BrokerInput {
+  return input
+}
