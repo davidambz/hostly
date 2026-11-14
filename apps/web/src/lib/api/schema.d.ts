@@ -2758,6 +2758,72 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/admin/dashboard': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * The backoffice figures
+     * @description Accounts (total, new in 30 days), accounts per plan and per source, grants ending in the next 30 days, and overall usage.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['AdminDashboard']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/admin/users': {
     parameters: {
       query?: never
@@ -3023,6 +3089,42 @@ export interface components {
       /** Format: date-time */
       updatedAt: string
     }
+    AdminDashboardInput: {
+      users: {
+        total: number
+        new: number
+      }
+      byPlan: {
+        /** Format: uuid */
+        id: string
+        code: string | null
+        name: string
+        users: number
+      }[]
+      bySource: {
+        free: number
+        grant: number
+      }
+      grantsEndingSoon: {
+        /** Format: uuid */
+        grantId: string
+        user: {
+          /** Format: uuid */
+          id: string
+          name: string
+          email: string
+        }
+        plan: {
+          name: string
+        }
+        /** Format: date-time */
+        endsAt: string
+      }[]
+      usage: {
+        properties: number
+        bookings: number
+      }
+    }
     UserInput: {
       /** Format: uuid */
       id: string
@@ -3285,6 +3387,42 @@ export interface components {
       createdAt: string
       /** Format: date-time */
       updatedAt: string
+    }
+    AdminDashboard: {
+      users: {
+        total: number
+        new: number
+      }
+      byPlan: {
+        /** Format: uuid */
+        id: string
+        code: string | null
+        name: string
+        users: number
+      }[]
+      bySource: {
+        free: number
+        grant: number
+      }
+      grantsEndingSoon: {
+        /** Format: uuid */
+        grantId: string
+        user: {
+          /** Format: uuid */
+          id: string
+          name: string
+          email: string
+        }
+        plan: {
+          name: string
+        }
+        /** Format: date-time */
+        endsAt: string
+      }[]
+      usage: {
+        properties: number
+        bookings: number
+      }
     }
     User: {
       /** Format: uuid */

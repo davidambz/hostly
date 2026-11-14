@@ -1,4 +1,4 @@
-import { Navigate, type RouteObject } from 'react-router'
+import type { RouteObject } from 'react-router'
 
 import { AppLayout } from '@/components/layout/app-layout'
 import { RequireAuth, RequireGuest, RequireVisitor } from '@/features/auth/guards'
@@ -74,7 +74,14 @@ export const routes: RouteObject[] = [
                   Component: (await import('@/features/admin/admin-layout')).AdminLayout,
                 }),
                 children: [
-                  { path: '/admin', element: <Navigate to="/admin/usuarios" replace /> },
+                  {
+                    path: '/admin',
+                    handle: handle('Administração'),
+                    lazy: async () => ({
+                      Component: (await import('@/features/admin/admin-dashboard-page'))
+                        .AdminDashboardPage,
+                    }),
+                  },
                   {
                     path: '/admin/usuarios',
                     handle: handle('Usuários · Administração'),

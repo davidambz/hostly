@@ -56,7 +56,7 @@ function serveAdmin(users: AdminUser[] = [carlos, me]) {
   return { queries, patches }
 }
 
-async function openPage(path = '/admin') {
+async function openPage(path = '/admin/usuarios') {
   const user = userEvent.setup()
   const view = renderRoute(routes, path)
   await screen.findByRole('heading', { level: 1, name: 'Administração' }, { timeout: 5000 })
@@ -77,9 +77,9 @@ describe('backoffice', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('opens from the top bar on the accounts, for an administrator', async () => {
+  it('lists the accounts for an administrator, with the backoffice in the top bar', async () => {
     serveAdmin()
-    const { router } = await openPage()
+    const { router } = await openPage('/admin/usuarios')
 
     expect(router.state.location.pathname).toBe('/admin/usuarios')
     expect(

@@ -6,6 +6,7 @@ import { useAuth } from '../auth/auth-context'
 
 /** The backoffice's sections, in tab order. */
 const ADMIN_SECTIONS = [
+  { title: 'Painel', to: '/admin' },
   { title: 'Usuários', to: '/admin/usuarios' },
   { title: 'Planos', to: '/admin/planos' },
 ]
@@ -31,6 +32,7 @@ export function AdminLayout() {
           <NavLink
             key={to}
             to={to}
+            end
             className={({ isActive }) =>
               cn(
                 'focus-visible:ring-ring -mb-px border-b-2 px-3 py-2 text-sm font-medium outline-none focus-visible:ring-2',
