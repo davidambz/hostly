@@ -9,6 +9,7 @@ import { UsersRepository } from '../users/users.repository.js'
 import { publicUserSchema, toPublicUser } from '../users/users.schemas.js'
 import {
   accessTokenSchema,
+  changePasswordBodySchema,
   loginBodySchema,
   loginResponseSchema,
   registerBodySchema,
@@ -162,6 +163,52 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
     async (request, reply) => {
       await service.logout(request.cookies[REFRESH_COOKIE])
       endSession(reply)
+      return reply.status(204).send(null)
+    },
+  )
+
+  app.post(
+    '/password',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        tags: ['auth'],
+        summary: 'Change the password',
+        description:
+          'Checks the current password (400 WRONG_PASSWORD) and ends every other session; ' +
+          'this one stays.',
+        security: [{ bearerAuth: [] }],
+        body: changePasswordBodySchema,
+        response: {
+          204: z.null(),
+          400: errorResponseSchema,
+          401: errorResponseSchema,
+          429: errorResponseSchema,
+        },
+      },
+      config: { rateLimit },
+    },
+    async (request, reply) => {
+      await service.changePassword(request.user.sub, request.body, request.cookies[REFRESH_COOKIE])
+      return reply.status(204).send(null)
+    },
+  )
+
+  app.post(
+    '/logout-others',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        tags: ['auth'],
+        summary: 'Log out every other device',
+        description: 'Revokes every session of the account except the one of this cookie.',
+        security: [{ bearerAuth: [] }],
+        response: { 204: z.null(), 401: errorResponseSchema, 429: errorResponseSchema },
+      },
+      config: { rateLimit },
+    },
+    async (request, reply) => {
+      await service.logoutOthers(request.user.sub, request.cookies[REFRESH_COOKIE])
       return reply.status(204).send(null)
     },
   )

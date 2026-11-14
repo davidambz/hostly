@@ -36,3 +36,12 @@ export const accessTokenSchema = z
 export const loginResponseSchema = accessTokenSchema
   .extend({ user: publicUserSchema })
   .meta({ id: 'LoginResponse' })
+
+/** Body of POST /auth/password. */
+export const changePasswordBodySchema = z.object({
+  // Not validated beyond presence, like the login: the rules may have changed since.
+  currentPassword: z.string().min(1, 'Required').max(PASSWORD_MAX_LENGTH),
+  newPassword: passwordSchema,
+})
+
+export type ChangePasswordInput = z.infer<typeof changePasswordBodySchema>

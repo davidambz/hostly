@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto'
 
 import type { User } from '../../generated/prisma/client.js'
 import { UniqueFieldError } from '../../shared/database-errors.js'
-import { ConflictError, UnauthorizedError } from '../../shared/errors.js'
+import { BadRequestError, ConflictError, UnauthorizedError } from '../../shared/errors.js'
 import type { UsersRepository } from '../users/users.repository.js'
-import type { LoginInput, RegisterInput } from './auth.schemas.js'
+import type { ChangePasswordInput, LoginInput, RegisterInput } from './auth.schemas.js'
 import { generateRefreshToken, hashRefreshToken } from './refresh-token.js'
 import type { NewRefreshToken, RefreshTokensRepository } from './refresh-tokens.repository.js'
 
@@ -15,10 +15,13 @@ import type { NewRefreshToken, RefreshTokensRepository } from './refresh-tokens.
 export const ROTATION_GRACE_MS = 30_000
 
 export interface AuthServiceDeps {
-  users: Pick<UsersRepository, 'create' | 'findByEmail' | 'existsByEmail'>
+  users: Pick<
+    UsersRepository,
+    'create' | 'findByEmail' | 'existsByEmail' | 'findById' | 'updatePasswordHash'
+  >
   refreshTokens: Pick<
     RefreshTokensRepository,
-    'create' | 'findByHash' | 'replace' | 'revokeFamily' | 'deleteExpired'
+    'create' | 'findByHash' | 'replace' | 'revokeFamily' | 'revokeAllBut' | 'deleteExpired'
   >
   hashPassword: (password: string) => Promise<string>
   verifyPassword: (passwordHash: string, password: string) => Promise<boolean>
@@ -159,6 +162,38 @@ export class AuthService {
     if (stored) {
       await this.deps.refreshTokens.revokeFamily(stored.familyId, this.now(), 'LOGOUT')
     }
+  }
+
+  /**
+   * Changes the password after checking the current one (400 WRONG_PASSWORD), and ends every
+   * other session: whoever might know the old password is logged out everywhere else.
+   */
+  async changePassword(
+    userId: string,
+    { currentPassword, newPassword }: ChangePasswordInput,
+    currentToken: string | undefined,
+  ): Promise<void> {
+    const user = await this.deps.users.findById(userId)
+    if (!user) {
+      throw new UnauthorizedError('Account no longer exists', { code: 'INVALID_TOKEN' })
+    }
+    if (!(await this.deps.verifyPassword(user.passwordHash, currentPassword))) {
+      throw new BadRequestError('Current password is wrong', {
+        code: 'WRONG_PASSWORD',
+        details: { field: 'currentPassword' },
+      })
+    }
+    await this.deps.users.updatePasswordHash(userId, await this.deps.hashPassword(newPassword))
+    await this.logoutOthers(userId, currentToken)
+  }
+
+  /** Ends every session of the user but the one `currentToken` belongs to. */
+  async logoutOthers(userId: string, currentToken: string | undefined): Promise<void> {
+    const current = currentToken
+      ? await this.deps.refreshTokens.findByHash(hashRefreshToken(currentToken))
+      : null
+    const keep = current?.userId === userId ? current.familyId : null
+    await this.deps.refreshTokens.revokeAllBut(userId, keep, this.now(), 'LOGOUT')
   }
 
   private getDummyHash(): Promise<string> {
