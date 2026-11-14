@@ -31,8 +31,13 @@ export interface CheckoutRequest {
  */
 export interface BillingGateway {
   createCustomer(user: { id: string; name: string; email: string }): Promise<string>
-  /** Starts a Stripe Checkout for a subscription; returns the page to send the user to. */
-  createCheckout(request: CheckoutRequest): Promise<string>
+  /** Starts a Stripe Checkout for a subscription: its id and the page to send the user to. */
+  createCheckout(request: CheckoutRequest): Promise<{ id: string; url: string }>
+  /**
+   * Closes a checkout that is still open. Answers `complete` when it was already paid (its
+   * webhook may not have arrived yet), `expired` otherwise.
+   */
+  expireCheckout(id: string): Promise<'complete' | 'expired'>
   /** Checks a webhook's signature and reads it; throws when it isn't Stripe's. */
   readWebhook(rawBody: Buffer, signature: string): Stripe.Event
   retrieveSubscription(id: string): Promise<Stripe.Subscription>
@@ -71,7 +76,7 @@ export class StripeGateway implements BillingGateway {
     return customer.id
   }
 
-  async createCheckout(request: CheckoutRequest): Promise<string> {
+  async createCheckout(request: CheckoutRequest): Promise<{ id: string; url: string }> {
     const { interval, intervalCount } = RECURRENCE[request.period]
     const session = await this.stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -94,7 +99,14 @@ export class StripeGateway implements BillingGateway {
       cancel_url: request.cancelUrl,
     })
     if (!session.url) throw new Error('Stripe gave the checkout session no URL')
-    return session.url
+    return { id: session.id, url: session.url }
+  }
+
+  async expireCheckout(id: string): Promise<'complete' | 'expired'> {
+    const session = await this.stripe.checkout.sessions.retrieve(id)
+    if (session.status === 'complete') return 'complete'
+    if (session.status === 'open') await this.stripe.checkout.sessions.expire(id)
+    return 'expired'
   }
 
   readWebhook(rawBody: Buffer, signature: string): Stripe.Event {

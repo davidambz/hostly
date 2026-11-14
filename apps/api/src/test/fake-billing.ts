@@ -11,6 +11,8 @@ export const TEST_WEBHOOK_SECRET = 'whsec_test_hostly'
 export class FakeBilling implements BillingGateway {
   readonly customers: { id: string; name: string; email: string }[] = []
   readonly checkouts: CheckoutRequest[] = []
+  /** Each checkout's state at "Stripe", by id (`cs_test_<n>`). */
+  readonly checkoutStatus = new Map<string, 'open' | 'complete' | 'expired'>()
   readonly subscriptions = new Map<string, Stripe.Subscription>()
   private readonly stripe = new Stripe('sk_test_fake')
 
@@ -21,9 +23,24 @@ export class FakeBilling implements BillingGateway {
 
   createCheckout(request: CheckoutRequest) {
     this.checkouts.push(request)
-    return Promise.resolve(
-      `https://checkout.stripe.com/c/pay/cs_test_${String(this.checkouts.length)}`,
-    )
+    const id = `cs_test_${String(this.checkouts.length)}`
+    this.checkoutStatus.set(id, 'open')
+    return Promise.resolve({ id, url: `https://checkout.stripe.com/c/pay/${id}` })
+  }
+
+  expireCheckout(id: string) {
+    if (this.checkoutStatus.get(id) === 'complete') return Promise.resolve('complete' as const)
+    this.checkoutStatus.set(id, 'expired')
+    return Promise.resolve('expired' as const)
+  }
+
+  /**
+   * An event about `subscription`, which is also how Stripe has it now: the API reads the
+   * subscription back from Stripe instead of trusting the event's copy.
+   */
+  subscriptionEvent(id: string, type: string, subscription: Stripe.Subscription): string {
+    this.subscriptions.set(subscription.id, subscription)
+    return stripeEvent(id, type, subscription)
   }
 
   readWebhook(rawBody: Buffer, signature: string): Stripe.Event {
