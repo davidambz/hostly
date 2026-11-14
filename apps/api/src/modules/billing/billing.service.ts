@@ -4,7 +4,7 @@ import type { BillingPeriod } from '../../generated/prisma/client.js'
 import type { Database } from '../../shared/database.js'
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js'
 import { FREE_PLAN } from '../plans/system-plans.js'
-import type { BillingGateway } from './billing-gateway.js'
+import type { BillingGateway, SavedCard } from './billing-gateway.js'
 import { PAYING_STATUSES } from './paying-statuses.js'
 
 const PRICE_OF: Record<BillingPeriod, 'monthlyPrice' | 'semiannualPrice' | 'annualPrice'> = {
@@ -28,15 +28,18 @@ export class BillingService {
   constructor(
     private readonly db: Database,
     private readonly gateway: BillingGateway,
-    private readonly appUrl: string,
   ) {}
 
   /**
-   * Starts paying for `planId` every `period`: returns the Stripe page to send the user to.
-   * 409 SUBSCRIPTION_EXISTS while a paid plan is running; 400 PLAN_NOT_FOR_SALE (Free, off
-   * sale) and PERIOD_NOT_OFFERED (no price for that period).
+   * Starts paying for `planId` every `period`: a subscription waiting for its first charge,
+   * and the secret the card form on the page uses to pay it. 409 SUBSCRIPTION_EXISTS while a
+   * paid plan is running; 400 PLAN_NOT_FOR_SALE (Free, off sale) and PERIOD_NOT_OFFERED.
    */
-  async checkout(userId: string, planId: string, period: BillingPeriod): Promise<string> {
+  async subscribe(
+    userId: string,
+    planId: string,
+    period: BillingPeriod,
+  ): Promise<{ clientSecret: string }> {
     const plan = await this.db.plan.findUnique({ where: { id: planId } })
     if (!plan) {
       throw new NotFoundError('Plan not found', {
@@ -58,43 +61,57 @@ export class BillingService {
       })
     }
 
-    // One checkout at a time per user, with the user's row locked: two tabs (or a double
-    // click) would otherwise create two customers and two checkouts, and paying both would
-    // charge two subscriptions. Opening one expires the previous one.
+    // One payment at a time per user, with the user's row locked: two tabs (or a double
+    // click) would otherwise create two customers and two subscriptions, and paying both
+    // would charge twice. A subscription still waiting for its payment is cancelled first.
     return this.db.$transaction(
       async (tx) => {
         await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId}::uuid FOR UPDATE`
         const user = await tx.user.findUniqueOrThrow({ where: { id: userId } })
-        const running = await tx.subscription.findFirst({
-          where: { userId, status: { in: PAYING_STATUSES } },
-        })
-        const previous = user.stripeCheckoutSessionId
-        // A previous checkout already paid means a subscription whose webhook is on its way.
-        if (running || (previous && (await this.gateway.expireCheckout(previous)) === 'complete')) {
+        if (
+          await tx.subscription.findFirst({ where: { userId, status: { in: PAYING_STATUSES } } })
+        ) {
           throw new ConflictError('A paid plan is already running', {
             code: 'SUBSCRIPTION_EXISTS',
           })
         }
+        const waiting = await tx.subscription.findMany({ where: { userId, status: 'incomplete' } })
+        for (const subscription of waiting) {
+          await this.gateway.cancelSubscription(subscription.stripeSubscriptionId)
+          await tx.subscription.update({
+            where: { id: subscription.id },
+            data: { status: 'canceled' },
+          })
+        }
 
         const customerId = user.stripeCustomerId ?? (await this.gateway.createCustomer(user))
-        const session = await this.gateway.createCheckout({
+        if (!user.stripeCustomerId) {
+          await tx.user.update({ where: { id: userId }, data: { stripeCustomerId: customerId } })
+        }
+        const productId = plan.stripeProductId ?? (await this.productOf(tx, plan))
+        const { subscription, clientSecret } = await this.gateway.createSubscription({
           customerId,
-          productName: `Hostly ${plan.name}`,
+          productId,
           amount,
           period,
           metadata: { userId, planId, period },
-          successUrl: `${this.appUrl}/plano?assinatura=confirmando`,
-          cancelUrl: `${this.appUrl}/plano`,
         })
-        await tx.user.update({
-          where: { id: userId },
-          data: { stripeCustomerId: customerId, stripeCheckoutSessionId: session.id },
-        })
-        return session.url
+        await this.saveSubscription(tx, subscription)
+        return { clientSecret }
       },
       // Stripe answers inside the transaction, so it gets more than the default 5 s.
       { timeout: 30_000 },
     )
+  }
+
+  /** The plan's product at Stripe, created once, with the plan's row locked meanwhile. */
+  private async productOf(tx: Transaction, plan: { id: string; name: string }) {
+    await tx.$queryRaw`SELECT id FROM plans WHERE id = ${plan.id}::uuid FOR UPDATE`
+    const current = await tx.plan.findUniqueOrThrow({ where: { id: plan.id } })
+    if (current.stripeProductId) return current.stripeProductId
+    const productId = await this.gateway.createProduct(plan)
+    await tx.plan.update({ where: { id: plan.id }, data: { stripeProductId: productId } })
+    return productId
   }
 
   /** The subscription that gives the user a paid plan now; 404 NO_SUBSCRIPTION without one. */
@@ -123,8 +140,8 @@ export class BillingService {
     await this.db.$transaction((tx) => this.saveSubscription(tx, updated))
   }
 
-  /** Moves the subscription to another billing period, at that period's price. */
-  async changePeriod(userId: string, period: BillingPeriod): Promise<void> {
+  /** The subscription, its price in `period` and the plan's product, for a period change. */
+  private async periodChange(userId: string, period: BillingPeriod) {
     const subscription = await this.running(userId)
     if (subscription.period === period) {
       throw new BadRequestError('That is already the period', {
@@ -139,8 +156,31 @@ export class BillingService {
         details: { field: 'period' },
       })
     }
+    // Always the plan's own product: a subscription from the old Stripe Checkout carries an
+    // inline product Stripe marks inactive, and new prices can't be made on it.
+    const productId =
+      subscription.plan.stripeProductId ??
+      (await this.db.$transaction((tx) => this.productOf(tx, subscription.plan)))
+    return { subscription, amount, productId }
+  }
+
+  /** What moving to `period` would charge now: the new period, less what's left of this one. */
+  async previewPeriod(userId: string, period: BillingPeriod): Promise<{ amountDue: number }> {
+    const { subscription, amount, productId } = await this.periodChange(userId, period)
+    return {
+      amountDue: await this.gateway.previewPeriodChange(subscription.stripeSubscriptionId, {
+        productId,
+        amount,
+        period,
+      }),
+    }
+  }
+
+  /** Moves the subscription to another billing period, at that period's price, from now. */
+  async changePeriod(userId: string, period: BillingPeriod): Promise<void> {
+    const { subscription, amount, productId } = await this.periodChange(userId, period)
     const updated = await this.gateway.changePeriod(subscription.stripeSubscriptionId, {
-      productName: `Hostly ${subscription.plan.name}`,
+      productId,
       amount,
       period,
       metadata: { userId, planId: subscription.planId, period },
@@ -148,13 +188,42 @@ export class BillingService {
     await this.db.$transaction((tx) => this.saveSubscription(tx, updated))
   }
 
-  /** Stripe's portal for the card; 404 NO_CUSTOMER for an account that never paid. */
-  async portal(userId: string): Promise<string> {
+  /** The running subscription and its customer at Stripe; 404 NO_SUBSCRIPTION without one. */
+  private async payer(userId: string) {
+    const subscription = await this.running(userId)
     const user = await this.db.user.findUniqueOrThrow({ where: { id: userId } })
     if (!user.stripeCustomerId) {
-      throw new NotFoundError('The account never paid with Stripe', { code: 'NO_CUSTOMER' })
+      throw new NotFoundError('No paid plan is running', { code: 'NO_SUBSCRIPTION' })
     }
-    return this.gateway.createPortal(user.stripeCustomerId, `${this.appUrl}/plano`)
+    return { subscription, customerId: user.stripeCustomerId }
+  }
+
+  /** The card the subscription is charged on; null when Stripe has none on file. */
+  async card(userId: string): Promise<SavedCard | null> {
+    const { subscription, customerId } = await this.payer(userId)
+    return this.gateway.currentCard(customerId, subscription.stripeSubscriptionId)
+  }
+
+  /** Starts saving a new card: the secret the card form completes it with. */
+  async cardSetup(userId: string): Promise<{ clientSecret: string }> {
+    const { customerId } = await this.payer(userId)
+    return { clientSecret: await this.gateway.createCardSetup(customerId) }
+  }
+
+  /**
+   * Charges the subscription on the card the form just saved. 400 INVALID_PAYMENT_METHOD
+   * for a card that isn't this customer's.
+   */
+  async setCard(userId: string, paymentMethodId: string): Promise<void> {
+    const { subscription, customerId } = await this.payer(userId)
+    if (
+      !(await this.gateway.useCard(customerId, subscription.stripeSubscriptionId, paymentMethodId))
+    ) {
+      throw new BadRequestError('That card is not yours', {
+        code: 'INVALID_PAYMENT_METHOD',
+        details: { field: 'paymentMethodId' },
+      })
+    }
   }
 
   /**
@@ -172,16 +241,6 @@ export class BillingService {
       await this.db.$transaction(async (tx) => {
         await tx.stripeEvent.create({ data: { id: event.id, type: event.type } })
         if (subscription) await this.saveSubscription(tx, subscription)
-        if (event.type === 'checkout.session.completed') {
-          // Paid: a new checkout no longer has this one to expire.
-          const id = event.data.object.id
-          if (typeof id === 'string') {
-            await tx.user.updateMany({
-              where: { stripeCheckoutSessionId: id },
-              data: { stripeCheckoutSessionId: null },
-            })
-          }
-        }
         if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
           await this.savePayment(tx, event.data.object, event.type === 'invoice.paid')
         }

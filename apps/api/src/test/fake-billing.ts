@@ -1,6 +1,11 @@
 import Stripe from 'stripe'
 
-import type { BillingGateway, CheckoutRequest } from '../modules/billing/billing-gateway.js'
+import type {
+  BillingGateway,
+  SavedCard,
+  SubscriptionMetadata,
+  SubscriptionRequest,
+} from '../modules/billing/billing-gateway.js'
 
 export const TEST_WEBHOOK_SECRET = 'whsec_test_hostly'
 
@@ -10,9 +15,10 @@ export const TEST_WEBHOOK_SECRET = 'whsec_test_hostly'
  */
 export class FakeBilling implements BillingGateway {
   readonly customers: { id: string; name: string; email: string }[] = []
-  readonly checkouts: CheckoutRequest[] = []
-  /** Each checkout's state at "Stripe", by id (`cs_test_<n>`). */
-  readonly checkoutStatus = new Map<string, 'open' | 'complete' | 'expired'>()
+  readonly products: { id: string; name: string }[] = []
+  /** Every subscription asked for, in order (`sub_<n>`, each waiting for its payment). */
+  readonly subscriptionRequests: SubscriptionRequest[] = []
+  readonly cancelled: string[] = []
   readonly subscriptions = new Map<string, Stripe.Subscription>()
   private readonly stripe = new Stripe('sk_test_fake')
 
@@ -21,17 +27,28 @@ export class FakeBilling implements BillingGateway {
     return Promise.resolve(`cus_${String(this.customers.length)}`)
   }
 
-  createCheckout(request: CheckoutRequest) {
-    this.checkouts.push(request)
-    const id = `cs_test_${String(this.checkouts.length)}`
-    this.checkoutStatus.set(id, 'open')
-    return Promise.resolve({ id, url: `https://checkout.stripe.com/c/pay/${id}` })
+  createProduct(plan: { id: string; name: string }) {
+    this.products.push({ id: plan.id, name: plan.name })
+    return Promise.resolve(`prod_${String(this.products.length)}`)
   }
 
-  expireCheckout(id: string) {
-    if (this.checkoutStatus.get(id) === 'complete') return Promise.resolve('complete' as const)
-    this.checkoutStatus.set(id, 'expired')
-    return Promise.resolve('expired' as const)
+  createSubscription(request: SubscriptionRequest) {
+    this.subscriptionRequests.push(request)
+    const n = this.subscriptionRequests.length
+    const subscription = stripeSubscription({
+      id: `sub_${String(n)}`,
+      status: 'incomplete',
+      metadata: { ...request.metadata },
+    })
+    this.subscriptions.set(subscription.id, subscription)
+    return Promise.resolve({ subscription, clientSecret: `pi_${String(n)}_secret_test` })
+  }
+
+  cancelSubscription(id: string) {
+    this.cancelled.push(id)
+    const subscription = this.subscriptions.get(id)
+    if (subscription) this.subscriptions.set(id, { ...subscription, status: 'canceled' })
+    return Promise.resolve()
   }
 
   /**
@@ -53,7 +70,7 @@ export class FakeBilling implements BillingGateway {
     return Promise.resolve(subscription)
   }
 
-  readonly periodChanges: { id: string; amount: number; period: string }[] = []
+  readonly periodChanges: { id: string; productId: string; amount: number; period: string }[] = []
 
   setCancelAtPeriodEnd(id: string, cancel: boolean) {
     const subscription = this.subscriptions.get(id)
@@ -65,20 +82,49 @@ export class FakeBilling implements BillingGateway {
 
   changePeriod(
     id: string,
-    change: { amount: number; period: string; metadata: Record<string, string> },
+    change: { productId: string; amount: number; period: string; metadata: SubscriptionMetadata },
   ) {
     const subscription = this.subscriptions.get(id)
     if (!subscription) return Promise.reject(new Error(`No subscription ${id}`))
-    this.periodChanges.push({ id, amount: change.amount, period: change.period })
-    const updated = { ...subscription, metadata: change.metadata }
+    this.periodChanges.push({
+      id,
+      productId: change.productId,
+      amount: change.amount,
+      period: change.period,
+    })
+    const updated = { ...subscription, metadata: { ...change.metadata } }
     this.subscriptions.set(id, updated)
     return Promise.resolve(updated)
   }
 
-  createPortal(customerId: string, returnUrl: string) {
-    return Promise.resolve(
-      `https://billing.stripe.com/p/session/test_${customerId}?return=${encodeURIComponent(returnUrl)}`,
-    )
+  /** What a period change "would charge": the new amount, less a made-up 1 000 of credit. */
+  previewPeriodChange(_id: string, change: { amount: number }) {
+    return Promise.resolve(change.amount - 1_000)
+  }
+
+  /** Cards "saved" through the card form, by id, with whose they are. */
+  readonly cards = new Map<string, SavedCard & { customerId: string }>()
+  /** The card each subscription is charged on. */
+  readonly charging = new Map<string, string>()
+  readonly setups: string[] = []
+
+  createCardSetup(customerId: string) {
+    this.setups.push(customerId)
+    return Promise.resolve(`seti_${String(this.setups.length)}_secret_test`)
+  }
+
+  useCard(customerId: string, subscriptionId: string, paymentMethodId: string) {
+    if (this.cards.get(paymentMethodId)?.customerId !== customerId) return Promise.resolve(false)
+    this.charging.set(subscriptionId, paymentMethodId)
+    return Promise.resolve(true)
+  }
+
+  currentCard(_customerId: string, subscriptionId: string) {
+    const id = this.charging.get(subscriptionId)
+    const card = id ? this.cards.get(id) : undefined
+    if (!card) return Promise.resolve(null)
+    const { customerId: _owner, ...saved } = card
+    return Promise.resolve(saved)
   }
 
   /** Signs `payload` the way Stripe signs its webhooks. */

@@ -96,12 +96,14 @@ describe('loadEnv', () => {
     const env = loadEnv({
       ...base,
       STRIPE_SECRET_KEY: 'sk_test_123',
+      STRIPE_PUBLISHABLE_KEY: 'pk_test_123',
       STRIPE_WEBHOOK_SECRET: 'whsec_123',
       APP_URL: 'https://app.hostly.dev',
     })
 
     expect(env).toMatchObject({
       STRIPE_SECRET_KEY: 'sk_test_123',
+      STRIPE_PUBLISHABLE_KEY: 'pk_test_123',
       STRIPE_WEBHOOK_SECRET: 'whsec_123',
       APP_URL: 'https://app.hostly.dev',
     })
@@ -240,13 +242,28 @@ describe('loadEnv', () => {
     })
   })
 
-  describe('STRIPE_WEBHOOK_SECRET', () => {
+  describe('STRIPE_WEBHOOK_SECRET and STRIPE_PUBLISHABLE_KEY', () => {
     const stripe = { ...base, STRIPE_SECRET_KEY: 'sk_test_x' }
 
-    it('is required in production along with the secret key', () => {
-      expect(() => loadEnv(stripe)).toThrow(/STRIPE_WEBHOOK_SECRET/)
-      expect(loadEnv({ ...stripe, STRIPE_WEBHOOK_SECRET: 'whsec_x' }).STRIPE_WEBHOOK_SECRET).toBe(
-        'whsec_x',
+    it('are required in production along with the secret key', () => {
+      expect(() => loadEnv({ ...stripe, STRIPE_PUBLISHABLE_KEY: 'pk_test_x' })).toThrow(
+        /STRIPE_WEBHOOK_SECRET/,
+      )
+      expect(() => loadEnv({ ...stripe, STRIPE_WEBHOOK_SECRET: 'whsec_x' })).toThrow(
+        /STRIPE_PUBLISHABLE_KEY/,
+      )
+      expect(
+        loadEnv({
+          ...stripe,
+          STRIPE_WEBHOOK_SECRET: 'whsec_x',
+          STRIPE_PUBLISHABLE_KEY: 'pk_test_x',
+        }),
+      ).toMatchObject({ STRIPE_WEBHOOK_SECRET: 'whsec_x', STRIPE_PUBLISHABLE_KEY: 'pk_test_x' })
+    })
+
+    it('refuses a publishable key that is not one', () => {
+      expect(() => loadEnv({ ...base, STRIPE_PUBLISHABLE_KEY: 'sk_test_x' })).toThrow(
+        /STRIPE_PUBLISHABLE_KEY/,
       )
     })
 

@@ -1826,6 +1826,34 @@
           "total"
         ]
       },
+      "SavedCardInput": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "description": "visa, mastercard, amex…"
+          },
+          "last4": {
+            "type": "string"
+          },
+          "expMonth": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "expYear": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "brand",
+          "last4",
+          "expMonth",
+          "expYear"
+        ]
+      },
       "BillingPaymentInput": {
         "type": "object",
         "properties": {
@@ -3730,6 +3758,35 @@
           "page",
           "pageSize",
           "total"
+        ],
+        "additionalProperties": false
+      },
+      "SavedCard": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "description": "visa, mastercard, amex…"
+          },
+          "last4": {
+            "type": "string"
+          },
+          "expMonth": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "expYear": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "brand",
+          "last4",
+          "expMonth",
+          "expYear"
         ],
         "additionalProperties": false
       },
@@ -6696,13 +6753,68 @@
         }
       }
     },
-    "/billing/checkout": {
+    "/billing/config": {
+      "get": {
+        "summary": "What the card form needs",
+        "tags": [
+          "billing"
+        ],
+        "description": "Stripe's publishable key, for the card form in the browser. 503 BILLING_UNAVAILABLE without Stripe.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "publishableKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "publishableKey"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/subscribe": {
       "post": {
         "summary": "Start paying for a plan",
         "tags": [
           "billing"
         ],
-        "description": "Answers the Stripe Checkout page to send the user to. 409 SUBSCRIPTION_EXISTS while a paid plan runs; 400 PLAN_NOT_FOR_SALE, PERIOD_NOT_OFFERED; 503 BILLING_UNAVAILABLE without Stripe.",
+        "description": "Creates the subscription waiting for its first charge and answers the secret the card form confirms it with (Stripe's Payment Element). The card never reaches this API. A subscription still waiting for a payment is cancelled first. 409 SUBSCRIPTION_EXISTS while a paid plan runs; 400 PLAN_NOT_FOR_SALE, PERIOD_NOT_OFFERED; 503 BILLING_UNAVAILABLE without Stripe.",
         "requestBody": {
           "required": true,
           "content": {
@@ -6745,13 +6857,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "url": {
-                      "type": "string",
-                      "format": "uri"
+                    "clientSecret": {
+                      "type": "string"
                     }
                   },
                   "required": [
-                    "url"
+                    "clientSecret"
                   ],
                   "additionalProperties": false
                 }
@@ -6899,6 +7010,98 @@
         }
       }
     },
+    "/billing/subscription/period/preview": {
+      "get": {
+        "summary": "What a period change would charge now",
+        "tags": [
+          "billing"
+        ],
+        "description": "In cents: the new period, less what is left of the current one. Changes nothing. 400 SAME_PERIOD, PERIOD_NOT_OFFERED; 404 NO_SUBSCRIPTION.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MONTHLY",
+                "SEMIANNUAL",
+                "ANNUAL"
+              ]
+            },
+            "in": "query",
+            "name": "period",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "amountDue": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "amountDue"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/billing/subscription/period": {
       "post": {
         "summary": "Change the billing period",
@@ -6992,13 +7195,13 @@
         }
       }
     },
-    "/billing/portal": {
-      "post": {
-        "summary": "Stripe's portal, to change the card",
+    "/billing/card": {
+      "get": {
+        "summary": "The card the subscription is charged on",
         "tags": [
           "billing"
         ],
-        "description": "Answers its address. 404 NO_CUSTOMER for an account that never paid.",
+        "description": "Brand, last four digits and expiry; never the number. 404 NO_SUBSCRIPTION without a paid plan.",
         "security": [
           {
             "bearerAuth": []
@@ -7012,13 +7215,171 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "url": {
-                      "type": "string",
-                      "format": "uri"
+                    "card": {
+                      "nullable": true,
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/SavedCard"
+                        }
+                      ]
                     }
                   },
                   "required": [
-                    "url"
+                    "card"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Charge the subscription on the card just saved",
+        "tags": [
+          "billing"
+        ],
+        "description": "`paymentMethodId` is the card the form saved. 400 INVALID_PAYMENT_METHOD when it is not this account's; 404 NO_SUBSCRIPTION without a paid plan.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "paymentMethodId": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "format": "starts_with",
+                    "pattern": "^pm_.*"
+                  }
+                },
+                "required": [
+                  "paymentMethodId"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    null
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/card/setup": {
+      "post": {
+        "summary": "Start saving a new card",
+        "tags": [
+          "billing"
+        ],
+        "description": "Answers the secret the card form (Stripe's Payment Element) saves the card with; the card goes to Stripe, never to this API. 404 NO_SUBSCRIPTION without a paid plan.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "clientSecret": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "clientSecret"
                   ],
                   "additionalProperties": false
                 }

@@ -18,6 +18,14 @@ const MESSAGES: Record<string, string> = {
   PAYMENT_EXCEEDS_BALANCE: 'O pagamento passa do que falta receber.',
   PLAN_LIMIT_REACHED: 'Seu plano não permite mais imóveis. Veja Meu plano.',
   LOGIN_LOCKED: 'Muitas tentativas de entrar com este e-mail. Espere 15 minutos e tente de novo.',
+  SAME_PERIOD: 'A assinatura já está nessa periodicidade.',
+  PERIOD_NOT_OFFERED: 'O plano não é vendido nessa periodicidade.',
+  PLAN_NOT_FOR_SALE: 'Esse plano não está à venda.',
+  SUBSCRIPTION_EXISTS: 'Você já tem uma assinatura em andamento.',
+  NO_SUBSCRIPTION: 'Você não tem uma assinatura em andamento.',
+  INVALID_PAYMENT_METHOD: 'Esse cartão não pôde ser usado. Tente de novo.',
+  BILLING_UNAVAILABLE: 'Os pagamentos estão indisponíveis agora. Tente mais tarde.',
+  PAYMENT_PROVIDER_ERROR: 'A Stripe recusou o pedido. Tente de novo em instantes.',
   TOO_MANY_REQUESTS: 'Muitas tentativas. Espere um minuto e tente de novo.',
 }
 

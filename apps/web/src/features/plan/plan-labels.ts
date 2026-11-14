@@ -1,6 +1,6 @@
 import { format } from 'date-fns'
 
-import type { BillingPeriod, MyGrant, MyPlan, Plan } from './api'
+import type { SavedCard, BillingPeriod, MyGrant, MyPlan, Plan } from './api'
 
 /** `1 de 1 imóvel`, `3 imóveis, sem limite`. */
 export function usageLabel({ propertyCount, plan }: MyPlan): string {
@@ -68,4 +68,22 @@ export function subscriptionLabel({ subscription }: MyPlan): string | null {
   return subscription.cancelAtPeriodEnd
     ? `${name} Renovação cancelada: vale até ${day}.`
     : `${name} Próxima cobrança em ${day}.`
+}
+
+const BRANDS: Record<string, string> = {
+  visa: 'Visa',
+  mastercard: 'Mastercard',
+  amex: 'American Express',
+  elo: 'Elo',
+  hipercard: 'Hipercard',
+  diners: 'Diners',
+  discover: 'Discover',
+  jcb: 'JCB',
+}
+
+/** `Visa •••• 4242 · vence 12/2030`. */
+export function cardLabel(card: SavedCard): string {
+  const brand = BRANDS[card.brand] ?? 'Cartão'
+  const month = String(card.expMonth).padStart(2, '0')
+  return `${brand} •••• ${card.last4} · vence ${month}/${String(card.expYear)}`
 }

@@ -38,11 +38,24 @@ export function useMyGrants() {
 
 export type BillingPeriod = 'MONTHLY' | 'SEMIANNUAL' | 'ANNUAL'
 
-/** Starts paying for a plan: answers the Stripe checkout page to go to. */
-export function useCheckout() {
+/**
+ * Starts paying for a plan: the subscription waits for its first charge, and the answer is
+ * the secret the card form confirms it with.
+ */
+export function useSubscribe() {
   return useMutation({
     mutationFn: async (input: { planId: string; period: BillingPeriod }) =>
-      unwrap(await api.POST('/billing/checkout', { body: input })),
+      unwrap(await api.POST('/billing/subscribe', { body: input })),
+  })
+}
+
+/** Stripe's publishable key, for the card form. It never changes while the app runs. */
+export function useBillingConfig(enabled: boolean) {
+  return useQuery({
+    queryKey: ['plan', 'billing-config'],
+    queryFn: async () => unwrap(await api.GET('/billing/config')),
+    staleTime: Infinity,
+    enabled,
   })
 }
 
@@ -77,8 +90,36 @@ export function useChangePeriod() {
   )
 }
 
-export function usePortal() {
+export type SavedCard = components['schemas']['SavedCard']
+
+/** What moving to `period` would charge now. Asked when the user is about to confirm. */
+export function usePeriodPreview() {
   return useMutation({
-    mutationFn: async () => unwrap(await api.POST('/billing/portal')),
+    mutationFn: async (period: BillingPeriod) =>
+      unwrap(
+        await api.GET('/billing/subscription/period/preview', { params: { query: { period } } }),
+      ),
   })
+}
+
+/** The card the subscription is charged on: brand, last digits, expiry. */
+export function useSavedCard() {
+  return useQuery({
+    queryKey: ['plan', 'card'],
+    queryFn: async () => unwrap(await api.GET('/billing/card')).card,
+  })
+}
+
+/** Starts saving a new card: the secret the card form completes it with. */
+export function useCardSetup() {
+  return useMutation({
+    mutationFn: async () => unwrap(await api.POST('/billing/card/setup')),
+  })
+}
+
+/** Charges the subscription on the card the form just saved. */
+export function useSetCard() {
+  return useSubscriptionMutation(async (paymentMethodId: string) =>
+    unwrap(await api.PUT('/billing/card', { body: { paymentMethodId } })),
+  )
 }

@@ -73,6 +73,8 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     strictPort: true,
+    // Stripe's card fields load the app's font from their own frame.
+    cors: { origin: ['https://js.stripe.com'] },
   },
   test: {
     environment: 'jsdom',
