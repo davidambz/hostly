@@ -1,8 +1,8 @@
 import { cn } from '@/lib/utils'
 
 /**
- * Hostly's mark: a house-number tile, white enamel in a cobalt frame, with the H painted on
- * it. `inverted` is for dark grounds (the sidebar).
+ * Hostly's mark: a sounding on a chart, the H set wide over a waterline. `inverted` is for the
+ * dark top bar.
  */
 export function BrandMark({
   className,
@@ -15,15 +15,13 @@ export function BrandMark({
     <span
       aria-hidden
       className={cn(
-        'font-display flex size-9 shrink-0 items-center justify-center rounded-[3px] text-xl leading-none',
-        'shadow-[inset_0_0_0_2px_currentColor,inset_0_0_0_4px_var(--card)]',
-        inverted
-          ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-[inset_0_0_0_2px_var(--sidebar-primary-foreground),inset_0_0_0_4px_var(--sidebar-primary)]'
-          : 'bg-card text-cobalt',
+        'font-wide relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md text-base leading-none font-extrabold',
+        inverted ? 'bg-bar-active text-depth-4-foreground' : 'bg-primary text-primary-foreground',
         className,
       )}
     >
-      H
+      <span className="-mt-1">H</span>
+      <span className="absolute inset-x-1.5 bottom-1.5 h-px bg-current opacity-60" />
     </span>
   )
 }
@@ -33,7 +31,7 @@ export function Brand({ className, inverted = false }: { className?: string; inv
   return (
     <span className={cn('flex items-center gap-2.5', className)}>
       <BrandMark inverted={inverted} />
-      <span className="font-display text-xl tracking-tight">Hostly</span>
+      <span className="font-wide text-lg font-bold">Hostly</span>
     </span>
   )
 }

@@ -101,7 +101,7 @@ function QuoteRows({
       {/* The figure the form exists for, set like the home page's. */}
       <div className="flex items-baseline justify-between gap-4">
         <dt className="font-medium">Falta receber</dt>
-        <dd className="font-display text-primary text-2xl tabular-nums">
+        <dd className="font-wide text-primary text-2xl font-semibold tabular-nums">
           {financials.balanceDue === 0 ? 'Quitado' : formatBRL(financials.balanceDue)}
         </dd>
       </div>
