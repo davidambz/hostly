@@ -1,4 +1,4 @@
-import { Check, Loader2 } from 'lucide-react'
+import { Check, Loader2, TriangleAlert } from 'lucide-react'
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import { errorMessage } from '@/lib/api/form-errors'
 import { leaveTo } from '@/lib/navigate'
 
-import { ManageSubscription } from './manage-subscription'
 import { formatBRL } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
@@ -23,12 +22,13 @@ import {
   subscriptionLabel,
   usageLabel,
 } from './plan-labels'
+import { ManageSubscription } from './manage-subscription'
 
-/** The user's plan, the plans there are, and the courtesy plans received. */
 /** How often, and how many times, to ask again while Stripe confirms a payment. */
 const CONFIRM_POLL_MS = 3000
 const CONFIRM_POLLS = 10
 
+/** The user's plan, the subscription, the plans there are, and the courtesy plans received. */
 export function PlanPage() {
   const myPlan = useMyPlan()
   const [params, setParams] = useSearchParams()
@@ -67,7 +67,7 @@ export function PlanPage() {
           {confirming && !confirmed && (
             <p
               role="status"
-              className="bg-accent text-accent-foreground flex max-w-2xl items-center gap-2 rounded-md p-3 text-sm"
+              className="bg-accent text-accent-foreground flex items-center gap-2 rounded-md p-3 text-sm"
             >
               <Loader2 className="size-4 animate-spin" aria-hidden />
               Pagamento recebido. A Stripe está confirmando; seu plano muda em instantes.
@@ -83,32 +83,72 @@ export function PlanPage() {
   )
 }
 
+/** The current plan as a band of figures: the plan, the properties it allows, how it is paid. */
 function CurrentPlan({ myPlan }: { myPlan: MyPlan }) {
+  const plans = usePlans()
+  const plan = plans.data?.find((item) => item.id === myPlan.plan.id)
+  const price =
+    myPlan.subscription && plan
+      ? periodPrices(plan).find((item) => item.period === myPlan.subscription?.period)
+      : undefined
+  const limit = myPlan.plan.maxProperties
+  const used = limit === null ? null : Math.min(1, myPlan.propertyCount / limit)
+  const billing =
+    subscriptionLabel(myPlan) ??
+    sourceLabel(myPlan) ??
+    (myPlan.plan.code === 'free' ? 'Sem cobrança e sem prazo.' : null)
+
   return (
-    <section
-      aria-labelledby="my-plan-title"
-      className="bg-card grid max-w-2xl gap-4 rounded-md border p-5"
-    >
-      <div className="grid gap-1">
-        <h2 id="my-plan-title" className="font-wide text-2xl font-bold">
-          {myPlan.plan.name}
-        </h2>
-        {myPlan.plan.description && (
-          <p className="text-muted-foreground">{myPlan.plan.description}</p>
-        )}
-        {sourceLabel(myPlan) && <p className="text-sm font-medium">{sourceLabel(myPlan)}</p>}
-        {subscriptionLabel(myPlan) && (
-          <p className="text-sm font-medium">{subscriptionLabel(myPlan)}</p>
-        )}
+    <section aria-labelledby="my-plan-title" className="grid gap-3">
+      <div className="bg-grid-line grid gap-px overflow-hidden rounded-md border sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
+        <div className="bg-card grid content-start gap-1 p-5">
+          <p className="text-muted-foreground text-sm">Seu plano</p>
+          <h2 id="my-plan-title" className="font-wide text-3xl leading-tight font-bold">
+            {myPlan.plan.name}
+          </h2>
+          {myPlan.plan.description && (
+            <p className="text-muted-foreground text-sm text-pretty">{myPlan.plan.description}</p>
+          )}
+        </div>
+        <div className="bg-card grid content-start gap-2 p-5">
+          <p className="text-muted-foreground text-sm">Imóveis</p>
+          <p className="font-wide text-xl leading-tight font-semibold tabular-nums">
+            {usageLabel(myPlan)}
+          </p>
+          {used !== null && (
+            <span
+              className="bg-muted block h-1.5 overflow-hidden rounded-full"
+              role="meter"
+              aria-label="Imóveis usados"
+              aria-valuemin={0}
+              aria-valuemax={limit ?? 0}
+              aria-valuenow={Math.min(myPlan.propertyCount, limit ?? 0)}
+            >
+              <span
+                className={cn(
+                  'block h-full rounded-full',
+                  myPlan.canAddProperty ? 'bg-primary' : 'bg-warning',
+                )}
+                style={{ width: `${String(used * 100)}%` }}
+              />
+            </span>
+          )}
+        </div>
+        <div className="bg-card grid content-start gap-1 p-5 sm:col-span-2 lg:col-span-1">
+          <p className="text-muted-foreground text-sm">Cobrança</p>
+          <p className="font-wide text-xl leading-tight font-semibold tabular-nums">
+            {price ? `${formatBRL(price.price)} ${price.label}` : 'De graça'}
+          </p>
+          {billing && <p className="text-sm text-pretty">{billing}</p>}
+        </div>
       </div>
-      <dl className="grid gap-1">
-        <dt className="text-muted-foreground text-sm">Imóveis</dt>
-        <dd className="font-wide text-xl font-semibold tabular-nums">{usageLabel(myPlan)}</dd>
-      </dl>
       {!myPlan.canAddProperty && (
-        <p className="text-sm">
-          Você chegou ao limite do seu plano. Seus imóveis continuam todos aqui; para cadastrar
-          mais, é preciso o Premium.
+        <p className="bg-sand text-sand-foreground flex items-start gap-2 rounded-md p-3 text-sm">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>
+            Você chegou ao limite do seu plano. Seus imóveis continuam todos aqui; para cadastrar
+            mais, é preciso o Premium.
+          </span>
         </p>
       )}
     </section>
@@ -128,7 +168,12 @@ function Plans({ currentId, paying }: { currentId: string; paying: boolean }) {
       ) : plans.isError ? (
         <ErrorState message={errorMessage(plans.error)} onRetry={() => void plans.refetch()} />
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul
+          className={cn(
+            'bg-grid-line grid gap-px overflow-hidden rounded-md border sm:grid-cols-2',
+            plans.data.length > 2 && 'lg:grid-cols-3',
+          )}
+        >
           {plans.data.map((plan) => (
             <PlanCard key={plan.id} plan={plan} current={plan.id === currentId} paying={paying} />
           ))}
@@ -144,15 +189,9 @@ function PlanCard({ plan, current, paying }: { plan: Plan; current: boolean; pay
   // Free needs no paying, and a running subscription is changed, not bought twice.
   const buyable = !free && !current && !paying && prices.length > 0
   return (
-    <li
-      aria-label={plan.name}
-      className={cn(
-        'bg-card grid content-start gap-3 rounded-md border p-5',
-        current && 'ring-primary ring-2',
-      )}
-    >
+    <li aria-label={plan.name} className="bg-card flex flex-col gap-3 p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-wide text-lg font-bold">{plan.name}</h3>
+        <h3 className="font-wide text-2xl font-bold">{plan.name}</h3>
         {current && <Badge>Seu plano</Badge>}
       </div>
       {plan.description && <p className="text-muted-foreground text-sm">{plan.description}</p>}
@@ -165,20 +204,25 @@ function PlanCard({ plan, current, paying }: { plan: Plan; current: boolean; pay
             : `Até ${String(plan.maxProperties)} imóveis`}
       </p>
       {free ? (
-        <p className="font-wide text-xl font-semibold">De graça</p>
+        <p className="font-wide text-2xl font-semibold">De graça</p>
       ) : prices.length === 0 ? (
         <p className="text-muted-foreground text-sm">Preços em breve.</p>
       ) : (
         <ul className="grid gap-0.5">
           {prices.map((period) => (
             <li key={period.label} className="tabular-nums">
-              <span className="font-wide text-lg font-semibold">{formatBRL(period.price)}</span>{' '}
-              <span className="text-muted-foreground text-sm">{period.label}</span>
+              <span className="font-wide text-2xl font-semibold">{formatBRL(period.price)}</span>{' '}
+              <span className="font-water text-muted-foreground text-sm">{period.label}</span>
             </li>
           ))}
         </ul>
       )}
-      {buyable && <Subscribe plan={plan} prices={prices} />}
+      {/* Pushed to the bottom, so the plans' actions line up whatever their text. */}
+      {buyable && (
+        <div className="mt-auto pt-2">
+          <Subscribe plan={plan} prices={prices} />
+        </div>
+      )}
     </li>
   )
 }
@@ -188,7 +232,7 @@ function Grants() {
   const grants = useMyGrants()
   if (!grants.data || grants.data.length === 0) return null
   return (
-    <section aria-labelledby="grants-title" className="grid max-w-2xl gap-3">
+    <section aria-labelledby="grants-title" className="grid gap-3">
       <h2 id="grants-title" className="font-wide text-xl font-semibold">
         Cortesias
       </h2>
@@ -227,7 +271,7 @@ function Subscribe({ plan, prices }: { plan: Plan; prices: PeriodPrice[] }) {
   }
 
   return (
-    <div className="grid gap-2 pt-1">
+    <div className="grid gap-2">
       {prices.map((price) => (
         <Button
           key={price.period}
