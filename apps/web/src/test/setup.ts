@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 
 import { cleanup, configure } from '@testing-library/react'
+import { toast } from 'sonner'
 import { afterAll, afterEach, beforeAll, vi } from 'vitest'
 
 import { setAccessToken } from '@/lib/api/session'
@@ -25,6 +26,11 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// jsdom has no pointer capture; the toasts call it when one is pressed (e.g. "Desfazer").
+Element.prototype.setPointerCapture = () => undefined
+Element.prototype.releasePointerCapture = () => undefined
+Element.prototype.hasPointerCapture = () => false
+
 // jsdom has no ResizeObserver; Radix measures elements with it. Nothing to measure here.
 const noop = () => undefined
 class ResizeObserverStub {
@@ -39,6 +45,8 @@ beforeAll(() => {
 })
 
 afterEach(() => {
+  // The toasts live in a module-wide store: without this, one test's notices crowd the next.
+  toast.dismiss()
   cleanup()
   server.resetHandlers()
   setAccessToken(null)

@@ -371,14 +371,34 @@ describe('deleting a broker', () => {
 
     await openActions(user, person.name, 'Excluir')
     const dialog = await screen.findByRole('alertdialog', { name: 'Excluir intermediador?' })
-    expect(
-      within(dialog).getByText('"Maria Corretora" será excluído. Isso não pode ser desfeito.'),
-    ).toBeInTheDocument()
+    expect(within(dialog).getByText('"Maria Corretora" será excluído.')).toBeInTheDocument()
     serveBrokers([])
     await user.click(within(dialog).getByRole('button', { name: 'Excluir' }))
 
     expect(await screen.findByText('"Maria Corretora" foi excluído.')).toBeInTheDocument()
     expect(deleted).toBe(true)
+  })
+
+  it('puts a deleted broker back from the notice', async () => {
+    serveBrokers([person])
+    let created: unknown = null
+    server.use(
+      http.delete(url(`/brokers/${person.id}`), () => new HttpResponse(null, { status: 204 })),
+      http.post(url('/brokers'), async ({ request }) => {
+        created = await request.json()
+        return HttpResponse.json({ ...person, id: 'new-id' }, { status: 201 })
+      }),
+    )
+    const { user } = await openPage()
+
+    await openActions(user, person.name, 'Excluir')
+    const dialog = await screen.findByRole('alertdialog', { name: 'Excluir intermediador?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await user.click(await screen.findByRole('button', { name: 'Desfazer' }))
+
+    expect(await screen.findByText('"Maria Corretora" voltou.')).toBeInTheDocument()
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...input } = person
+    expect(created).toEqual(input)
   })
 
   it('explains that a broker in bookings cannot be deleted', async () => {

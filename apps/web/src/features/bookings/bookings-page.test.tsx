@@ -703,6 +703,66 @@ describe('editing and deleting a booking', () => {
     expect(deleted).toBe(true)
   })
 
+  it('puts a deleted booking back from the notice, with every value it had', async () => {
+    serve()
+    serveQuote()
+    const withBroker = { ...pedro }
+    let created: unknown = null
+    server.use(
+      http.delete(url(`/bookings/${withBroker.id}`), () => new HttpResponse(null, { status: 204 })),
+      http.post(url('/bookings'), async ({ request }) => {
+        created = await request.json()
+        return HttpResponse.json(withBroker, { status: 201 })
+      }),
+    )
+    const { user } = await openPage()
+
+    await user.click(nth(await screen.findAllByRole('button', { name: /^Pedro Alves, / }), 0))
+    const sheet = await screen.findByRole('dialog', { name: 'Editar reserva' })
+    await user.click(within(sheet).getByRole('button', { name: 'Excluir' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Excluir reserva?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await user.click(await screen.findByRole('button', { name: 'Desfazer' }))
+
+    await waitFor(() => {
+      expect(created).not.toBeNull()
+    })
+    expect(await screen.findByText('A reserva de Pedro Alves voltou.')).toBeInTheDocument()
+    expect(created).toEqual({
+      propertyId: ape.id,
+      brokerId: carlos.id,
+      guestName: 'Pedro Alves',
+      checkIn: '2026-11-20',
+      checkOut: '2026-11-24',
+      nightlyRate: 45000,
+      cleaningFee: 15000,
+      discount: 0,
+      amountPaid: 50000,
+      brokerCommissionBps: 1000,
+    })
+  })
+
+  it('says why a booking could not be put back', async () => {
+    serve()
+    serveQuote()
+    server.use(
+      http.delete(url(`/bookings/${rafael.id}`), () => new HttpResponse(null, { status: 204 })),
+      http.post(url('/bookings'), () => apiError(409, 'BOOKING_OVERLAP')),
+    )
+    const { user } = await openPage()
+
+    await user.click(nth(await screen.findAllByRole('button', { name: /^Rafael Mendes, / }), 0))
+    const sheet = await screen.findByRole('dialog', { name: 'Editar reserva' })
+    await user.click(within(sheet).getByRole('button', { name: 'Excluir' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Excluir reserva?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await user.click(await screen.findByRole('button', { name: 'Desfazer' }))
+
+    expect(
+      await screen.findByText(/./, { selector: '[data-type="error"] [data-title]' }),
+    ).toBeInTheDocument()
+  })
+
   it('says when the booking is already gone', async () => {
     serve()
     server.use(http.delete(url(`/bookings/${rafael.id}`), () => apiError(404, 'BOOKING_NOT_FOUND')))

@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 
-/** Asks before something that can't be undone, e.g. deleting. */
+/** Asks before something with consequences, e.g. deleting. */
 export function ConfirmDialog({
   open,
   onOpenChange,
