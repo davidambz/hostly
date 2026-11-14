@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import type { User } from '../../generated/prisma/client.js'
+import { emailSchema, nameSchema } from '../../shared/validation/fields.js'
 
 /** A user as the API returns it: never with the password hash. */
 export const publicUserSchema = z
@@ -28,3 +29,11 @@ export function toPublicUser(user: User): PublicUser {
     createdAt: user.createdAt.toISOString(),
   }
 }
+
+/** Body of PATCH /me: the name, the e-mail or both. */
+export const updateProfileBodySchema = z
+  .object({ name: nameSchema, email: emailSchema })
+  .partial()
+  .refine((body) => Object.keys(body).length > 0, { message: 'Nothing to update' })
+
+export type UpdateProfileInput = z.infer<typeof updateProfileBodySchema>

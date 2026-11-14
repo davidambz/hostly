@@ -25,3 +25,26 @@ export const registerSchema = z
   })
 
 export type RegisterValues = z.infer<typeof registerSchema>
+
+export const profileSchema = z.object({
+  name: z.string().trim().min(1, 'Informe seu nome.').max(255, 'Nome longo demais.'),
+  email: z.string().trim().min(1, 'Informe seu e-mail.').pipe(z.email('E-mail inválido.')),
+})
+
+export type ProfileValues = z.infer<typeof profileSchema>
+
+export const passwordChangeSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Informe a senha atual.'),
+    newPassword: z
+      .string()
+      .min(PASSWORD_MIN_LENGTH, `A senha precisa de pelo menos ${PASSWORD_MIN_LENGTH} caracteres.`)
+      .max(128, 'Senha longa demais.'),
+    confirmPassword: z.string(),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'As senhas não conferem.',
+  })
+
+export type PasswordChangeValues = z.infer<typeof passwordChangeSchema>

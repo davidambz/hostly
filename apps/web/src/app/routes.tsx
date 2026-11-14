@@ -70,6 +70,13 @@ export const routes: RouteObject[] = [
                 }),
               },
               {
+                path: '/conta',
+                handle: handle('Conta'),
+                lazy: async () => ({
+                  Component: (await import('@/features/account/account-page')).AccountPage,
+                }),
+              },
+              {
                 path: '/intermediadores',
                 handle: handle('Intermediadores'),
                 lazy: async () => ({

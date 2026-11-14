@@ -36,3 +36,27 @@ export async function logout(): Promise<void> {
     // Nothing to do: the local session is already gone.
   }
 }
+
+export interface ProfileInput {
+  name?: string
+  email?: string
+}
+
+export async function updateProfile(input: ProfileInput): Promise<User> {
+  return unwrap(await api.PATCH('/me', { body: input }))
+}
+
+export interface PasswordChange {
+  currentPassword: string
+  newPassword: string
+}
+
+/** Changes the password; the API ends every other session, keeping this one. */
+export async function changePassword(input: PasswordChange): Promise<void> {
+  unwrap(await api.POST('/auth/password', { body: input }))
+}
+
+/** Ends every session of the account but this one. */
+export async function logoutOthers(): Promise<void> {
+  unwrap(await api.POST('/auth/logout-others'))
+}

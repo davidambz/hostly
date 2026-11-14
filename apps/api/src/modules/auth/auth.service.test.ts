@@ -57,6 +57,10 @@ function setup() {
     ),
     findByEmail: vi.fn<(email: string) => Promise<User | null>>().mockResolvedValue(existingUser),
     existsByEmail: vi.fn<(email: string) => Promise<boolean>>().mockResolvedValue(false),
+    findById: vi.fn<(id: string) => Promise<User | null>>().mockResolvedValue(existingUser),
+    updatePasswordHash: vi
+      .fn<(id: string, hash: string) => Promise<void>>()
+      .mockResolvedValue(undefined),
   }
   const refreshTokens = {
     create: vi.fn((data: NewRefreshToken) =>
@@ -67,6 +71,9 @@ function setup() {
       .fn<(id: string, next: NewRefreshToken, at: Date) => Promise<boolean>>()
       .mockResolvedValue(true),
     revokeFamily: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    revokeAllBut: vi
+      .fn<(userId: string, keep: string | null, at: Date, reason: string) => Promise<void>>()
+      .mockResolvedValue(undefined),
     deleteExpired: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   }
   const hashPassword = vi.fn((_password: string) => Promise.resolve('$argon2id$fake-hash'))
@@ -476,4 +483,60 @@ it('defaults the clock to the current time', async () => {
   const { session } = await service.login({ email: 'ana@hostly.dev', password: 'x' })
 
   expect(session.refreshTokenExpiresAt.getTime()).toBeGreaterThanOrEqual(before + 1000)
+})
+
+describe('AuthService.changePassword', () => {
+  const input = { currentPassword: 'correct horse', newPassword: 'battery staple 2' }
+
+  it('stores the new hash and ends every other session, keeping this one', async () => {
+    const { users, refreshTokens, hashPassword, service } = setup()
+    refreshTokens.findByHash.mockResolvedValue(storedToken({ familyId: 'this-device' }))
+
+    await service.changePassword('u1', input, 'the-token')
+
+    expect(hashPassword).toHaveBeenCalledWith('battery staple 2')
+    expect(users.updatePasswordHash).toHaveBeenCalledWith('u1', '$argon2id$fake-hash')
+    expect(refreshTokens.revokeAllBut).toHaveBeenCalledWith('u1', 'this-device', NOW, 'LOGOUT')
+  })
+
+  it('answers 400 WRONG_PASSWORD and changes nothing when the current password is wrong', async () => {
+    const { users, refreshTokens, service } = setup()
+
+    await expect(
+      service.changePassword('u1', { ...input, currentPassword: 'nope' }, 'the-token'),
+    ).rejects.toMatchObject({ statusCode: 400, code: 'WRONG_PASSWORD' })
+    expect(users.updatePasswordHash).not.toHaveBeenCalled()
+    expect(refreshTokens.revokeAllBut).not.toHaveBeenCalled()
+  })
+
+  it('answers 401 for an account deleted after the token was issued', async () => {
+    const { users, service } = setup()
+    users.findById.mockResolvedValue(null)
+
+    await expect(service.changePassword('u1', input, undefined)).rejects.toMatchObject({
+      code: 'INVALID_TOKEN',
+    })
+  })
+})
+
+describe('AuthService.logoutOthers', () => {
+  it('keeps only the session of the current cookie', async () => {
+    const { refreshTokens, service } = setup()
+    refreshTokens.findByHash.mockResolvedValue(storedToken({ familyId: 'this-device' }))
+
+    await service.logoutOthers('u1', 'the-token')
+
+    expect(refreshTokens.revokeAllBut).toHaveBeenCalledWith('u1', 'this-device', NOW, 'LOGOUT')
+  })
+
+  it("ends them all without a cookie, or with someone else's", async () => {
+    const { refreshTokens, service } = setup()
+
+    await service.logoutOthers('u1', undefined)
+    refreshTokens.findByHash.mockResolvedValue(storedToken({ userId: 'other', familyId: 'theirs' }))
+    await service.logoutOthers('u1', 'their-token')
+
+    expect(refreshTokens.revokeAllBut).toHaveBeenNthCalledWith(1, 'u1', null, NOW, 'LOGOUT')
+    expect(refreshTokens.revokeAllBut).toHaveBeenNthCalledWith(2, 'u1', null, NOW, 'LOGOUT')
+  })
 })

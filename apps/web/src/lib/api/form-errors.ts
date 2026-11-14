@@ -14,6 +14,7 @@ const MESSAGES: Record<string, string> = {
   BROKER_NOT_FOUND: 'Este intermediador não existe mais.',
   BOOKING_NOT_FOUND: 'Esta reserva não existe mais.',
   EMAIL_TAKEN: 'Este e-mail já tem uma conta.',
+  WRONG_PASSWORD: 'A senha atual não confere.',
   TOO_MANY_REQUESTS: 'Muitas tentativas. Espere um minuto e tente de novo.',
 }
 

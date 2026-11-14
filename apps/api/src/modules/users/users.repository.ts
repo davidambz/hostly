@@ -34,11 +34,29 @@ export class UsersRepository {
     try {
       return await this.db.user.create({ data })
     } catch (error) {
-      const violation = uniqueViolation(error)
-      if (violation && violates(violation, { table: 'users', field: 'email' })) {
-        throw new UniqueFieldError('email')
-      }
-      throw error
+      throw emailTakenOr(error)
     }
   }
+
+  /** Changes the name and the e-mail; UniqueFieldError when the e-mail is someone else's. */
+  async updateProfile(id: string, data: { name?: string; email?: string }): Promise<User> {
+    try {
+      return await this.db.user.update({ where: { id }, data })
+    } catch (error) {
+      throw emailTakenOr(error)
+    }
+  }
+
+  async updatePasswordHash(id: string, passwordHash: string): Promise<void> {
+    await this.db.user.update({ where: { id }, data: { passwordHash } })
+  }
+}
+
+/** A unique violation on the e-mail as UniqueFieldError; any other error as it is. */
+function emailTakenOr(error: unknown): unknown {
+  const violation = uniqueViolation(error)
+  if (violation && violates(violation, { table: 'users', field: 'email' })) {
+    return new UniqueFieldError('email')
+  }
+  return error
 }

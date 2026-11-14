@@ -45,6 +45,19 @@ export class RefreshTokensRepository {
     })
   }
 
+  /** Revokes every active token of the user but the family `keep` (the current session). */
+  async revokeAllBut(
+    userId: string,
+    keep: string | null,
+    at: Date,
+    reason: RefreshTokenRevocation,
+  ): Promise<void> {
+    await this.db.refreshToken.updateMany({
+      where: { userId, revokedAt: null, ...(keep ? { familyId: { not: keep } } : {}) },
+      data: { revokedAt: at, revokedReason: reason },
+    })
+  }
+
   /** Expired tokens are useless, even for reuse detection; this keeps the table bounded. */
   async deleteExpired(userId: string, now: Date): Promise<void> {
     await this.db.refreshToken.deleteMany({ where: { userId, expiresAt: { lte: now } } })

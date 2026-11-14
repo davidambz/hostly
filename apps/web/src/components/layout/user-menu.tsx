@@ -1,4 +1,5 @@
-import { LogOut, Monitor, Moon, Sun } from 'lucide-react'
+import { LogOut, Monitor, Moon, Sun, UserRound } from 'lucide-react'
+import { Link } from 'react-router'
 
 import type { Theme } from '@/components/theme/theme-context'
 import { useTheme } from '@/components/theme/theme-context'
@@ -50,6 +51,12 @@ export function UserMenu() {
           <p className="text-muted-foreground text-xs">{user.email}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/conta">
+            <UserRound className="size-4" />
+            Minha conta
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Tema</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
