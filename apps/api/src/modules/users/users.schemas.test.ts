@@ -10,6 +10,7 @@ describe('toPublicUser', () => {
     cpf: '52998224725',
     phone: '48999990000',
     passwordHash: '$argon2id$secret',
+    isAdmin: true,
     createdAt: new Date('2026-10-31T12:00:00.000Z'),
     updatedAt: new Date('2026-10-31T13:00:00.000Z'),
   }
@@ -21,6 +22,7 @@ describe('toPublicUser', () => {
       email: 'ana@hostly.dev',
       cpf: '52998224725',
       phone: '48999990000',
+      isAdmin: true,
       createdAt: '2026-10-31T12:00:00.000Z',
     })
   })

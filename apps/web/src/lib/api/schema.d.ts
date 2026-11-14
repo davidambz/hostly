@@ -1978,6 +1978,7 @@ export interface components {
       email: string
       cpf: string | null
       phone: string | null
+      isAdmin: boolean
       /** Format: date-time */
       createdAt: string
     }
@@ -2115,6 +2116,7 @@ export interface components {
       email: string
       cpf: string | null
       phone: string | null
+      isAdmin: boolean
       /** Format: date-time */
       createdAt: string
     }

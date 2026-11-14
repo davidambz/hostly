@@ -13,6 +13,8 @@ export const publicUserSchema = z
     cpf: z.string().nullable(),
     /** Accounts from before signup stopped asking for it; null otherwise. */
     phone: z.string().nullable(),
+    /** Can use the backoffice. */
+    isAdmin: z.boolean(),
     createdAt: z.iso.datetime(),
   })
   .meta({ id: 'User' })
@@ -26,6 +28,7 @@ export function toPublicUser(user: User): PublicUser {
     email: user.email,
     cpf: user.cpf,
     phone: user.phone,
+    isAdmin: user.isAdmin,
     createdAt: user.createdAt.toISOString(),
   }
 }

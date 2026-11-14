@@ -24,6 +24,7 @@ const existingUser: User = {
   cpf: '52998224725',
   phone: '48999990000',
   passwordHash: '$argon2id$real-hash',
+  isAdmin: false,
   createdAt: NOW,
   updatedAt: NOW,
 }
@@ -51,6 +52,7 @@ function setup() {
         id: 'u1',
         cpf: null,
         phone: null,
+        isAdmin: false,
         createdAt: NOW,
         updatedAt: NOW,
       } satisfies User),
