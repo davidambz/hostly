@@ -26,7 +26,6 @@ const existingUser: User = {
   passwordHash: '$argon2id$real-hash',
   isAdmin: false,
   stripeCustomerId: null,
-  stripeCheckoutSessionId: null,
   createdAt: NOW,
   updatedAt: NOW,
 }
@@ -56,7 +55,6 @@ function setup() {
         phone: null,
         isAdmin: false,
         stripeCustomerId: null,
-        stripeCheckoutSessionId: null,
         createdAt: NOW,
         updatedAt: NOW,
       } satisfies User),

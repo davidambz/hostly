@@ -28,10 +28,10 @@ afterEach(async () => {
   await app.close()
 })
 
-function checkout(body: object, as: User = user) {
+function subscribe(body: object, as: User = user) {
   return app.inject({
     method: 'POST',
-    url: '/billing/checkout',
+    url: '/billing/subscribe',
     payload: body,
     headers: authHeader(app, as.id),
   })
@@ -55,31 +55,44 @@ const planOf = async () =>
     subscription: { period: string; cancelAtPeriodEnd: boolean } | null
   }>()
 
-describe('POST /billing/checkout', () => {
-  it('opens a Stripe checkout for the plan and period, creating the customer once', async () => {
-    const first = await checkout({ planId: premium.id, period: 'MONTHLY' })
-    await checkout({ planId: premium.id, period: 'ANNUAL' })
+describe('POST /billing/subscribe', () => {
+  it('creates the subscription waiting for the card, with the customer and product once', async () => {
+    const first = await subscribe({ planId: premium.id, period: 'MONTHLY' })
+    const second = await subscribe({ planId: premium.id, period: 'ANNUAL' })
 
     expect(first.statusCode).toBe(200)
-    expect(first.json()).toEqual({ url: 'https://checkout.stripe.com/c/pay/cs_test_1' })
+    expect(first.json()).toEqual({ clientSecret: 'pi_1_secret_test' })
+    expect(second.json()).toEqual({ clientSecret: 'pi_2_secret_test' })
     expect(billing.customers).toEqual([
       expect.objectContaining({ id: user.id, email: 'ana@hostly.test' }),
     ])
-    expect(billing.checkouts).toEqual([
+    expect(billing.products).toEqual([{ id: premium.id, name: 'Premium' }])
+    expect(billing.subscriptionRequests).toEqual([
       {
         customerId: 'cus_1',
-        productName: 'Hostly Premium',
+        productId: 'prod_1',
         amount: 3990,
         period: 'MONTHLY',
         metadata: { userId: user.id, planId: premium.id, period: 'MONTHLY' },
-        successUrl: 'https://app.hostly.test/plano?assinatura=confirmando',
-        cancelUrl: 'https://app.hostly.test/plano',
       },
-      expect.objectContaining({ customerId: 'cus_1', amount: 38300, period: 'ANNUAL' }),
+      expect.objectContaining({ productId: 'prod_1', amount: 38300, period: 'ANNUAL' }),
     ])
-    expect((await db.user.findUniqueOrThrow({ where: { id: user.id } })).stripeCustomerId).toBe(
-      'cus_1',
-    )
+    // The first one, never paid, is cancelled when the second starts.
+    expect(billing.cancelled).toEqual(['sub_1'])
+    const stored = await db.subscription.findMany({ orderBy: { createdAt: 'asc' } })
+    expect(stored.map((row) => [row.stripeSubscriptionId, row.status])).toEqual([
+      ['sub_1', 'canceled'],
+      ['sub_2', 'incomplete'],
+    ])
+    expect(await db.plan.findUniqueOrThrow({ where: { id: premium.id } })).toMatchObject({
+      stripeProductId: 'prod_1',
+    })
+  })
+
+  it('does not give the plan before the payment is confirmed', async () => {
+    await subscribe({ planId: premium.id, period: 'MONTHLY' })
+
+    expect((await planOf()).source).toBe('FREE')
   })
 
   it.each([
@@ -88,11 +101,20 @@ describe('POST /billing/checkout', () => {
   ])('answers 400 for %s', async (_case, code, period, error) => {
     const plan = await db.plan.findUniqueOrThrow({ where: { code } })
 
-    const response = await checkout({ planId: plan.id, period })
+    const response = await subscribe({ planId: plan.id, period })
 
     expect(response.statusCode).toBe(400)
     expect(response.json()).toMatchObject({ code: error })
-    expect(billing.checkouts).toHaveLength(0)
+    expect(billing.subscriptionRequests).toHaveLength(0)
+  })
+
+  it('answers 404 PLAN_NOT_FOUND for a plan that is not there', async () => {
+    const response = await subscribe({
+      planId: '018f0000-0000-7000-8000-000000000009',
+      period: 'MONTHLY',
+    })
+
+    expect(response.statusCode).toBe(404)
   })
 
   it('answers 409 SUBSCRIPTION_EXISTS while a paid plan runs', async () => {
@@ -106,7 +128,7 @@ describe('POST /billing/checkout', () => {
       },
     })
 
-    expect((await checkout({ planId: premium.id, period: 'ANNUAL' })).json()).toMatchObject({
+    expect((await subscribe({ planId: premium.id, period: 'ANNUAL' })).json()).toMatchObject({
       code: 'SUBSCRIPTION_EXISTS',
     })
   })
@@ -116,7 +138,7 @@ describe('POST /billing/checkout', () => {
     try {
       const response = await noStripe.inject({
         method: 'POST',
-        url: '/billing/checkout',
+        url: '/billing/subscribe',
         payload: { planId: premium.id, period: 'MONTHLY' },
         headers: authHeader(noStripe, user.id),
       })
@@ -126,8 +148,38 @@ describe('POST /billing/checkout', () => {
       await noStripe.close()
     }
     expect(
-      (await app.inject({ method: 'POST', url: '/billing/checkout', payload: {} })).statusCode,
+      (await app.inject({ method: 'POST', url: '/billing/subscribe', payload: {} })).statusCode,
     ).toBe(401)
+  })
+})
+
+describe('GET /billing/config', () => {
+  it("hands the card form Stripe's publishable key", async () => {
+    const withKey = await buildApp(testEnv({ STRIPE_PUBLISHABLE_KEY: 'pk_test_hostly' }), {
+      db,
+      billing,
+    })
+    try {
+      const response = await withKey.inject({
+        method: 'GET',
+        url: '/billing/config',
+        headers: authHeader(withKey, user.id),
+      })
+      expect(response.json()).toEqual({ publishableKey: 'pk_test_hostly' })
+    } finally {
+      await withKey.close()
+    }
+  })
+
+  it('answers 503 BILLING_UNAVAILABLE without the key, and 401 without a token', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/billing/config',
+      headers: authHeader(app, user.id),
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect((await app.inject({ method: 'GET', url: '/billing/config' })).statusCode).toBe(401)
   })
 })
 

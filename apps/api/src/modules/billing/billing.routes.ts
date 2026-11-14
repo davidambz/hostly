@@ -8,8 +8,10 @@ import type { BillingGateway } from './billing-gateway.js'
 import { BillingService } from './billing.service.js'
 
 export interface BillingRoutesOptions {
-  /** Null when Stripe isn't configured: checkout answers 503 BILLING_UNAVAILABLE. */
+  /** Null when Stripe isn't configured: paying answers 503 BILLING_UNAVAILABLE. */
   gateway: BillingGateway | null
+  /** Stripe's publishable key, for the card form. */
+  publishableKey?: string
   appUrl: string
 }
 
@@ -22,24 +24,50 @@ export const billingRoutes: FastifyPluginAsyncZod<BillingRoutesOptions> = async 
     ? new BillingService(app.db, options.gateway, options.appUrl)
     : null
 
+  app.get(
+    '/config',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        tags: ['billing'],
+        summary: 'What the card form needs',
+        description:
+          "Stripe's publishable key, for the card form in the browser. 503 BILLING_UNAVAILABLE " +
+          'without Stripe.',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: z.object({ publishableKey: z.string() }),
+          401: errorResponseSchema,
+          503: errorResponseSchema,
+        },
+      },
+    },
+    async () => {
+      if (!service || !options.publishableKey) throw unavailable()
+      return { publishableKey: options.publishableKey }
+    },
+  )
+
   app.post(
-    '/checkout',
+    '/subscribe',
     {
       onRequest: [app.authenticate],
       schema: {
         tags: ['billing'],
         summary: 'Start paying for a plan',
         description:
-          'Answers the Stripe Checkout page to send the user to. 409 SUBSCRIPTION_EXISTS while a ' +
-          'paid plan runs; 400 PLAN_NOT_FOR_SALE, PERIOD_NOT_OFFERED; 503 BILLING_UNAVAILABLE ' +
-          'without Stripe.',
+          'Creates the subscription waiting for its first charge and answers the secret the ' +
+          "card form confirms it with (Stripe's Payment Element). The card never reaches this " +
+          'API. A subscription still waiting for a payment is cancelled first. 409 ' +
+          'SUBSCRIPTION_EXISTS while a paid plan runs; 400 PLAN_NOT_FOR_SALE, ' +
+          'PERIOD_NOT_OFFERED; 503 BILLING_UNAVAILABLE without Stripe.',
         security: [{ bearerAuth: [] }],
         body: z.object({
           planId: z.uuid(),
           period: z.enum(['MONTHLY', 'SEMIANNUAL', 'ANNUAL']),
         }),
         response: {
-          200: z.object({ url: z.url() }),
+          200: z.object({ clientSecret: z.string() }),
           400: errorResponseSchema,
           401: errorResponseSchema,
           404: errorResponseSchema,
@@ -50,9 +78,7 @@ export const billingRoutes: FastifyPluginAsyncZod<BillingRoutesOptions> = async 
     },
     async (request) => {
       if (!service) throw unavailable()
-      return {
-        url: await service.checkout(request.user.sub, request.body.planId, request.body.period),
-      }
+      return service.subscribe(request.user.sub, request.body.planId, request.body.period)
     },
   )
 

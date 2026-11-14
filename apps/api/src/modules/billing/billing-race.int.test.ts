@@ -52,10 +52,10 @@ function webhook(payload: string) {
   })
 }
 
-function checkout() {
+function subscribe() {
   return app.inject({
     method: 'POST',
-    url: '/billing/checkout',
+    url: '/billing/subscribe',
     payload: { planId: premium.id, period: 'MONTHLY' },
     headers: authHeader(app, user.id),
   })
@@ -135,47 +135,27 @@ describe('the same event twice at once', () => {
   })
 })
 
-describe('one checkout at a time', () => {
-  it('creates one customer for two checkouts at once, and expires the first', async () => {
-    const responses = await Promise.all([checkout(), checkout()])
+describe('one payment at a time', () => {
+  it('creates one customer for two subscribes at once, and cancels the first', async () => {
+    const responses = await Promise.all([subscribe(), subscribe()])
 
     expect(responses.map((response) => response.statusCode)).toEqual([200, 200])
     expect(billing.customers).toHaveLength(1)
-    expect([...billing.checkoutStatus.values()]).toEqual(['expired', 'open'])
-    expect(
-      (await db.user.findUniqueOrThrow({ where: { id: user.id } })).stripeCheckoutSessionId,
-    ).toBe('cs_test_2')
+    expect(billing.products).toHaveLength(1)
+    expect(billing.cancelled).toEqual(['sub_1'])
+    const stored = await db.subscription.findMany({ orderBy: { createdAt: 'asc' } })
+    expect(stored.map((row) => row.status)).toEqual(['canceled', 'incomplete'])
   })
 
-  it('answers 409 SUBSCRIPTION_EXISTS when the previous checkout was already paid', async () => {
-    await checkout()
-    billing.checkoutStatus.set('cs_test_1', 'complete')
-
-    const response = await checkout()
-
-    expect(response.statusCode).toBe(409)
-    expect(response.json()).toMatchObject({ code: 'SUBSCRIPTION_EXISTS' })
-    expect(billing.checkouts).toHaveLength(1)
-  })
-
-  it('forgets a paid checkout once Stripe confirms it, so a later one can start', async () => {
-    await checkout()
-    billing.checkoutStatus.set('cs_test_1', 'complete')
+  it('activates the subscription when Stripe confirms the payment', async () => {
+    await subscribe()
     billing.subscriptions.set(
       'sub_1',
-      stripeSubscription({ metadata: metadata(), status: 'canceled' }),
+      stripeSubscription({ id: 'sub_1', metadata: metadata(), status: 'active' }),
     )
 
-    await webhook(
-      stripeEvent('evt_1', 'checkout.session.completed', {
-        id: 'cs_test_1',
-        subscription: 'sub_1',
-      }),
-    )
+    await webhook(stripeEvent('evt_1', 'customer.subscription.updated', { id: 'sub_1' }))
 
-    expect(
-      (await db.user.findUniqueOrThrow({ where: { id: user.id } })).stripeCheckoutSessionId,
-    ).toBeNull()
-    expect((await checkout()).statusCode).toBe(200)
+    expect(await source()).toBe('SUBSCRIPTION')
   })
 })

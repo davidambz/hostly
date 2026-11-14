@@ -1,5 +1,6 @@
 import { Check, Loader2, TriangleAlert } from 'lucide-react'
-import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 
@@ -8,12 +9,11 @@ import { ErrorState, LoadingState } from '@/components/states'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { errorMessage } from '@/lib/api/form-errors'
-import { leaveTo } from '@/lib/navigate'
 
 import { formatBRL } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
-import { type MyPlan, type Plan, useCheckout, useMyGrants, useMyPlan, usePlans } from './api'
+import { type MyPlan, type Plan, useMyGrants, useMyPlan, usePlans } from './api'
 import {
   grantLabel,
   type PeriodPrice,
@@ -23,6 +23,7 @@ import {
   usageLabel,
 } from './plan-labels'
 import { ManageSubscription } from './manage-subscription'
+import { SubscribeSheet } from './subscribe-sheet'
 
 /** How often, and how many times, to ask again while Stripe confirms a payment. */
 const CONFIRM_POLL_MS = 3000
@@ -158,6 +159,15 @@ function CurrentPlan({ myPlan }: { myPlan: MyPlan }) {
 /** The plans on sale, side by side, the user's own marked. */
 function Plans({ currentId, paying }: { currentId: string; paying: boolean }) {
   const plans = usePlans()
+  const [, setParams] = useSearchParams()
+  const queryClient = useQueryClient()
+  const [buying, setBuying] = useState<{ plan: Plan; period: PeriodPrice['period'] } | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+
+  const buy = (plan: Plan, period: PeriodPrice['period']) => {
+    setBuying({ plan, period })
+    setSheetOpen(true)
+  }
   return (
     <section aria-labelledby="plans-title" className="grid gap-3">
       <h2 id="plans-title" className="font-wide text-xl font-semibold">
@@ -175,15 +185,48 @@ function Plans({ currentId, paying }: { currentId: string; paying: boolean }) {
           )}
         >
           {plans.data.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} current={plan.id === currentId} paying={paying} />
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              current={plan.id === currentId}
+              paying={paying}
+              onBuy={buy}
+            />
           ))}
         </ul>
+      )}
+      {buying && (
+        <SubscribeSheet
+          plan={buying.plan}
+          period={buying.period}
+          onPeriodChange={(period) => {
+            setBuying({ ...buying, period })
+          }}
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          onPaid={() => {
+            setSheetOpen(false)
+            void queryClient.invalidateQueries({ queryKey: ['plan'] })
+            // The webhook switches the plan on in a moment: the page waits for it.
+            setParams({ assinatura: 'confirmando' }, { replace: true })
+          }}
+        />
       )}
     </section>
   )
 }
 
-function PlanCard({ plan, current, paying }: { plan: Plan; current: boolean; paying: boolean }) {
+function PlanCard({
+  plan,
+  current,
+  paying,
+  onBuy,
+}: {
+  plan: Plan
+  current: boolean
+  paying: boolean
+  onBuy: (plan: Plan, period: PeriodPrice['period']) => void
+}) {
   const prices = periodPrices(plan)
   const free = plan.code === 'free'
   // Free needs no paying, and a running subscription is changed, not bought twice.
@@ -220,7 +263,12 @@ function PlanCard({ plan, current, paying }: { plan: Plan; current: boolean; pay
       {/* Pushed to the bottom, so the plans' actions line up whatever their text. */}
       {buyable && (
         <div className="mt-auto pt-2">
-          <Subscribe plan={plan} prices={prices} />
+          <Subscribe
+            prices={prices}
+            onBuy={(period) => {
+              onBuy(plan, period)
+            }}
+          />
         </div>
       )}
     </li>
@@ -257,33 +305,29 @@ function Grants() {
   )
 }
 
-/** One button per period: each opens Stripe's checkout for it. */
-function Subscribe({ plan, prices }: { plan: Plan; prices: PeriodPrice[] }) {
-  const checkout = useCheckout()
-
-  const start = async (period: PeriodPrice['period']) => {
-    try {
-      const { url } = await checkout.mutateAsync({ planId: plan.id, period })
-      leaveTo(url)
-    } catch (error) {
-      toast.error(errorMessage(error))
-    }
-  }
-
+/** One button per period: each opens the card form for it. */
+function Subscribe({
+  prices,
+  onBuy,
+}: {
+  prices: PeriodPrice[]
+  onBuy: (period: PeriodPrice['period']) => void
+}) {
   return (
     <div className="grid gap-2">
       {prices.map((price) => (
         <Button
           key={price.period}
           variant={price.period === 'MONTHLY' ? 'default' : 'outline'}
-          disabled={checkout.isPending}
-          onClick={() => void start(price.period)}
+          onClick={() => {
+            onBuy(price.period)
+          }}
         >
           Assinar · {formatBRL(price.price)} {price.label}
         </Button>
       ))}
       <p className="text-muted-foreground text-xs">
-        O pagamento é feito na página segura da Stripe.
+        Você paga com o cartão aqui mesmo; a Stripe processa o pagamento.
       </p>
     </div>
   )

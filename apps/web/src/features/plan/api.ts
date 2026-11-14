@@ -38,11 +38,24 @@ export function useMyGrants() {
 
 export type BillingPeriod = 'MONTHLY' | 'SEMIANNUAL' | 'ANNUAL'
 
-/** Starts paying for a plan: answers the Stripe checkout page to go to. */
-export function useCheckout() {
+/**
+ * Starts paying for a plan: the subscription waits for its first charge, and the answer is
+ * the secret the card form confirms it with.
+ */
+export function useSubscribe() {
   return useMutation({
     mutationFn: async (input: { planId: string; period: BillingPeriod }) =>
-      unwrap(await api.POST('/billing/checkout', { body: input })),
+      unwrap(await api.POST('/billing/subscribe', { body: input })),
+  })
+}
+
+/** Stripe's publishable key, for the card form. It never changes while the app runs. */
+export function useBillingConfig(enabled: boolean) {
+  return useQuery({
+    queryKey: ['plan', 'billing-config'],
+    queryFn: async () => unwrap(await api.GET('/billing/config')),
+    staleTime: Infinity,
+    enabled,
   })
 }
 

@@ -1,6 +1,10 @@
 import Stripe from 'stripe'
 
-import type { BillingGateway, CheckoutRequest } from '../modules/billing/billing-gateway.js'
+import type {
+  BillingGateway,
+  SubscriptionMetadata,
+  SubscriptionRequest,
+} from '../modules/billing/billing-gateway.js'
 
 export const TEST_WEBHOOK_SECRET = 'whsec_test_hostly'
 
@@ -10,9 +14,10 @@ export const TEST_WEBHOOK_SECRET = 'whsec_test_hostly'
  */
 export class FakeBilling implements BillingGateway {
   readonly customers: { id: string; name: string; email: string }[] = []
-  readonly checkouts: CheckoutRequest[] = []
-  /** Each checkout's state at "Stripe", by id (`cs_test_<n>`). */
-  readonly checkoutStatus = new Map<string, 'open' | 'complete' | 'expired'>()
+  readonly products: { id: string; name: string }[] = []
+  /** Every subscription asked for, in order (`sub_<n>`, each waiting for its payment). */
+  readonly subscriptionRequests: SubscriptionRequest[] = []
+  readonly cancelled: string[] = []
   readonly subscriptions = new Map<string, Stripe.Subscription>()
   private readonly stripe = new Stripe('sk_test_fake')
 
@@ -21,17 +26,28 @@ export class FakeBilling implements BillingGateway {
     return Promise.resolve(`cus_${String(this.customers.length)}`)
   }
 
-  createCheckout(request: CheckoutRequest) {
-    this.checkouts.push(request)
-    const id = `cs_test_${String(this.checkouts.length)}`
-    this.checkoutStatus.set(id, 'open')
-    return Promise.resolve({ id, url: `https://checkout.stripe.com/c/pay/${id}` })
+  createProduct(plan: { id: string; name: string }) {
+    this.products.push({ id: plan.id, name: plan.name })
+    return Promise.resolve(`prod_${String(this.products.length)}`)
   }
 
-  expireCheckout(id: string) {
-    if (this.checkoutStatus.get(id) === 'complete') return Promise.resolve('complete' as const)
-    this.checkoutStatus.set(id, 'expired')
-    return Promise.resolve('expired' as const)
+  createSubscription(request: SubscriptionRequest) {
+    this.subscriptionRequests.push(request)
+    const n = this.subscriptionRequests.length
+    const subscription = stripeSubscription({
+      id: `sub_${String(n)}`,
+      status: 'incomplete',
+      metadata: { ...request.metadata },
+    })
+    this.subscriptions.set(subscription.id, subscription)
+    return Promise.resolve({ subscription, clientSecret: `pi_${String(n)}_secret_test` })
+  }
+
+  cancelSubscription(id: string) {
+    this.cancelled.push(id)
+    const subscription = this.subscriptions.get(id)
+    if (subscription) this.subscriptions.set(id, { ...subscription, status: 'canceled' })
+    return Promise.resolve()
   }
 
   /**
@@ -65,12 +81,12 @@ export class FakeBilling implements BillingGateway {
 
   changePeriod(
     id: string,
-    change: { amount: number; period: string; metadata: Record<string, string> },
+    change: { amount: number; period: string; metadata: SubscriptionMetadata },
   ) {
     const subscription = this.subscriptions.get(id)
     if (!subscription) return Promise.reject(new Error(`No subscription ${id}`))
     this.periodChanges.push({ id, amount: change.amount, period: change.period })
-    const updated = { ...subscription, metadata: change.metadata }
+    const updated = { ...subscription, metadata: { ...change.metadata } }
     this.subscriptions.set(id, updated)
     return Promise.resolve(updated)
   }

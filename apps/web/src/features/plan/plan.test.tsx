@@ -5,6 +5,38 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/navigate', () => ({ leaveTo: vi.fn() }))
 
+// Stripe's card fields are frames from js.stripe.com: here they are stand-ins that record
+// what the page asks of them.
+const stripe = vi.hoisted(() => ({
+  confirmPayment: vi.fn(),
+  submit: vi.fn(),
+  amounts: [] as number[],
+}))
+vi.mock('@stripe/stripe-js', () => ({ loadStripe: vi.fn(() => Promise.resolve({})) }))
+vi.mock('@stripe/react-stripe-js', async () => {
+  const { useEffect } = await import('react')
+  return {
+    Elements: ({
+      children,
+      options,
+    }: {
+      children: React.ReactNode
+      options: { amount: number }
+    }) => {
+      stripe.amounts.push(options.amount)
+      return children
+    },
+    PaymentElement: ({ onReady }: { onReady?: () => void }) => {
+      useEffect(() => {
+        onReady?.()
+      }, [onReady])
+      return <div>Campos do cartão</div>
+    },
+    useStripe: () => ({ confirmPayment: stripe.confirmPayment }),
+    useElements: () => ({ submit: stripe.submit }),
+  }
+})
+
 import { routes } from '@/test/app-routes'
 import { nth } from '@/test/nth'
 import { renderRoute } from '@/test/render'
@@ -236,28 +268,83 @@ describe('plan helpers', () => {
 })
 
 describe('subscribing', () => {
-  it('sends the user to Stripe for the chosen period', async () => {
+  function servePaying() {
     serve(freePlan())
     const bodies: unknown[] = []
     server.use(
       http.get(url('/plans'), () => HttpResponse.json([plan({}), premium])),
       http.get(url('/me/grants'), () => HttpResponse.json([])),
-      http.post(url('/billing/checkout'), async ({ request }) => {
+      http.get(url('/billing/config'), () => HttpResponse.json({ publishableKey: 'pk_test_x' })),
+      http.post(url('/billing/subscribe'), async ({ request }) => {
         bodies.push(await request.json())
-        return HttpResponse.json({ url: 'https://checkout.stripe.com/c/pay/cs_test_1' })
+        return HttpResponse.json({ clientSecret: 'pi_1_secret_test' })
       }),
     )
+    stripe.amounts.length = 0
+    stripe.submit.mockResolvedValue({})
+    stripe.confirmPayment.mockResolvedValue({})
+    return bodies
+  }
+
+  it('pays with the card inside the app, for the period chosen', async () => {
+    const bodies = servePaying()
     const user = userEvent.setup()
-    renderRoute(routes, '/plano')
+    const { router } = renderRoute(routes, '/plano')
 
     await user.click(
       await screen.findByRole('button', { name: 'Assinar · R$ 383,00 por ano' }, { timeout: 5000 }),
     )
+    const sheet = await screen.findByRole('dialog', { name: 'Assinar o Premium' })
+    expect(within(sheet).getByRole('radio', { name: /R\$ 383,00/ })).toBeChecked()
+    expect(await within(sheet).findByText('Campos do cartão')).toBeInTheDocument()
+    expect(stripe.amounts.at(-1)).toBe(38300)
+
+    await user.click(within(sheet).getByRole('radio', { name: /R\$ 39,90/ }))
+    await user.click(await within(sheet).findByRole('button', { name: 'Pagar R$ 39,90 por mês' }))
 
     await vi.waitFor(() => {
-      expect(leaveTo).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_test_1')
+      expect(router.state.location.search).toBe('?assinatura=confirmando')
     })
-    expect(bodies).toEqual([{ planId: premium.id, period: 'ANNUAL' }])
+    expect(stripe.amounts.at(-1)).toBe(3990)
+    expect(bodies).toEqual([{ planId: premium.id, period: 'MONTHLY' }])
+    expect(stripe.confirmPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ clientSecret: 'pi_1_secret_test', redirect: 'if_required' }),
+    )
+    expect(screen.queryByRole('dialog', { name: 'Assinar o Premium' })).not.toBeInTheDocument()
+    expect(await screen.findByText(/A Stripe está confirmando/)).toBeInTheDocument()
+  })
+
+  it("shows the card's problem and keeps the form open", async () => {
+    servePaying()
+    stripe.confirmPayment.mockResolvedValue({ error: { message: 'Seu cartão foi recusado.' } })
+    const user = userEvent.setup()
+    renderRoute(routes, '/plano')
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Assinar · R$ 39,90 por mês' }, { timeout: 5000 }),
+    )
+    const sheet = await screen.findByRole('dialog', { name: 'Assinar o Premium' })
+    await user.click(await within(sheet).findByRole('button', { name: 'Pagar R$ 39,90 por mês' }))
+
+    expect(await within(sheet).findByRole('alert')).toHaveTextContent('Seu cartão foi recusado.')
+    expect(screen.getByRole('dialog', { name: 'Assinar o Premium' })).toBeInTheDocument()
+  })
+
+  it('checks the card before creating any subscription', async () => {
+    const bodies = servePaying()
+    stripe.submit.mockResolvedValue({ error: { message: 'O número do cartão está incompleto.' } })
+    const user = userEvent.setup()
+    renderRoute(routes, '/plano')
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Assinar · R$ 39,90 por mês' }, { timeout: 5000 }),
+    )
+    const sheet = await screen.findByRole('dialog', { name: 'Assinar o Premium' })
+    await user.click(await within(sheet).findByRole('button', { name: 'Pagar R$ 39,90 por mês' }))
+
+    expect(await within(sheet).findByRole('alert')).toHaveTextContent('incompleto')
+    expect(bodies).toEqual([])
+    expect(stripe.confirmPayment).not.toHaveBeenCalled()
   })
 
   it('says it is confirming after Stripe, then that it is done', async () => {

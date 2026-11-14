@@ -6696,13 +6696,68 @@
         }
       }
     },
-    "/billing/checkout": {
+    "/billing/config": {
+      "get": {
+        "summary": "What the card form needs",
+        "tags": [
+          "billing"
+        ],
+        "description": "Stripe's publishable key, for the card form in the browser. 503 BILLING_UNAVAILABLE without Stripe.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "publishableKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "publishableKey"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/subscribe": {
       "post": {
         "summary": "Start paying for a plan",
         "tags": [
           "billing"
         ],
-        "description": "Answers the Stripe Checkout page to send the user to. 409 SUBSCRIPTION_EXISTS while a paid plan runs; 400 PLAN_NOT_FOR_SALE, PERIOD_NOT_OFFERED; 503 BILLING_UNAVAILABLE without Stripe.",
+        "description": "Creates the subscription waiting for its first charge and answers the secret the card form confirms it with (Stripe's Payment Element). The card never reaches this API. A subscription still waiting for a payment is cancelled first. 409 SUBSCRIPTION_EXISTS while a paid plan runs; 400 PLAN_NOT_FOR_SALE, PERIOD_NOT_OFFERED; 503 BILLING_UNAVAILABLE without Stripe.",
         "requestBody": {
           "required": true,
           "content": {
@@ -6745,13 +6800,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "url": {
-                      "type": "string",
-                      "format": "uri"
+                    "clientSecret": {
+                      "type": "string"
                     }
                   },
                   "required": [
-                    "url"
+                    "clientSecret"
                   ],
                   "additionalProperties": false
                 }

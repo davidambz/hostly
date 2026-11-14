@@ -111,6 +111,7 @@ export async function buildApp(env: Env, options: BuildAppOptions = {}) {
         ? new StripeGateway(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET)
         : null),
     appUrl: env.APP_URL,
+    publishableKey: env.STRIPE_PUBLISHABLE_KEY,
   })
   await app.register(adminRoutes, { prefix: '/admin' })
 

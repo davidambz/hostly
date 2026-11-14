@@ -95,6 +95,8 @@ const envSchema = z
     REFRESH_SESSION_MAX_DAYS: optional(z.coerce.number().int().positive().default(90)),
     /** Stripe's secret key (`sk_…`). Without it, checkout answers 503 BILLING_UNAVAILABLE. */
     STRIPE_SECRET_KEY: optional(z.string().startsWith('sk_').optional()),
+    /** Stripe's publishable key (`pk_…`), handed to the browser for the card form. */
+    STRIPE_PUBLISHABLE_KEY: optional(z.string().startsWith('pk_').optional()),
     /** Signs Stripe's webhooks (`whsec_…`); `stripe listen` prints one for local work. */
     STRIPE_WEBHOOK_SECRET: optional(z.string().startsWith('whsec_').optional()),
     /** Where the web app lives, for Stripe to send the user back to. Defaults to the first CORS origin. */
@@ -121,6 +123,17 @@ const envSchema = z
     {
       path: ['STRIPE_WEBHOOK_SECRET'],
       // Without it every webhook fails its signature check and no payment is ever confirmed.
+      message: 'Required in production when STRIPE_SECRET_KEY is set',
+    },
+  )
+  .refine(
+    (env) =>
+      env.NODE_ENV !== 'production' ||
+      env.STRIPE_SECRET_KEY === undefined ||
+      env.STRIPE_PUBLISHABLE_KEY !== undefined,
+    {
+      path: ['STRIPE_PUBLISHABLE_KEY'],
+      // Without it the card form can't load, so nobody can subscribe.
       message: 'Required in production when STRIPE_SECRET_KEY is set',
     },
   )

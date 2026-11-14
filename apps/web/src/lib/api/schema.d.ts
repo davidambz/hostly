@@ -2294,7 +2294,66 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/billing/checkout': {
+  '/billing/config': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * What the card form needs
+     * @description Stripe's publishable key, for the card form in the browser. 503 BILLING_UNAVAILABLE without Stripe.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              publishableKey: string
+            }
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        503: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/billing/subscribe': {
     parameters: {
       query?: never
       header?: never
@@ -2305,7 +2364,7 @@ export interface paths {
     put?: never
     /**
      * Start paying for a plan
-     * @description Answers the Stripe Checkout page to send the user to. 409 SUBSCRIPTION_EXISTS while a paid plan runs; 400 PLAN_NOT_FOR_SALE, PERIOD_NOT_OFFERED; 503 BILLING_UNAVAILABLE without Stripe.
+     * @description Creates the subscription waiting for its first charge and answers the secret the card form confirms it with (Stripe's Payment Element). The card never reaches this API. A subscription still waiting for a payment is cancelled first. 409 SUBSCRIPTION_EXISTS while a paid plan runs; 400 PLAN_NOT_FOR_SALE, PERIOD_NOT_OFFERED; 503 BILLING_UNAVAILABLE without Stripe.
      */
     post: {
       parameters: {
@@ -2332,8 +2391,7 @@ export interface paths {
           }
           content: {
             'application/json': {
-              /** Format: uri */
-              url: string
+              clientSecret: string
             }
           }
         }
