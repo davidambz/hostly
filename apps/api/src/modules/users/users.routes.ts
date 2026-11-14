@@ -1,9 +1,12 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
+import { z } from 'zod'
 
 import { errorResponseSchema } from '../../shared/error-response.js'
 import { UsersRepository } from './users.repository.js'
 import { currentPlan } from '../plans/current-plan.js'
+import { isInForce } from '../grants/grant-dates.js'
 import {
+  myGrantSchema,
   myPlanSchema,
   publicUserSchema,
   toPublicUser,
@@ -60,6 +63,39 @@ export const usersRoutes: FastifyPluginAsyncZod = async (app) => {
         propertyCount,
         canAddProperty: plan.maxProperties === null || propertyCount < plan.maxProperties,
       }
+    },
+  )
+
+  app.get(
+    '/me/grants',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        tags: ['users'],
+        summary: 'Plans given to me',
+        description:
+          'Courtesy plans an administrator gave this account, newest first. The reason and ' +
+          'who granted them stay in the backoffice.',
+        security: [{ bearerAuth: [] }],
+        response: { 200: z.array(myGrantSchema), 401: errorResponseSchema },
+      },
+    },
+    async (request) => {
+      const now = new Date()
+      const grants = await app.db.planGrant.findMany({
+        where: { userId: request.user.sub },
+        include: { plan: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+      })
+      return grants.map((grant) => ({
+        id: grant.id,
+        plan: grant.plan,
+        duration: grant.duration,
+        startsAt: grant.startsAt.toISOString(),
+        endsAt: grant.endsAt?.toISOString() ?? null,
+        revokedAt: grant.revokedAt?.toISOString() ?? null,
+        inForce: isInForce(grant, now),
+      }))
     },
   )
 

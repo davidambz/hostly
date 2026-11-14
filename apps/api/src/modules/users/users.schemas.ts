@@ -61,3 +61,16 @@ export const myPlanSchema = z
     canAddProperty: z.boolean(),
   })
   .meta({ id: 'MyPlan' })
+
+/** GET /me/grants: the plans an administrator gave the user, as the user sees them. */
+export const myGrantSchema = z
+  .object({
+    id: z.uuid(),
+    plan: z.object({ name: z.string() }),
+    duration: z.enum(['ONE_MONTH', 'SIX_MONTHS', 'ONE_YEAR', 'LIFETIME']),
+    startsAt: z.iso.datetime(),
+    endsAt: z.iso.datetime().nullable(),
+    revokedAt: z.iso.datetime().nullable(),
+    inForce: z.boolean(),
+  })
+  .meta({ id: 'MyGrant' })
