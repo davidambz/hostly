@@ -19,6 +19,8 @@ export type AuthContextValue = AuthState & {
   logout: () => void
   /** Tries to resume the session again, after `unavailable`. */
   retry: () => void
+  /** Puts the account as the API now has it (after the name or e-mail changed). */
+  setUser: (user: User) => void
 }
 
 /** Waits between automatic attempts to resume a session the API couldn't confirm. */

@@ -103,14 +103,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void authApi.logout()
   }, [])
 
+  const setUser = useCallback((user: authApi.User) => {
+    setState((current) => (current.status === 'authenticated' ? { ...current, user } : current))
+  }, [])
+
   const retry = useCallback(() => {
     setState({ status: 'loading', user: null })
     setAttempt((value) => value + 1)
   }, [])
 
   const value = useMemo(
-    () => ({ ...state, login, register, logout, retry }),
-    [state, login, register, logout, retry],
+    () => ({ ...state, login, register, logout, retry, setUser }),
+    [state, login, register, logout, retry, setUser],
   )
 
   return <AuthContext value={value}>{children}</AuthContext>
