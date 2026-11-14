@@ -36,6 +36,20 @@ export interface BillingGateway {
   /** Checks a webhook's signature and reads it; throws when it isn't Stripe's. */
   readWebhook(rawBody: Buffer, signature: string): Stripe.Event
   retrieveSubscription(id: string): Promise<Stripe.Subscription>
+  /** Turns the renewal off (Premium lasts until the period's end) or back on. */
+  setCancelAtPeriodEnd(id: string, cancel: boolean): Promise<Stripe.Subscription>
+  /** Charges the subscription every `period` from now on, at `amount` cents. */
+  changePeriod(
+    id: string,
+    change: {
+      productName: string
+      amount: number
+      period: BillingPeriod
+      metadata: CheckoutRequest['metadata']
+    },
+  ): Promise<Stripe.Subscription>
+  /** Stripe's customer portal, where the user changes the card; returns its address. */
+  createPortal(customerId: string, returnUrl: string): Promise<string>
 }
 
 export class StripeGateway implements BillingGateway {
@@ -90,5 +104,51 @@ export class StripeGateway implements BillingGateway {
 
   retrieveSubscription(id: string): Promise<Stripe.Subscription> {
     return this.stripe.subscriptions.retrieve(id)
+  }
+
+  setCancelAtPeriodEnd(id: string, cancel: boolean): Promise<Stripe.Subscription> {
+    return this.stripe.subscriptions.update(id, { cancel_at_period_end: cancel })
+  }
+
+  async changePeriod(
+    id: string,
+    change: {
+      productName: string
+      amount: number
+      period: BillingPeriod
+      metadata: CheckoutRequest['metadata']
+    },
+  ): Promise<Stripe.Subscription> {
+    const subscription = await this.stripe.subscriptions.retrieve(id)
+    const item = subscription.items.data[0]
+    if (!item) throw new Error(`Subscription ${id} has no item`)
+    const { interval, intervalCount } = RECURRENCE[change.period]
+    const product =
+      typeof item.price.product === 'string' ? item.price.product : item.price.product.id
+    return this.stripe.subscriptions.update(id, {
+      items: [
+        {
+          id: item.id,
+          price_data: {
+            currency: 'brl',
+            product,
+            unit_amount: change.amount,
+            recurring: { interval, interval_count: intervalCount },
+          },
+        },
+      ],
+      // A new interval restarts the billing cycle now (Stripe does that on its own when the
+      // interval changes), with what was left of the old period credited.
+      proration_behavior: 'create_prorations',
+      metadata: change.metadata,
+    })
+  }
+
+  async createPortal(customerId: string, returnUrl: string): Promise<string> {
+    const session = await this.stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl,
+    })
+    return session.url
   }
 }

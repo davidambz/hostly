@@ -56,6 +56,126 @@ export const billingRoutes: FastifyPluginAsyncZod<BillingRoutesOptions> = async 
     },
   )
 
+  const periodSchema = z.enum(['MONTHLY', 'SEMIANNUAL', 'ANNUAL'])
+  const ok = {
+    204: z.null(),
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    404: errorResponseSchema,
+    503: errorResponseSchema,
+  }
+
+  app.post(
+    '/subscription/renewal',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        tags: ['billing'],
+        summary: 'Cancel or resume the renewal',
+        description:
+          '`renew: false` cancels the renewal: the plan lasts until the end of the period paid. ' +
+          '`renew: true` undoes it. 404 NO_SUBSCRIPTION without a paid plan.',
+        security: [{ bearerAuth: [] }],
+        body: z.object({ renew: z.boolean() }),
+        response: ok,
+      },
+    },
+    async (request, reply) => {
+      if (!service) throw unavailable()
+      await service.setRenewal(request.user.sub, request.body.renew)
+      return reply.status(204).send(null)
+    },
+  )
+
+  app.post(
+    '/subscription/period',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        tags: ['billing'],
+        summary: 'Change the billing period',
+        description:
+          "From now, at that period's price, with what was left of the current one credited. " +
+          '400 SAME_PERIOD, PERIOD_NOT_OFFERED; 404 NO_SUBSCRIPTION.',
+        security: [{ bearerAuth: [] }],
+        body: z.object({ period: periodSchema }),
+        response: ok,
+      },
+    },
+    async (request, reply) => {
+      if (!service) throw unavailable()
+      await service.changePeriod(request.user.sub, request.body.period)
+      return reply.status(204).send(null)
+    },
+  )
+
+  app.post(
+    '/portal',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        tags: ['billing'],
+        summary: "Stripe's portal, to change the card",
+        description: 'Answers its address. 404 NO_CUSTOMER for an account that never paid.',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: z.object({ url: z.url() }),
+          401: errorResponseSchema,
+          404: errorResponseSchema,
+          503: errorResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      if (!service) throw unavailable()
+      return { url: await service.portal(request.user.sub) }
+    },
+  )
+
+  app.get(
+    '/payments',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        tags: ['billing'],
+        summary: 'My charges',
+        description:
+          'Newest first: amount in cents, paid or failed, and for which plan and period.',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: z.array(
+            z
+              .object({
+                id: z.uuid(),
+                amount: z.number().int(),
+                status: z.enum(['paid', 'failed']),
+                at: z.iso.datetime(),
+                plan: z.string().nullable(),
+                period: periodSchema.nullable(),
+              })
+              .meta({ id: 'BillingPayment' }),
+          ),
+          401: errorResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const payments = await app.db.billingPayment.findMany({
+        where: { userId: request.user.sub },
+        include: { subscription: { select: { period: true, plan: { select: { name: true } } } } },
+        orderBy: { at: 'desc' },
+      })
+      return payments.map((payment) => ({
+        id: payment.id,
+        amount: payment.amount,
+        status: payment.status as 'paid' | 'failed',
+        at: payment.at.toISOString(),
+        plan: payment.subscription?.plan.name ?? null,
+        period: payment.subscription?.period ?? null,
+      }))
+    },
+  )
+
   await app.register(webhookRoute(service, options.gateway))
 }
 

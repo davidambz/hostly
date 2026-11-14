@@ -320,3 +320,158 @@ describe('subscribing', () => {
     expect(subscriptionLabel(freePlan())).toBeNull()
   })
 })
+
+describe('managing the subscription', () => {
+  const subscribed = (cancelAtPeriodEnd = false) => ({
+    ...freePlan(),
+    source: 'SUBSCRIPTION' as const,
+    plan: {
+      ...freePlan().plan,
+      id: premium.id,
+      code: 'premium',
+      name: 'Premium',
+      maxProperties: null,
+    },
+    subscription: {
+      period: 'MONTHLY' as const,
+      currentPeriodEnd: '2026-12-14T12:00:00.000Z',
+      cancelAtPeriodEnd,
+    },
+  })
+
+  function serveSubscription(cancelled = false) {
+    const calls: { path: string; body: unknown }[] = []
+    serve(subscribed(cancelled))
+    server.use(
+      http.get(url('/plans'), () => HttpResponse.json([plan({}), premium])),
+      http.get(url('/me/grants'), () => HttpResponse.json([])),
+      http.get(url('/billing/payments'), () =>
+        HttpResponse.json([
+          {
+            id: '018f0000-0000-7000-8000-0000000000c1',
+            amount: 3990,
+            status: 'paid',
+            at: '2026-11-14T12:00:00.000Z',
+            plan: 'Premium',
+            period: 'MONTHLY',
+          },
+          {
+            id: '018f0000-0000-7000-8000-0000000000c2',
+            amount: 3990,
+            status: 'failed',
+            at: '2026-10-14T12:00:00.000Z',
+            plan: null,
+            period: null,
+          },
+        ]),
+      ),
+      http.post(url('/billing/subscription/renewal'), async ({ request }) => {
+        calls.push({ path: 'renewal', body: await request.json() })
+        return new HttpResponse(null, { status: 204 })
+      }),
+      http.post(url('/billing/subscription/period'), async ({ request }) => {
+        calls.push({ path: 'period', body: await request.json() })
+        return new HttpResponse(null, { status: 204 })
+      }),
+      http.post(url('/billing/portal'), () =>
+        HttpResponse.json({ url: 'https://billing.stripe.com/p/session/test_1' }),
+      ),
+    )
+    return calls
+  }
+
+  it('lists the charges, paid and failed', async () => {
+    serveSubscription()
+    renderRoute(routes, '/plano')
+
+    const list = await screen.findByRole('list', { name: 'Pagamentos' }, { timeout: 5000 })
+    const items = within(list).getAllByRole('listitem')
+    expect(items[0]).toHaveTextContent('14/11/2026')
+    expect(items[0]).toHaveTextContent('Premium · mensal')
+    expect(items[0]).toHaveTextContent('R$ 39,90')
+    expect(items[0]).toHaveTextContent('Pago')
+    expect(items[1]).toHaveTextContent('Assinatura')
+    expect(items[1]).toHaveTextContent('Falhou')
+  })
+
+  it('cancels the renewal after confirming', async () => {
+    const calls = serveSubscription()
+    const user = userEvent.setup()
+    renderRoute(routes, '/plano')
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Cancelar renovação' }, { timeout: 5000 }),
+    )
+    const dialog = await screen.findByRole('alertdialog', { name: 'Cancelar a renovação?' })
+    expect(dialog).toHaveTextContent('O plano continua até 14/12/2026')
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar renovação' }))
+
+    await vi.waitFor(() => {
+      expect(calls).toEqual([{ path: 'renewal', body: { renew: false } }])
+    })
+  })
+
+  it('resumes a cancelled renewal, with no period change offered', async () => {
+    const calls = serveSubscription(true)
+    const user = userEvent.setup()
+    renderRoute(routes, '/plano')
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Retomar renovação' }, { timeout: 5000 }),
+    )
+
+    await vi.waitFor(() => {
+      expect(calls).toEqual([{ path: 'renewal', body: { renew: true } }])
+    })
+    expect(screen.queryByLabelText('Mudar para')).not.toBeInTheDocument()
+  })
+
+  it('changes to another priced period', async () => {
+    const calls = serveSubscription()
+    const user = userEvent.setup()
+    renderRoute(routes, '/plano')
+
+    const select = await screen.findByLabelText('Mudar para', {}, { timeout: 5000 })
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Escolha', 'Anual · R$ 383,00 por ano'])
+    await user.selectOptions(select, 'ANNUAL')
+    await user.click(screen.getByRole('button', { name: 'Mudar' }))
+
+    await vi.waitFor(() => {
+      expect(calls).toEqual([{ path: 'period', body: { period: 'ANNUAL' } }])
+    })
+  })
+
+  it('opens the Stripe portal to update the card', async () => {
+    serveSubscription()
+    const user = userEvent.setup()
+    renderRoute(routes, '/plano')
+
+    await user.click(
+      await screen.findByRole(
+        'button',
+        { name: 'Atualizar forma de pagamento' },
+        { timeout: 5000 },
+      ),
+    )
+
+    await vi.waitFor(() => {
+      expect(leaveTo).toHaveBeenCalledWith('https://billing.stripe.com/p/session/test_1')
+    })
+  })
+
+  it('is not shown without a paid subscription', async () => {
+    serve(freePlan())
+    server.use(
+      http.get(url('/plans'), () => HttpResponse.json([plan({}), premium])),
+      http.get(url('/me/grants'), () => HttpResponse.json([])),
+    )
+    renderRoute(routes, '/plano')
+
+    await screen.findByRole('region', { name: 'Planos' }, { timeout: 5000 })
+    expect(screen.queryByRole('region', { name: 'Sua assinatura' })).not.toBeInTheDocument()
+  })
+})

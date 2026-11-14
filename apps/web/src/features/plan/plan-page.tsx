@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { errorMessage } from '@/lib/api/form-errors'
 import { leaveTo } from '@/lib/navigate'
+
+import { ManageSubscription } from './manage-subscription'
 import { formatBRL } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
@@ -72,6 +74,7 @@ export function PlanPage() {
             </p>
           )}
           <CurrentPlan myPlan={myPlan.data} />
+          <SubscriptionSection myPlan={myPlan.data} />
           <Plans currentId={myPlan.data.plan.id} paying={myPlan.data.source === 'SUBSCRIPTION'} />
           <Grants />
         </div>
@@ -239,5 +242,17 @@ function Subscribe({ plan, prices }: { plan: Plan; prices: PeriodPrice[] }) {
         O pagamento é feito na página segura da Stripe.
       </p>
     </div>
+  )
+}
+
+/** The paid subscription's controls, with its plan's prices for a period change. */
+function SubscriptionSection({ myPlan }: { myPlan: MyPlan }) {
+  const plans = usePlans()
+  if (!myPlan.subscription) return null
+  return (
+    <ManageSubscription
+      myPlan={myPlan}
+      plan={plans.data?.find((plan) => plan.id === myPlan.plan.id)}
+    />
   )
 }

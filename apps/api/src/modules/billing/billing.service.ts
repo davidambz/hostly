@@ -81,6 +81,66 @@ export class BillingService {
     })
   }
 
+  /** The subscription that gives the user a paid plan now; 404 NO_SUBSCRIPTION without one. */
+  private async running(userId: string) {
+    const subscription = await this.db.subscription.findFirst({
+      where: { userId, status: { in: PAYING_STATUSES } },
+      include: { plan: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (!subscription) {
+      throw new NotFoundError('No paid plan is running', { code: 'NO_SUBSCRIPTION' })
+    }
+    return subscription
+  }
+
+  /**
+   * Cancels the renewal (`cancel`) or turns it back on. The plan stays until the end of the
+   * period already paid; the local record follows at once, and Stripe's webhook confirms it.
+   */
+  async setRenewal(userId: string, renew: boolean): Promise<void> {
+    const subscription = await this.running(userId)
+    const updated = await this.gateway.setCancelAtPeriodEnd(
+      subscription.stripeSubscriptionId,
+      !renew,
+    )
+    await this.db.$transaction((tx) => this.saveSubscription(tx, updated))
+  }
+
+  /** Moves the subscription to another billing period, at that period's price. */
+  async changePeriod(userId: string, period: BillingPeriod): Promise<void> {
+    const subscription = await this.running(userId)
+    if (subscription.period === period) {
+      throw new BadRequestError('That is already the period', {
+        code: 'SAME_PERIOD',
+        details: { field: 'period' },
+      })
+    }
+    const amount = subscription.plan[PRICE_OF[period]]
+    if (amount === null || amount === 0) {
+      throw new BadRequestError('The plan is not offered for this period', {
+        code: 'PERIOD_NOT_OFFERED',
+        details: { field: 'period' },
+      })
+    }
+    const updated = await this.gateway.changePeriod(subscription.stripeSubscriptionId, {
+      productName: `Hostly ${subscription.plan.name}`,
+      amount,
+      period,
+      metadata: { userId, planId: subscription.planId, period },
+    })
+    await this.db.$transaction((tx) => this.saveSubscription(tx, updated))
+  }
+
+  /** Stripe's portal for the card; 404 NO_CUSTOMER for an account that never paid. */
+  async portal(userId: string): Promise<string> {
+    const user = await this.db.user.findUniqueOrThrow({ where: { id: userId } })
+    if (!user.stripeCustomerId) {
+      throw new NotFoundError('The account never paid with Stripe', { code: 'NO_CUSTOMER' })
+    }
+    return this.gateway.createPortal(user.stripeCustomerId, `${this.appUrl}/plano`)
+  }
+
   /**
    * Applies a Stripe event. The event's id is stored in the same transaction as its effect:
    * a webhook Stripe sends again is applied once, and one that fails is retried by Stripe.
@@ -120,20 +180,17 @@ export class BillingService {
   private async saveSubscription(tx: Transaction, subscription: Stripe.Subscription) {
     const { userId, planId, period } = subscription.metadata
     if (!userId || !planId || !period || !PERIODS.has(period)) return
+    // The plan and the period follow the subscription's metadata, which a period change updates.
     const data = {
+      planId,
+      period: period as BillingPeriod,
       status: subscription.status,
       currentPeriodEnd: periodEnd(subscription),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
     }
     await tx.subscription.upsert({
       where: { stripeSubscriptionId: subscription.id },
-      create: {
-        ...data,
-        userId,
-        planId,
-        period: period as BillingPeriod,
-        stripeSubscriptionId: subscription.id,
-      },
+      create: { ...data, userId, stripeSubscriptionId: subscription.id },
       update: data,
     })
   }

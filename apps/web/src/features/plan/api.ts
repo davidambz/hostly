@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/lib/api/client'
 import { unwrap } from '@/lib/api/errors'
@@ -43,5 +43,42 @@ export function useCheckout() {
   return useMutation({
     mutationFn: async (input: { planId: string; period: BillingPeriod }) =>
       unwrap(await api.POST('/billing/checkout', { body: input })),
+  })
+}
+
+export type BillingPayment = components['schemas']['BillingPayment']
+
+/** The account's charges, newest first. */
+export function useBillingPayments() {
+  return useQuery({
+    queryKey: ['plan', 'payments'],
+    queryFn: async () => unwrap(await api.GET('/billing/payments')),
+  })
+}
+
+/** Every change to the subscription refreshes the plan (and its page). */
+function useSubscriptionMutation<T>(run: (input: T) => Promise<unknown>) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: run,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] }),
+  })
+}
+
+export function useSetRenewal() {
+  return useSubscriptionMutation(async (renew: boolean) =>
+    unwrap(await api.POST('/billing/subscription/renewal', { body: { renew } })),
+  )
+}
+
+export function useChangePeriod() {
+  return useSubscriptionMutation(async (period: BillingPeriod) =>
+    unwrap(await api.POST('/billing/subscription/period', { body: { period } })),
+  )
+}
+
+export function usePortal() {
+  return useMutation({
+    mutationFn: async () => unwrap(await api.POST('/billing/portal')),
   })
 }
