@@ -33,6 +33,8 @@ describe('createPropertyBodySchema', () => {
       building: null,
       block: null,
       unit: null,
+      defaultNightlyRate: null,
+      defaultCleaningFee: null,
     })
   })
 
@@ -117,6 +119,8 @@ describe('toPublicProperty', () => {
     building: null,
     block: null,
     unit: null,
+    defaultNightlyRate: null,
+    defaultCleaningFee: null,
     createdAt: new Date('2026-10-31T12:00:00.000Z'),
     updatedAt: new Date('2026-10-31T13:00:00.000Z'),
   }

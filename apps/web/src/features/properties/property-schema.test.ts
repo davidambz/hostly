@@ -23,6 +23,8 @@ const property: Property = {
   building: 'Mar Azul',
   block: 'B',
   unit: '1204',
+  defaultNightlyRate: 45000,
+  defaultCleaningFee: null,
   createdAt: '',
   updatedAt: '',
 }
@@ -52,7 +54,20 @@ describe('toPropertyInput', () => {
       building: null,
       block: null,
       unit: null,
+      defaultNightlyRate: null,
+      defaultCleaningFee: null,
     })
+  })
+
+  it('reads the masked defaults as cents', () => {
+    const input = toPropertyInput({
+      ...EMPTY_PROPERTY_FORM,
+      name: 'Casa',
+      defaultNightlyRate: 'R$ 450,00',
+      defaultCleaningFee: 'R$ 180,00',
+    })
+
+    expect(input).toMatchObject({ defaultNightlyRate: 45000, defaultCleaningFee: 18000 })
   })
 
   it('drops apartment fields from a house, even if they were typed before switching', () => {

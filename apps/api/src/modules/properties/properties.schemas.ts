@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { Property } from '../../generated/prisma/client.js'
 import { pageSchema, paginationQuerySchema } from '../../shared/pagination.js'
 import { cepSchema, nameSchema, optionalText, stateSchema } from '../../shared/validation/fields.js'
+import { optionalCentsSchema } from '../../shared/validation/money.js'
 
 export const propertyTypeSchema = z.enum(['HOUSE', 'APARTMENT'])
 
@@ -21,6 +22,10 @@ const propertyFields = {
   building: optionalText(255),
   block: optionalText(50),
   unit: optionalText(20),
+  /** Cents per night that a new booking of this property starts with. */
+  defaultNightlyRate: optionalCentsSchema,
+  /** Cleaning fee, in cents, that a new booking of this property starts with. */
+  defaultCleaningFee: optionalCentsSchema,
 }
 
 export const createPropertyBodySchema = z
@@ -76,6 +81,8 @@ export const propertySchema = z
     building: z.string().nullable(),
     block: z.string().nullable(),
     unit: z.string().nullable(),
+    defaultNightlyRate: z.number().int().nullable(),
+    defaultCleaningFee: z.number().int().nullable(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
   })

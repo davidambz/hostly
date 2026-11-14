@@ -19,6 +19,7 @@ function makeBroker(overrides: Partial<Broker> = {}): Broker {
     document: '52998224725',
     mobilePhone: '48999990000',
     landlinePhone: null,
+    defaultCommissionBps: null,
     createdAt: '2026-10-31T12:00:00.000Z',
     updatedAt: '2026-10-31T12:00:00.000Z',
     ...overrides,
@@ -225,6 +226,7 @@ describe('creating a broker', () => {
       document: '52998224725',
       mobilePhone: '48999990000',
       landlinePhone: null,
+      defaultCommissionBps: null,
     })
     expect(await screen.findByText('Maria Corretora')).toBeInTheDocument()
   })

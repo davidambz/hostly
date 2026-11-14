@@ -18,6 +18,7 @@ const company: Broker = {
   document: '12ABC34501DE35',
   mobilePhone: '48999990000',
   landlinePhone: '4833334444',
+  defaultCommissionBps: null,
   createdAt: '',
   updatedAt: '',
 }
@@ -85,7 +86,22 @@ describe('toBrokerInput', () => {
       document: '12ABC34501DE35',
       mobilePhone: '48999990000',
       landlinePhone: null,
+      defaultCommissionBps: null,
     })
+  })
+
+  it('turns the commission percent into basis points', () => {
+    const values = brokerFormSchema.parse({
+      ...EMPTY_BROKER_FORM,
+      name: 'Maria',
+      defaultCommissionBps: '10,5',
+    })
+
+    expect(toBrokerInput(values).defaultCommissionBps).toBe(1050)
+  })
+
+  it('refuses a commission above 100%', () => {
+    expect(parse({ defaultCommissionBps: '100,01' }).success).toBe(false)
   })
 })
 
@@ -98,7 +114,14 @@ describe('toFormValues', () => {
       document: '12.ABC.345/01DE-35',
       mobilePhone: '(48) 99999-0000',
       landlinePhone: '(48) 3333-4444',
+      defaultCommissionBps: '',
     })
+  })
+
+  it('shows a saved commission as a percent', () => {
+    expect(toFormValues({ ...company, defaultCommissionBps: 1050 }).defaultCommissionBps).toBe(
+      '10,5',
+    )
   })
 
   it('round-trips through the form unchanged', () => {

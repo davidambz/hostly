@@ -26,6 +26,8 @@ function makeProperty(overrides: Partial<Property> = {}): Property {
     building: null,
     block: null,
     unit: null,
+    defaultNightlyRate: null,
+    defaultCleaningFee: null,
     createdAt: '2026-10-31T12:00:00.000Z',
     updatedAt: '2026-10-31T12:00:00.000Z',
     ...overrides,
@@ -237,6 +239,8 @@ describe('creating a property', () => {
       building: null,
       block: null,
       unit: null,
+      defaultNightlyRate: null,
+      defaultCleaningFee: null,
     })
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

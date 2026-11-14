@@ -21,6 +21,8 @@ const apartment: Property = {
   building: 'Mar Azul',
   block: 'B',
   unit: '1204',
+  defaultNightlyRate: null,
+  defaultCleaningFee: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 }

@@ -15,6 +15,7 @@ const company: Broker = {
   document: '11222333000181',
   mobilePhone: null,
   landlinePhone: null,
+  defaultCommissionBps: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 }
@@ -56,7 +57,13 @@ describe('documentError', () => {
 })
 
 describe('BrokersService.create', () => {
-  const base = { name: 'X', email: null, mobilePhone: null, landlinePhone: null }
+  const base = {
+    name: 'X',
+    email: null,
+    mobilePhone: null,
+    landlinePhone: null,
+    defaultCommissionBps: null,
+  }
 
   it('creates a broker whose document fits its type', async () => {
     const { repository, service } = setup()

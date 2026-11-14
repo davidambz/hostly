@@ -15,9 +15,10 @@ const casa = { id: '018f0000-0000-7000-8000-0000000000a1', name: 'Casa da Praia'
 const ape = { id: '018f0000-0000-7000-8000-0000000000a2', name: 'Apê Centro' }
 const carlos = { id: '018f0000-0000-7000-8000-0000000000b1', name: 'Carlos Lima' }
 
-function property(ref: { id: string; name: string }) {
+type PropertyRef = { id: string; name: string } & Record<string, unknown>
+
+function property(ref: PropertyRef) {
   return {
-    ...ref,
     type: 'HOUSE',
     zipCode: null,
     state: null,
@@ -29,8 +30,11 @@ function property(ref: { id: string; name: string }) {
     building: null,
     block: null,
     unit: null,
+    defaultNightlyRate: null,
+    defaultCleaningFee: null,
     createdAt: '2026-10-31T12:00:00.000Z',
     updatedAt: '2026-10-31T12:00:00.000Z',
+    ...ref,
   }
 }
 
@@ -86,7 +90,7 @@ const pedro = makeBooking({
 function serve({
   properties = [casa, ape],
   bookings = [rafael, pedro],
-}: { properties?: { id: string; name: string }[]; bookings?: Booking[] } = {}) {
+}: { properties?: PropertyRef[]; bookings?: Booking[] } = {}) {
   const calendarQueries: URLSearchParams[] = []
   server.use(
     http.get(url('/properties'), () =>
@@ -474,6 +478,30 @@ describe('picking days on the calendar', () => {
 })
 
 describe('creating a booking', () => {
+  it("starts with the property's rate and cleaning fee, and swaps them with the property", async () => {
+    serveQuote()
+    serve({
+      properties: [
+        { ...casa, defaultNightlyRate: 45000, defaultCleaningFee: 18000 },
+        { ...ape, defaultNightlyRate: 30000 },
+      ],
+    })
+    const { user } = await openPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Nova reserva' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Nova reserva' })
+    await user.selectOptions(within(sheet).getByLabelText('Imóvel'), 'Casa da Praia')
+
+    expect(within(sheet).getByLabelText('Diária')).toHaveValue('R$ 450,00')
+    expect(within(sheet).getByLabelText('Limpeza')).toHaveValue('R$ 180,00')
+
+    await user.selectOptions(within(sheet).getByLabelText('Imóvel'), 'Apê Centro')
+
+    expect(within(sheet).getByLabelText('Diária')).toHaveValue('R$ 300,00')
+    // Apê Centro has no cleaning default: Casa da Praia's stays, it may be what was meant.
+    expect(within(sheet).getByLabelText('Limpeza')).toHaveValue('R$ 180,00')
+  })
+
   it('shows the quote as the form is filled, and sends cents and basis points', async () => {
     serve()
     const quotes = serveQuote()

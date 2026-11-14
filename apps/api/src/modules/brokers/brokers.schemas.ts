@@ -9,6 +9,7 @@ import {
   optionalLandlinePhoneSchema,
   optionalMobilePhoneSchema,
 } from '../../shared/validation/fields.js'
+import { optionalBpsSchema } from '../../shared/validation/money.js'
 
 export const brokerTypeSchema = z.enum(['INDIVIDUAL', 'COMPANY'])
 
@@ -19,6 +20,8 @@ const brokerFields = {
   document: optionalDocumentSchema,
   mobilePhone: optionalMobilePhoneSchema,
   landlinePhone: optionalLandlinePhoneSchema,
+  /** Commission, in basis points (1000 = 10%), that a new booking with this broker starts with. */
+  defaultCommissionBps: optionalBpsSchema,
 }
 
 /** Whether the document fits the type is checked by the service (400 INVALID_DOCUMENT). */
@@ -55,6 +58,7 @@ export const brokerSchema = z
     document: z.string().nullable(),
     mobilePhone: z.string().nullable(),
     landlinePhone: z.string().nullable(),
+    defaultCommissionBps: z.number().int().nullable(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
   })

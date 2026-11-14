@@ -36,6 +36,7 @@ describe('createBrokerBodySchema', () => {
       document: '12ABC34501DE35',
       mobilePhone: '48988776655',
       landlinePhone: '4833221100',
+      defaultCommissionBps: null,
     })
   })
 
@@ -47,6 +48,7 @@ describe('createBrokerBodySchema', () => {
       document: null,
       mobilePhone: null,
       landlinePhone: null,
+      defaultCommissionBps: null,
     })
   })
 
@@ -89,6 +91,7 @@ it('toPublicBroker drops the owner and matches the schema', () => {
     document: '12ABC34501DE35',
     mobilePhone: null,
     landlinePhone: null,
+    defaultCommissionBps: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   }
