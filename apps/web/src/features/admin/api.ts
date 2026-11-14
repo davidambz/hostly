@@ -133,3 +133,12 @@ export function useRevokeGrant() {
     ),
   )
 }
+
+export type AdminDashboard = components['schemas']['AdminDashboard']
+
+export function useAdminDashboard() {
+  return useQuery({
+    queryKey: [...adminKeys.all, 'dashboard'],
+    queryFn: async () => unwrap(await api.GET('/admin/dashboard')),
+  })
+}

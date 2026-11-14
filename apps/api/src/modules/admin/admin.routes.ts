@@ -5,6 +5,7 @@ import { errorResponseSchema } from '../../shared/error-response.js'
 import { grantsRoutes } from '../grants/grants.routes.js'
 import { plansAdminRoutes } from '../plans/plans-admin.routes.js'
 import { AdminRepository } from './admin.repository.js'
+import { dashboard, dashboardSchema } from './dashboard.js'
 import {
   adminUserPageSchema,
   listUsersQuerySchema,
@@ -31,6 +32,22 @@ export const adminRoutes: FastifyPluginAsyncZod = async (app) => {
 
   await app.register(plansAdminRoutes)
   await app.register(grantsRoutes)
+
+  app.get(
+    '/dashboard',
+    {
+      schema: {
+        tags,
+        security,
+        summary: 'The backoffice figures',
+        description:
+          'Accounts (total, new in 30 days), accounts per plan and per source, grants ending ' +
+          'in the next 30 days, and overall usage.',
+        response: { 200: dashboardSchema, ...errors },
+      },
+    },
+    async () => dashboard(app.db),
+  )
 
   app.get(
     '/users',
