@@ -18,9 +18,12 @@ import { type Booking, bookingInputOf, useCreateBooking, useDeleteBooking } from
 import { type BookingDraft, BookingSheet } from './booking-sheet'
 import { BookingsCalendar, type CalendarView } from './bookings-calendar'
 import { BookingsList } from './bookings-list'
+import { FirstSteps } from './first-steps'
 import { formatStay, todayISO, validDateOrNull } from './dates'
+import { MonthMoney } from './month-money'
 import { OccupancySoundings } from './occupancy-soundings'
 import { propertyColors } from './property-colors'
+import { UpcomingMoves } from './upcoming-moves'
 import { useRememberedView } from './use-remembered-view'
 
 interface SheetState {
@@ -126,18 +129,38 @@ export function BookingsPage() {
           onRetry={() => void properties.refetch()}
         />
       ) : properties.data.length === 0 ? (
-        <EmptyState
-          icon={Home}
-          title="Cadastre um imóvel primeiro"
-          description="As reservas são de um imóvel. Cadastre a casa ou o apartamento e volte aqui."
-          action={
-            <Button asChild>
-              <Link to="/imoveis">Ir para imóveis</Link>
-            </Button>
+        <FirstSteps
+          hasProperty={false}
+          onNewBooking={() => {
+            openDraft()
+          }}
+          fallback={
+            <EmptyState
+              icon={Home}
+              title="Cadastre um imóvel primeiro"
+              description="As reservas são de um imóvel. Cadastre a casa ou o apartamento e volte aqui."
+              action={
+                <Button asChild>
+                  <Link to="/imoveis">Ir para imóveis</Link>
+                </Button>
+              }
+            />
           }
         />
       ) : (
         <>
+          <FirstSteps
+            hasProperty
+            onNewBooking={() => {
+              openDraft()
+            }}
+          />
+          <UpcomingMoves
+            today={todayISO()}
+            propertyId={filter}
+            colors={colors}
+            onOpenBooking={openBooking}
+          />
           <div className="flex flex-wrap items-end gap-3">
             <div className="grid gap-2">
               <label htmlFor="booking-property-filter" className="text-sm font-medium">
@@ -195,6 +218,7 @@ export function BookingsPage() {
                   set('imovel', id)
                 }}
               />
+              <MonthMoney date={date} propertyId={filter} />
               <BookingsCalendar
                 view={view}
                 date={date}
