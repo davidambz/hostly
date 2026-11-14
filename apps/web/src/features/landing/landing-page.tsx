@@ -10,15 +10,45 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
+import { PlansSection } from './plans-section'
 import { QuoteDemo } from './quote-demo'
 import { isScreenId, SCREENS, type ScreenId } from './screens'
 import { signupPath } from './signup-path'
 import { SeasonChart } from './season-chart'
+import { SeasonReport } from './season-report'
 
 /** A transparent 1×1 GIF. */
 const BLANK_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
 export const REPOSITORY_URL = 'https://github.com/davidambz/hostly'
+
+/** What else comes with the app, as a chart's legend: a term and what it means. */
+const INCLUDED = [
+  {
+    term: 'Pagamentos da reserva',
+    description: 'Registre o sinal e cada parcela; o que falta receber se atualiza sozinho.',
+  },
+  {
+    term: 'Intermediadores',
+    description: 'Corretor com CPF ou imobiliária com CNPJ, cada um com a sua comissão.',
+  },
+  {
+    term: 'Próximas entradas e saídas',
+    description: 'Quem chega e quem sai nos próximos sete dias, logo no topo das reservas.',
+  },
+  {
+    term: 'Planilha do mês',
+    description: 'As reservas do mês, ou um relatório, num arquivo que o Excel abre direto.',
+  },
+  {
+    term: 'No celular',
+    description: 'Instale na tela inicial e abra como um app, direto nas reservas.',
+  },
+  {
+    term: 'Claro e escuro',
+    description: 'Segue o tema do aparelho, ou o que você escolher.',
+  },
+]
 
 /** The public home page: the season read like a chart, the money math working, the real screens. */
 export function LandingPage() {
@@ -134,12 +164,55 @@ export function LandingPage() {
               </h2>
               <p className="text-muted-foreground mt-4 text-pretty">
                 Diárias, limpeza, sinal e comissão viram o total do hóspede, o que você recebe e o
-                que falta receber. Mexa nos valores: é a mesma conta do app.
+                que falta receber. Depois, cada pagamento registrado desconta do que falta. Mexa nos
+                valores: é a mesma conta do app.
               </p>
             </div>
-            <div className="lg:col-span-8">
+            <div className="min-w-0 lg:col-span-8">
               <QuoteDemo />
             </div>
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="reports-title"
+          className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-12"
+        >
+          <div className="lg:col-span-4">
+            <h2
+              id="reports-title"
+              className="font-wide text-3xl leading-tight font-bold text-balance sm:text-4xl"
+            >
+              Como cada imóvel vai, mês a mês
+            </h2>
+            <p className="text-muted-foreground mt-4 text-pretty">
+              Os relatórios contam as noites e o dinheiro de cada imóvel, e comparam com o período
+              anterior e com o ano passado. Uma reserva que vira o mês entra em cada mês só com as
+              noites dele.
+            </p>
+            <dl className="mt-6 grid gap-4 text-sm">
+              <div>
+                <dt className="font-semibold">Desempenho</dt>
+                <dd className="text-muted-foreground">
+                  Ocupação, receita, líquido, diária média e RevPAR de cada imóvel.
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Ano mês a mês</dt>
+                <dd className="text-muted-foreground">
+                  A temporada inteira, para saber quando subir e quando baixar a diária.
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Comissões e canais</dt>
+                <dd className="text-muted-foreground">
+                  Quanto pagar a cada intermediador, e quanto rende cada canal depois da comissão.
+                </dd>
+              </div>
+            </dl>
+          </div>
+          <div className="min-w-0 lg:col-span-8">
+            <SeasonReport />
           </div>
         </section>
 
@@ -159,7 +232,7 @@ export function LandingPage() {
           >
             <TabsPrimitive.List
               aria-label="Telas do Hostly"
-              className="flex flex-wrap gap-2 sm:grid sm:grid-cols-5 sm:gap-3"
+              className="flex flex-wrap gap-2 sm:grid sm:grid-cols-3 sm:gap-3 lg:grid-cols-6"
             >
               {SCREENS.map((item) => (
                 <TabsPrimitive.Trigger
@@ -228,6 +301,45 @@ export function LandingPage() {
             </p>
           </TabsPrimitive.Root>
         </section>
+
+        <section
+          aria-labelledby="included-title"
+          className="border-border bg-card border-y py-16 sm:py-24"
+        >
+          <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-12">
+            <h2
+              id="included-title"
+              className="font-wide text-3xl leading-tight font-bold text-balance sm:text-4xl lg:col-span-4"
+            >
+              E o que mais vem junto
+            </h2>
+            <dl className="grid gap-x-10 sm:grid-cols-2 lg:col-span-8">
+              {INCLUDED.map((item) => (
+                <div key={item.term} className="border-grid-line grid gap-1 border-t py-4">
+                  <dt className="font-semibold">{item.term}</dt>
+                  <dd className="text-muted-foreground text-sm text-pretty">{item.description}</dd>
+                </div>
+              ))}
+              <div className="border-grid-line grid gap-1 border-t py-4">
+                <dt className="font-semibold">Código aberto</dt>
+                <dd className="text-muted-foreground text-sm text-pretty">
+                  Todo o código está{' '}
+                  <a
+                    href={REPOSITORY_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary font-medium underline-offset-4 hover:underline"
+                  >
+                    no GitHub
+                  </a>
+                  , para quem quiser conferir como as contas são feitas.
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+
+        <PlansSection signup={signupPath(propertyName)} />
 
         <section
           aria-labelledby="close-title"

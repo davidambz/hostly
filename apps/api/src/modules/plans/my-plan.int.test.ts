@@ -36,8 +36,16 @@ describe('GET /plans', () => {
     ])
   })
 
-  it('answers 401 without a token', async () => {
-    expect((await app.inject({ method: 'GET', url: '/plans' })).statusCode).toBe(401)
+  it('is public, for the home page: the same list without a token', async () => {
+    await db.plan.update({ where: { code: 'premium' }, data: { annualPrice: 38300 } })
+
+    const response = await app.inject({ method: 'GET', url: '/plans' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json<{ code: string }[]>().map((plan) => plan.code)).toEqual([
+      'free',
+      'premium',
+    ])
   })
 })
 

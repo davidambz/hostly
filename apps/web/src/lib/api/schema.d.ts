@@ -2065,7 +2065,7 @@ export interface paths {
     }
     /**
      * The plans on sale
-     * @description Free first, then by name. Prices in cents; null while a period is not offered.
+     * @description Public. Free first, then by name. Prices in cents; null while a period is not offered.
      */
     get: {
       parameters: {
@@ -2083,15 +2083,6 @@ export interface paths {
           }
           content: {
             'application/json': components['schemas']['Plan'][]
-          }
-        }
-        /** @description Default Response */
-        401: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
           }
         }
       }
