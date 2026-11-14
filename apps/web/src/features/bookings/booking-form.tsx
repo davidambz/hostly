@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, MessageCircle, Trash2 } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 
 import { FormError } from '@/components/form/form-error'
@@ -12,10 +12,10 @@ import { Button } from '@/components/ui/button'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { ApiError } from '@/lib/api/errors'
 import { applyApiError } from '@/lib/api/form-errors'
-import { maskMoney, maskPercent } from '@/lib/money'
+import { formatBRL, maskMoney, maskPercent } from '@/lib/money'
 import { maskPhone } from '@hostly/validation'
 
-import type { BookingInput, QuoteInput } from './api'
+import { type BookingInput, type QuoteInput, useQuote } from './api'
 import {
   type BookingFormValues,
   bookingFormSchema,
@@ -28,6 +28,7 @@ import {
 import { DateRangeField } from './date-range-field'
 import { formatShortDate } from './dates'
 import { FinancialSummary, QUOTE_DEBOUNCE_MS } from './financial-summary'
+import { PaymentsSection } from './payments-section'
 
 interface Option {
   value: string
@@ -114,6 +115,16 @@ export function BookingForm({
 
   const money = (name: 'nightlyRate' | 'cleaningFee' | 'discount' | 'amountPaid') =>
     withMask(form.register(name), maskMoney)
+
+  // The same quote the summary shows (one request): what is due, for settling it.
+  const quote = useQuote(quoteInput)
+  /** A payment recorded or deleted: the summary follows what was paid now. */
+  const setPaid = useCallback(
+    (paid: number) => {
+      form.setValue('amountPaid', paid === 0 ? '' : formatBRL(paid))
+    },
+    [form],
+  )
 
   /**
    * Picking a property or broker brings its defaults into the fields not typed in. The
@@ -227,13 +238,17 @@ export function BookingForm({
           error={errors.discount?.message}
           {...money('discount')}
         />
-        <TextField
-          label="Valor já pago"
-          inputMode="numeric"
-          placeholder="R$"
-          error={errors.amountPaid?.message}
-          {...money('amountPaid')}
-        />
+        {/* A saved booking takes payments one by one, in the section below the summary. */}
+        {!bookingId && (
+          <TextField
+            label="Sinal recebido"
+            inputMode="numeric"
+            placeholder="R$"
+            hint="Vira o primeiro pagamento da reserva."
+            error={errors.amountPaid?.message}
+            {...money('amountPaid')}
+          />
+        )}
       </div>
 
       <div className="grid items-start gap-4 sm:grid-cols-[1fr_8rem]">
@@ -269,6 +284,14 @@ export function BookingForm({
       />
 
       <FinancialSummary input={quoteInput} />
+
+      {bookingId && (
+        <PaymentsSection
+          bookingId={bookingId}
+          due={quote.data?.financials.balanceDue ?? null}
+          onPaidChange={setPaid}
+        />
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
         {onDelete ? (

@@ -122,6 +122,8 @@ function serve({
         pageSize: 100,
       }),
     ),
+    // An existing booking opened in the panel lists its payments: none, unless a test says.
+    http.get(url('/bookings/:id/payments'), () => HttpResponse.json([])),
     http.get(url('/bookings/calendar'), ({ request }) => {
       const query = new URL(request.url).searchParams
       calendarQueries.push(query)
@@ -570,7 +572,7 @@ describe('creating a booking', () => {
     expect(within(sheet).getByLabelText('Comissão (%)')).toBeDisabled()
     await user.selectOptions(within(sheet).getByLabelText('Intermediador'), 'Carlos Lima')
     await user.type(within(sheet).getByLabelText('Comissão (%)'), '10')
-    await user.type(within(sheet).getByLabelText('Valor já pago'), '50000')
+    await user.type(within(sheet).getByLabelText('Sinal recebido'), '50000')
 
     await waitFor(() => {
       expect(summary).toHaveTextContent('Você recebe')
@@ -699,7 +701,7 @@ describe('creating a booking', () => {
     await user.type(within(sheet).getByLabelText('Diária'), '10000')
     await user.click(within(sheet).getByRole('button', { name: 'Criar reserva' }))
 
-    expect(await within(sheet).findByLabelText('Valor já pago')).toHaveAccessibleDescription(
+    expect(await within(sheet).findByLabelText('Sinal recebido')).toHaveAccessibleDescription(
       'O valor pago passa do total.',
     )
   })
