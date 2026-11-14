@@ -12,6 +12,8 @@ import {
   normalizePhone,
 } from '@hostly/validation'
 
+import { bpsToPercent, percentToBps } from '@/lib/money'
+
 import type { Broker, BrokerInput, BrokerType } from './api'
 
 /** The document mask that fits the broker type: CPF for a person, CNPJ for a company. */
@@ -44,6 +46,10 @@ export const brokerFormSchema = z
         (value) => value === '' || isValidLandlinePhone(normalizePhone(value)),
         'Telefone fixo inválido.',
       ),
+    /** A percent as typed (`10,5`); blank means no default. */
+    defaultCommissionBps: z
+      .string()
+      .refine((value) => (percentToBps(value) ?? 0) <= 10_000, 'No máximo 100%.'),
   })
   .superRefine(({ type, document }, ctx) => {
     if (document === '') return
@@ -65,6 +71,7 @@ export const EMPTY_BROKER_FORM: BrokerFormValues = {
   document: '',
   mobilePhone: '',
   landlinePhone: '',
+  defaultCommissionBps: '',
 }
 
 export function toFormValues(broker: Broker): BrokerFormValues {
@@ -75,6 +82,8 @@ export function toFormValues(broker: Broker): BrokerFormValues {
     document: broker.document ? maskDocument(broker.type, broker.document) : '',
     mobilePhone: broker.mobilePhone ? maskPhone(broker.mobilePhone) : '',
     landlinePhone: broker.landlinePhone ? maskPhone(broker.landlinePhone) : '',
+    defaultCommissionBps:
+      broker.defaultCommissionBps === null ? '' : bpsToPercent(broker.defaultCommissionBps),
   }
 }
 
@@ -87,5 +96,6 @@ export function toBrokerInput(values: ParsedBroker): Required<BrokerInput> {
     document: values.document ? normalizeDocument(values.document) : null,
     mobilePhone: values.mobilePhone ? normalizePhone(values.mobilePhone) : null,
     landlinePhone: values.landlinePhone ? normalizePhone(values.landlinePhone) : null,
+    defaultCommissionBps: percentToBps(values.defaultCommissionBps),
   }
 }

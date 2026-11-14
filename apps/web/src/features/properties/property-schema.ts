@@ -2,6 +2,8 @@ import { z } from 'zod'
 
 import { isValidCep, maskCep, onlyDigits, STATES } from '@hostly/validation'
 
+import { formatBRL, parseMoney } from '@/lib/money'
+
 import type { Property, PropertyInput } from './api'
 
 const optional = (max: number, label: string) =>
@@ -22,6 +24,9 @@ export const propertyFormSchema = z.object({
   building: optional(255, 'Edifício'),
   block: optional(50, 'Bloco'),
   unit: optional(20, 'Unidade'),
+  /** Masked amounts (`R$ 450,00`); blank means no default. */
+  defaultNightlyRate: z.string(),
+  defaultCleaningFee: z.string(),
 })
 
 export type PropertyFormValues = z.infer<typeof propertyFormSchema>
@@ -39,6 +44,8 @@ export const EMPTY_PROPERTY_FORM: PropertyFormValues = {
   building: '',
   block: '',
   unit: '',
+  defaultNightlyRate: '',
+  defaultCleaningFee: '',
 }
 
 export function toFormValues(property: Property): PropertyFormValues {
@@ -56,7 +63,14 @@ export function toFormValues(property: Property): PropertyFormValues {
     building: text(property.building),
     block: text(property.block),
     unit: text(property.unit),
+    defaultNightlyRate: amount(property.defaultNightlyRate),
+    defaultCleaningFee: amount(property.defaultCleaningFee),
   }
+}
+
+/** A stored amount in the masked form, or blank when there is none. */
+function amount(cents: number | null): string {
+  return cents === null ? '' : formatBRL(cents)
 }
 
 /** Parsed form values (already trimmed) to what the API takes: blank means no value, and only apartments have unit data. */
@@ -76,5 +90,7 @@ export function toPropertyInput(values: PropertyFormValues): Required<PropertyIn
     building: apartment ? orNull(values.building) : null,
     block: apartment ? orNull(values.block) : null,
     unit: apartment ? orNull(values.unit) : null,
+    defaultNightlyRate: parseMoney(values.defaultNightlyRate),
+    defaultCleaningFee: parseMoney(values.defaultCleaningFee),
   }
 }

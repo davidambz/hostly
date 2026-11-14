@@ -4,13 +4,14 @@ import { type ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 
 import { FormError } from '@/components/form/form-error'
-import { applyMask } from '@/components/form/mask'
+import { applyMask, withMask } from '@/components/form/mask'
 import { SelectField } from '@/components/form/select-field'
 import { TextField } from '@/components/form/text-field'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { applyApiError } from '@/lib/api/form-errors'
+import { maskMoney } from '@/lib/money'
 import { isValidCep, maskCep, onlyDigits, STATES } from '@hostly/validation'
 import { lookupCep } from '@/lib/viacep'
 
@@ -204,6 +205,29 @@ export function PropertyForm({
           </div>
         </fieldset>
       )}
+
+      <fieldset className="grid gap-3">
+        <legend className="text-sm font-medium">Valores das reservas</legend>
+        <p className="text-muted-foreground -mt-1 text-sm">
+          Uma reserva nova deste imóvel já começa com eles. Dá para mudar em cada reserva.
+        </p>
+        <div className="grid items-start gap-4 sm:grid-cols-2">
+          <TextField
+            label="Diária"
+            inputMode="numeric"
+            placeholder="R$ 0,00"
+            error={errors.defaultNightlyRate?.message}
+            {...withMask(form.register('defaultNightlyRate'), maskMoney)}
+          />
+          <TextField
+            label="Limpeza"
+            inputMode="numeric"
+            placeholder="R$ 0,00"
+            error={errors.defaultCleaningFee?.message}
+            {...withMask(form.register('defaultCleaningFee'), maskMoney)}
+          />
+        </div>
+      </fieldset>
 
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>

@@ -5,6 +5,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form'
 
 import { FormError } from '@/components/form/form-error'
 import { withMask } from '@/components/form/mask'
+import { maskPercent } from '@/lib/money'
 import { TextField } from '@/components/form/text-field'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -153,6 +154,15 @@ export function BrokerForm({
           {...withMask(form.register('landlinePhone'), maskPhone)}
         />
       </div>
+
+      <TextField
+        label="Comissão (%)"
+        inputMode="decimal"
+        placeholder="0"
+        hint="Uma reserva nova com este intermediador já começa com ela. Sobre as diárias, sem a limpeza."
+        error={errors.defaultCommissionBps?.message}
+        {...withMask(form.register('defaultCommissionBps'), maskPercent)}
+      />
 
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
