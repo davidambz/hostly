@@ -113,6 +113,17 @@ const envSchema = z
       message: 'The development JWT secret must not be used in production',
     },
   )
+  .refine(
+    (env) =>
+      env.NODE_ENV !== 'production' ||
+      env.STRIPE_SECRET_KEY === undefined ||
+      env.STRIPE_WEBHOOK_SECRET !== undefined,
+    {
+      path: ['STRIPE_WEBHOOK_SECRET'],
+      // Without it every webhook fails its signature check and no payment is ever confirmed.
+      message: 'Required in production when STRIPE_SECRET_KEY is set',
+    },
+  )
   .refine((env) => env.NODE_ENV !== 'production' || env.TRUST_PROXY !== undefined, {
     path: ['TRUST_PROXY'],
     message:
