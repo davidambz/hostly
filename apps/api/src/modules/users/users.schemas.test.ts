@@ -11,6 +11,7 @@ describe('toPublicUser', () => {
     phone: '48999990000',
     passwordHash: '$argon2id$secret',
     isAdmin: true,
+    stripeCustomerId: null,
     createdAt: new Date('2026-10-31T12:00:00.000Z'),
     updatedAt: new Date('2026-10-31T13:00:00.000Z'),
   }

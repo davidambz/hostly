@@ -24,8 +24,8 @@ export const adminUserSchema = z
     propertyCount: z.number().int(),
     /** The plan the user is on now. */
     plan: z.object({ id: z.uuid(), code: z.string().nullable(), name: z.string() }),
-    /** FREE, or GRANT when an administrator gave it. */
-    planSource: z.enum(['FREE', 'GRANT']),
+    /** FREE, GRANT when an administrator gave it, SUBSCRIPTION when it is paid. */
+    planSource: z.enum(['FREE', 'GRANT', 'SUBSCRIPTION']),
     /** The grant in force, if any; `endsAt` null for a lifetime one. */
     grant: z.object({ id: z.uuid(), endsAt: z.iso.datetime().nullable() }).nullable(),
   })

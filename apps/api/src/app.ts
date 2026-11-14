@@ -9,6 +9,8 @@ import {
 
 import type { Env } from './config/env.js'
 import { adminRoutes } from './modules/admin/admin.routes.js'
+import { type BillingGateway, StripeGateway } from './modules/billing/billing-gateway.js'
+import { billingRoutes } from './modules/billing/billing.routes.js'
 import { plansRoutes } from './modules/plans/plans.routes.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
 import { bookingsRoutes } from './modules/bookings/bookings.routes.js'
@@ -40,6 +42,8 @@ function loggerOptions(env: Env): FastifyServerOptions['logger'] {
 export interface BuildAppOptions {
   /** Reuse an existing database client instead of opening one from DATABASE_URL. */
   db?: Database
+  /** Talk to this instead of Stripe (tests). Without it, Stripe when STRIPE_SECRET_KEY is set. */
+  billing?: BillingGateway
 }
 
 export async function buildApp(env: Env, options: BuildAppOptions = {}) {
@@ -93,6 +97,15 @@ export async function buildApp(env: Env, options: BuildAppOptions = {}) {
   await app.register(brokersRoutes, { prefix: '/brokers' })
   await app.register(bookingsRoutes, { prefix: '/bookings' })
   await app.register(plansRoutes)
+  await app.register(billingRoutes, {
+    prefix: '/billing',
+    gateway:
+      options.billing ??
+      (env.STRIPE_SECRET_KEY
+        ? new StripeGateway(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET)
+        : null),
+    appUrl: env.APP_URL,
+  })
   await app.register(adminRoutes, { prefix: '/admin' })
 
   return app

@@ -89,7 +89,8 @@
             "type": "string",
             "enum": [
               "FREE",
-              "GRANT"
+              "GRANT",
+              "SUBSCRIPTION"
             ]
           },
           "grant": {
@@ -478,11 +479,17 @@
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
+              },
+              "subscription": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "required": [
               "free",
-              "grant"
+              "grant",
+              "subscription"
             ]
           },
           "grantsEndingSoon": {
@@ -653,7 +660,8 @@
             "type": "string",
             "enum": [
               "FREE",
-              "GRANT"
+              "GRANT",
+              "SUBSCRIPTION"
             ]
           },
           "endsAt": {
@@ -661,6 +669,34 @@
             "type": "string",
             "format": "date-time",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "subscription": {
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "period": {
+                "type": "string",
+                "enum": [
+                  "MONTHLY",
+                  "SEMIANNUAL",
+                  "ANNUAL"
+                ]
+              },
+              "currentPeriodEnd": {
+                "nullable": true,
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              "cancelAtPeriodEnd": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "period",
+              "currentPeriodEnd",
+              "cancelAtPeriodEnd"
+            ]
           },
           "propertyCount": {
             "type": "integer",
@@ -675,6 +711,7 @@
           "plan",
           "source",
           "endsAt",
+          "subscription",
           "propertyCount",
           "canAddProperty"
         ]
@@ -1337,7 +1374,8 @@
             "type": "string",
             "enum": [
               "FREE",
-              "GRANT"
+              "GRANT",
+              "SUBSCRIPTION"
             ]
           },
           "grant": {
@@ -1738,11 +1776,17 @@
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
+              },
+              "subscription": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "required": [
               "free",
-              "grant"
+              "grant",
+              "subscription"
             ],
             "additionalProperties": false
           },
@@ -1921,7 +1965,8 @@
             "type": "string",
             "enum": [
               "FREE",
-              "GRANT"
+              "GRANT",
+              "SUBSCRIPTION"
             ]
           },
           "endsAt": {
@@ -1929,6 +1974,35 @@
             "type": "string",
             "format": "date-time",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "subscription": {
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "period": {
+                "type": "string",
+                "enum": [
+                  "MONTHLY",
+                  "SEMIANNUAL",
+                  "ANNUAL"
+                ]
+              },
+              "currentPeriodEnd": {
+                "nullable": true,
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              "cancelAtPeriodEnd": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "period",
+              "currentPeriodEnd",
+              "cancelAtPeriodEnd"
+            ],
+            "additionalProperties": false
           },
           "propertyCount": {
             "type": "integer",
@@ -1943,6 +2017,7 @@
           "plan",
           "source",
           "endsAt",
+          "subscription",
           "propertyCount",
           "canAddProperty"
         ],
@@ -5234,6 +5309,135 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/billing/checkout": {
+      "post": {
+        "summary": "Start paying for a plan",
+        "tags": [
+          "billing"
+        ],
+        "description": "Answers the Stripe Checkout page to send the user to. 409 SUBSCRIPTION_EXISTS while a paid plan runs; 400 PLAN_NOT_FOR_SALE, PERIOD_NOT_OFFERED; 503 BILLING_UNAVAILABLE without Stripe.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "planId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "period": {
+                    "type": "string",
+                    "enum": [
+                      "MONTHLY",
+                      "SEMIANNUAL",
+                      "ANNUAL"
+                    ]
+                  }
+                },
+                "required": [
+                  "planId",
+                  "period"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/webhook": {
+      "post": {
+        "summary": "Stripe's events",
+        "tags": [
+          "billing"
+        ],
+        "description": "Called by Stripe, signed with STRIPE_WEBHOOK_SECRET; 400 INVALID_SIGNATURE otherwise. Each event is applied once, however many times it arrives.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
           }
         }
       }

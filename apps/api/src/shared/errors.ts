@@ -56,3 +56,10 @@ export class ConflictError extends AppError {
     super(409, 'CONFLICT', message, options)
   }
 }
+
+/** Something the API depends on isn't configured or reachable (e.g. payments without Stripe). */
+export class ServiceUnavailableError extends AppError {
+  constructor(message: string, options?: AppErrorOptions) {
+    super(503, 'SERVICE_UNAVAILABLE', message, options)
+  }
+}

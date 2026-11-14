@@ -53,6 +53,7 @@ export function freePlan({ full = false } = {}): MyPlan {
     },
     source: 'FREE',
     endsAt: null,
+    subscription: null,
     propertyCount: full ? 1 : 0,
     canAddProperty: !full,
   }

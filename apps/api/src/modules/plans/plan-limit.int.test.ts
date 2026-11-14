@@ -116,6 +116,7 @@ describe('GET /me/plan', () => {
       },
       source: 'FREE',
       endsAt: null,
+      subscription: null,
       propertyCount: 1,
       canAddProperty: false,
     })

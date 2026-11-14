@@ -1,6 +1,6 @@
 import { format } from 'date-fns'
 
-import type { MyGrant, MyPlan, Plan } from './api'
+import type { BillingPeriod, MyGrant, MyPlan, Plan } from './api'
 
 /** `1 de 1 imóvel`, `3 imóveis, sem limite`. */
 export function usageLabel({ propertyCount, plan }: MyPlan): string {
@@ -35,14 +35,37 @@ export function grantLabel(grant: MyGrant): string {
   return `${grant.plan.name} por ${DURATION_LABELS[grant.duration]}, de ${day(grant.startsAt)} a ${day(grant.endsAt)}`
 }
 
+export interface PeriodPrice {
+  period: BillingPeriod
+  label: string
+  price: number
+}
+
 /** Each billing period a plan is offered in, with its price. */
-export function periodPrices(plan: Plan): { label: string; price: number }[] {
+export function periodPrices(plan: Plan): PeriodPrice[] {
   const periods = [
-    { label: 'por mês', price: plan.monthlyPrice },
-    { label: 'por semestre', price: plan.semiannualPrice },
-    { label: 'por ano', price: plan.annualPrice },
+    { period: 'MONTHLY' as const, label: 'por mês', price: plan.monthlyPrice },
+    { period: 'SEMIANNUAL' as const, label: 'por semestre', price: plan.semiannualPrice },
+    { period: 'ANNUAL' as const, label: 'por ano', price: plan.annualPrice },
   ]
   return periods.filter(
-    (period): period is { label: string; price: number } => period.price !== null,
+    (period): period is PeriodPrice => period.price !== null && period.price > 0,
   )
+}
+
+const PERIOD_NAMES: Record<BillingPeriod, string> = {
+  MONTHLY: 'mensal',
+  SEMIANNUAL: 'semestral',
+  ANNUAL: 'anual',
+}
+
+/** `Assinatura mensal. Próxima cobrança em 14/12/2026.`, or when it was cancelled. */
+export function subscriptionLabel({ subscription }: MyPlan): string | null {
+  if (!subscription) return null
+  const name = `Assinatura ${PERIOD_NAMES[subscription.period]}.`
+  if (!subscription.currentPeriodEnd) return name
+  const day = format(new Date(subscription.currentPeriodEnd), 'dd/MM/yyyy')
+  return subscription.cancelAtPeriodEnd
+    ? `${name} Renovação cancelada: vale até ${day}.`
+    : `${name} Próxima cobrança em ${day}.`
 }

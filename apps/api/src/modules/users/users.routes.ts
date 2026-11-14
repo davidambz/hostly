@@ -46,7 +46,7 @@ export const usersRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request) => {
       const userId = request.user.sub
       await service.me(userId)
-      const [{ plan, source, grant }, propertyCount] = await Promise.all([
+      const [{ plan, source, grant, subscription }, propertyCount] = await Promise.all([
         currentPlan(app.db, userId),
         app.db.property.count({ where: { userId } }),
       ])
@@ -60,6 +60,11 @@ export const usersRoutes: FastifyPluginAsyncZod = async (app) => {
         },
         source,
         endsAt: grant?.endsAt?.toISOString() ?? null,
+        subscription: subscription && {
+          period: subscription.period,
+          currentPeriodEnd: subscription.currentPeriodEnd?.toISOString() ?? null,
+          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+        },
         propertyCount,
         canAddProperty: plan.maxProperties === null || propertyCount < plan.maxProperties,
       }
