@@ -12,7 +12,6 @@ import { RouteErrorPage } from '@/pages/route-error-page'
 
 import { AppLayout } from './app-layout'
 import { initials } from './initials'
-import { readSidebarOpen } from './sidebar-state'
 
 async function renderApp(path = '/reservas') {
   server.use(...loggedInHandlers)
@@ -31,7 +30,7 @@ describe('app layout', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Reservas' })).toBeInTheDocument()
   })
 
-  it('lists the sections in the sidebar and marks the current one', async () => {
+  it('lists the sections in the top bar and marks the current one', async () => {
     await renderApp('/imoveis')
 
     const nav = screen.getByRole('navigation', { name: 'Principal' })
@@ -65,18 +64,6 @@ describe('app layout', () => {
     await waitFor(() => {
       expect(document.title).toBe('Intermediadores · Hostly')
     })
-  })
-
-  it('collapses and expands the sidebar', async () => {
-    const user = userEvent.setup()
-    const { container } = await renderApp()
-    const sidebar = () => container.querySelector('[data-slot="sidebar"][data-state]')
-
-    expect(sidebar()).toHaveAttribute('data-state', 'expanded')
-    await user.click(screen.getByRole('button', { name: 'Alternar menu' }))
-    expect(sidebar()).toHaveAttribute('data-state', 'collapsed')
-    await user.click(screen.getByRole('button', { name: 'Alternar menu' }))
-    expect(sidebar()).toHaveAttribute('data-state', 'expanded')
   })
 
   it('shows who is logged in, and switches the theme from the user menu', async () => {
@@ -117,48 +104,8 @@ describe('initials', () => {
   })
 })
 
-describe('readSidebarOpen', () => {
-  it.each([
-    ['', true],
-    ['sidebar_state=true', true],
-    ['other=1; sidebar_state=false; x=2', false],
-    ['sidebar_state=false', false],
-  ])('%j → %o', (cookie, open) => {
-    expect(readSidebarOpen(cookie)).toBe(open)
-  })
-})
-
 describe('layout behavior', () => {
-  it('starts collapsed when the sidebar was left collapsed', async () => {
-    document.cookie = 'sidebar_state=false; path=/'
-    const { container } = await renderApp()
-
-    expect(container.querySelector('[data-slot="sidebar"][data-state]')).toHaveAttribute(
-      'data-state',
-      'collapsed',
-    )
-    document.cookie = 'sidebar_state=; max-age=0; path=/'
-  })
-
-  it('ignores Ctrl+B while typing in a field, and toggles the sidebar otherwise', async () => {
-    const user = userEvent.setup()
-    const { container } = await renderApp()
-    const state = () =>
-      container.querySelector('[data-slot="sidebar"][data-state]')?.getAttribute('data-state')
-    const input = document.createElement('input')
-    document.body.append(input)
-
-    input.focus()
-    await user.keyboard('{Control>}b{/Control}')
-    expect(state()).toBe('expanded')
-
-    input.blur()
-    await user.keyboard('{Control>}b{/Control}')
-    expect(state()).toBe('collapsed')
-    input.remove()
-  })
-
-  it('keeps the sidebar when a page fails, showing the error inside the layout', async () => {
+  it('keeps the top bar when a page fails, showing the error inside the layout', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     server.use(...loggedInHandlers)
     function Broken(): never {

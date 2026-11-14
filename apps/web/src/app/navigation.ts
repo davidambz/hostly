@@ -6,7 +6,7 @@ export interface NavItem {
   icon: LucideIcon
 }
 
-/** The app's sections, in sidebar order. */
+/** The app's sections, in top bar order. */
 export const NAV_ITEMS: NavItem[] = [
   { title: 'Reservas', to: '/reservas', icon: CalendarDays },
   { title: 'Imóveis', to: '/imoveis', icon: Home },
