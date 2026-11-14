@@ -17,7 +17,7 @@ describe('routes', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: /Sua temporada, ladrilho por ladrilho/,
+        name: /Cada noite de cada imóvel, no lugar certo/,
       }),
     ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/')
@@ -46,7 +46,7 @@ describe('routes', () => {
       expect(
         await screen.findByRole('heading', {
           level: 1,
-          name: /Sua temporada, ladrilho por ladrilho/,
+          name: /Cada noite de cada imóvel, no lugar certo/,
         }),
       ).toBeInTheDocument()
       expect(screen.queryByText('Carregando…')).not.toBeInTheDocument()
@@ -78,7 +78,10 @@ describe('routes', () => {
       const notice = await screen.findByText(/Não foi possível conectar ao servidor/)
       expect(notice).toHaveAttribute('role', 'status')
       expect(
-        screen.getByRole('heading', { level: 1, name: /Sua temporada, ladrilho por ladrilho/ }),
+        screen.getByRole('heading', {
+          level: 1,
+          name: /Cada noite de cada imóvel, no lugar certo/,
+        }),
       ).toBeInTheDocument()
 
       // It was a logged-in user after all: once the API is back, on to the app.
@@ -117,7 +120,10 @@ describe('routes', () => {
     await user.click(screen.getByRole('link', { name: 'Voltar ao início' }))
 
     // An anonymous visitor lands on the home page.
-    await screen.findByRole('heading', { level: 1, name: /Sua temporada, ladrilho por ladrilho/ })
+    await screen.findByRole('heading', {
+      level: 1,
+      name: /Cada noite de cada imóvel, no lugar certo/,
+    })
     expect(router.state.location.pathname).toBe('/')
   })
 })

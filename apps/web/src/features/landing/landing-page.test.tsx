@@ -25,7 +25,7 @@ describe('LandingPage', () => {
     renderPage()
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Sua temporada, ladrilho por ladrilho.' }),
+      screen.getByRole('heading', { level: 1, name: 'Cada noite de cada imóvel, no lugar certo.' }),
     ).toBeInTheDocument()
     const signups = screen.getAllByRole('link', { name: 'Criar conta' })
     expect(signups).toHaveLength(2)
@@ -35,7 +35,7 @@ describe('LandingPage', () => {
     }
   })
 
-  it('paints the property the visitor names on the wall and takes it to the signup', async () => {
+  it('charts the property the visitor names and takes it to the signup', async () => {
     const user = userEvent.setup()
     const { router } = renderRoute([
       { path: '/', element: <LandingPage /> },
@@ -47,7 +47,9 @@ describe('LandingPage', () => {
     await user.type(screen.getByLabelText('Comece pelo nome do seu imóvel'), 'Casa Azul')
 
     expect(wall).toHaveAccessibleName(/e de Casa Azul/)
-    expect(screen.getByRole('button', { name: 'Casa Azul' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Casa Azul: 6 noites em janeiro' }),
+    ).toBeInTheDocument()
     expect(screen.getByText('Casa Azul · sua 1ª reserva')).toBeInTheDocument()
     // The closing call to action carries the name too.
     expect(screen.getAllByRole('link', { name: 'Criar conta' }).at(-1)).toHaveAttribute(
@@ -84,23 +86,26 @@ describe('LandingPage', () => {
     expect(signupPath(name)).toBe(path)
   })
 
-  it('lights up one property on the wall from the legend', async () => {
+  it('lights up one property on the chart from its sounding', async () => {
     const user = userEvent.setup()
     renderPage()
 
     const legend = screen.getByRole('list', { name: 'Imóveis do exemplo' })
-    await user.hover(within(legend).getByRole('button', { name: 'Casa da Praia' }))
-
-    expect(within(legend).getByRole('button', { name: 'Casa da Praia' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
+    await user.hover(
+      within(legend).getByRole('button', { name: 'Casa da Praia: 19 noites em janeiro' }),
     )
+
+    expect(
+      within(legend).getByRole('button', { name: 'Casa da Praia: 19 noites em janeiro' }),
+    ).toHaveAttribute('aria-pressed', 'true')
     const bands = (guest: string) => screen.getAllByText(guest)
     // Other properties' stays fade; Casa da Praia's stay lit, in every week they cross.
     for (const band of bands('Juliana Prado')) expect(band).toHaveClass('opacity-20')
     for (const band of bands('Carlos Menezes')) expect(band).not.toHaveClass('opacity-20')
 
-    await user.unhover(within(legend).getByRole('button', { name: 'Casa da Praia' }))
+    await user.unhover(
+      within(legend).getByRole('button', { name: 'Casa da Praia: 19 noites em janeiro' }),
+    )
     for (const band of bands('Juliana Prado')) expect(band).not.toHaveClass('opacity-20')
 
     await user.tab()
@@ -119,9 +124,7 @@ describe('LandingPage', () => {
     // 7 nights × R$ 450 + R$ 180 cleaning; 10% over the nights only; half paid.
     expect(within(money).getByText('R$ 3.330,00')).toBeInTheDocument()
     expect(within(money).getByText('− R$ 315,00')).toBeInTheDocument()
-    expect(
-      within(money).getByText('R$ 1.665,00', { selector: 'dd.font-display' }),
-    ).toBeInTheDocument()
+    expect(within(money).getByText('R$ 1.665,00', { selector: 'dd.font-wide' })).toBeInTheDocument()
 
     await user.click(within(money).getByRole('button', { name: 'Uma noite a mais' }))
     await user.click(within(money).getByRole('radio', { name: 'Direto' }))

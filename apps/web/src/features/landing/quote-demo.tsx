@@ -44,7 +44,7 @@ export function QuoteDemo() {
             </Button>
             <output
               aria-live="polite"
-              className="font-display w-12 text-center text-3xl tabular-nums"
+              className="font-wide w-12 text-center text-3xl font-semibold tabular-nums"
             >
               {nights}
             </output>
@@ -91,7 +91,7 @@ export function QuoteDemo() {
         </label>
       </div>
 
-      <dl className="bg-card azulejo-field relative grid content-start gap-0 overflow-hidden rounded-md border p-1 [--tile-size:44px]">
+      <dl className="bg-card relative grid content-start gap-0 overflow-hidden rounded-md border p-1">
         <div className="bg-card grid gap-2 rounded-[3px] p-5">
           <Line label={`${String(nights)} noites × ${formatBRL(nightly * 100)}`} value={lodging} />
           <Line label="Limpeza" value={cleaning * 100} />
@@ -106,7 +106,7 @@ export function QuoteDemo() {
             <dt className="font-medium">Falta receber</dt>
             <dd
               key={total - deposit}
-              className="font-display animate-tile-flip text-primary text-2xl tabular-nums"
+              className="font-wide animate-surface text-primary text-2xl font-semibold tabular-nums"
             >
               {total - deposit === 0 ? 'Quitado' : formatBRL(total - deposit)}
             </dd>
