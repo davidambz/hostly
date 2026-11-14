@@ -2,16 +2,13 @@ import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 
-vi.mock('@/features/bookings/export-csv', async (original) => ({
-  ...(await original<object>()),
-  downloadFile: vi.fn(),
-}))
+vi.mock('@/lib/download', () => ({ downloadFile: vi.fn() }))
 
 import { routes } from '@/test/app-routes'
 import { renderRoute } from '@/test/render'
 import { loggedInHandlers, server, url } from '@/test/server'
 
-import { downloadFile } from '@/features/bookings/export-csv'
+import { downloadFile } from '@/lib/download'
 
 import type { PerformanceReport, ReportFigures } from './api'
 import { performanceCsv } from './report-csv'

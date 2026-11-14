@@ -9,10 +9,11 @@ import { Button } from '@/components/ui/button'
 import { unwrap } from '@/lib/api/errors'
 import { api } from '@/lib/api/client'
 import { errorMessage } from '@/lib/api/form-errors'
+import { downloadFile } from '@/lib/download'
 
 import { bookingKeys } from './api'
 import { parseDate } from './dates'
-import { bookingsCsv, csvFileName, downloadFile } from './export-csv'
+import { bookingsCsv, csvFileName } from './export-csv'
 import { monthBounds } from './occupancy'
 
 /**

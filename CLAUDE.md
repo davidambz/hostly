@@ -68,6 +68,12 @@ src/
 - As regras de integridade também ficam no banco, como CHECK constraints escritas à mão no SQL da migration (o Prisma não modela CHECK). Ao criar uma migration nova, use `--create-only` quando precisar acrescentar SQL.
 - O `.pnpmfile.cjs` tira o peer `prisma` do `@prisma/client`, para a CLI não ir para a imagem de produção. A CLI só existe na imagem `migrate`.
 
+### Relatórios
+
+- Módulo `reports` (todos os planos): `/reports/performance` (período livre, até 731 dias), `/reports/monthly` (os 12 meses de um ano) e `/reports/brokers` (comissões e canais). As contas ficam em funções puras (`performance.ts`, `brokers-report.ts`), agregadas na API.
+- Regra única: reserva que atravessa o período conta só as noites dentro dele; hospedagem e comissão são divididas por noite com `⌊X·b/n⌋ − ⌊X·a/n⌋` (as partes somam o todo ao centavo); limpeza no dia da entrada. A exceção são as comissões a pagar, acertadas por reserva: entrada no período, comissão inteira.
+- No front, `/relatorios`, `/relatorios/ano` e `/relatorios/comissoes`, com o período na URL. Gráficos em SVG próprio; a cor de comparação (ano anterior) é o token `chart-compare`, validado para contraste e daltonismo.
+
 ### Planos, concessões e cobrança
 
 - Planos em `plans` (Free e Premium têm `code` estável; o Free é sempre de graça e à venda, garantido por CHECK). Limite de imóveis por plano (`max_properties`, nulo = ilimitado) e preço por periodicidade em centavos.

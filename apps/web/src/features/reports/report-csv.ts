@@ -1,4 +1,4 @@
-import type { PerformanceReport, ReportFigures } from './api'
+import type { BrokersReport, PerformanceReport, ReportFigures } from './api'
 
 const BOM = String.fromCharCode(0xfeff)
 
@@ -38,4 +38,37 @@ export function performanceCsv(report: PerformanceReport): string {
 /** `hostly-desempenho-2026-12-01-a-2026-12-31.csv`. */
 export function performanceFileName(report: PerformanceReport, lastDay: string): string {
   return `hostly-desempenho-${report.from}-a-${lastDay}.csv`
+}
+
+const date = (value: string) => value.split('-').reverse().join('/')
+
+/** Every commission of the period, one line per booking, to settle with each broker. */
+export function commissionsCsv(report: BrokersReport): string {
+  const header = [
+    'Intermediador',
+    'Hóspede',
+    'Imóvel',
+    'Entrada',
+    'Saída',
+    'Noites',
+    'Hospedagem',
+    'Comissão (%)',
+    'Comissão',
+  ].join(';')
+  const rows = report.brokers.flatMap((broker) =>
+    broker.items.map((item) =>
+      [
+        cell(broker.name),
+        cell(item.guestName),
+        cell(item.propertyName),
+        date(item.checkIn),
+        date(item.checkOut),
+        String(item.nights),
+        amount(item.lodging),
+        (item.commissionBps / 100).toFixed(2).replace('.', ','),
+        amount(item.fee),
+      ].join(';'),
+    ),
+  )
+  return `${BOM}${[header, ...rows].join('\r\n')}\r\n`
 }

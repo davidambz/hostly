@@ -1,8 +1,11 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 
+import { formatDate } from '../../shared/dates.js'
 import { errorResponseSchema } from '../../shared/error-response.js'
 import { ReportsRepository } from './reports.repository.js'
 import {
+  brokersQuerySchema,
+  brokersReportSchema,
   monthlyQuerySchema,
   monthlySchema,
   performanceSchema,
@@ -59,5 +62,40 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) =>
       service.monthly(request.user.sub, request.query.year, request.query.propertyId),
+  )
+
+  app.get(
+    '/brokers',
+    {
+      schema: {
+        tags,
+        security,
+        summary: 'Commissions per broker, and each channel',
+        description:
+          'What to pay each broker: the bookings checking in during the period, each with ' +
+          'its whole fee, listed. Channels (each broker and direct bookings) follow the ' +
+          'performance rules instead: nights inside the period, spread per night. Optionally ' +
+          'for one property (404 PROPERTY_NOT_FOUND when not yours).',
+        querystring: brokersQuerySchema,
+        response: { 200: brokersReportSchema, 404: errorResponseSchema, ...errors },
+      },
+    },
+    async (request) => {
+      const { from, to, propertyId } = request.query
+      const report = await service.brokers(request.user.sub, from, to, propertyId)
+      return {
+        from,
+        to,
+        channels: report.channels,
+        brokers: report.brokers.map((broker) => ({
+          ...broker,
+          items: broker.items.map((item) => ({
+            ...item,
+            checkIn: formatDate(item.checkIn),
+            checkOut: formatDate(item.checkOut),
+          })),
+        })),
+      }
+    },
   )
 }
