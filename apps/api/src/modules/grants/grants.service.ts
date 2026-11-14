@@ -130,6 +130,9 @@ export class GrantsService {
     },
   ): Promise<PublicGrant> {
     const grant = await this.db.$transaction(async (tx) => {
+      // Locked: two changes at once would both decide from the same row, and the second
+      // would undo the first (two renewals adding one month, a renewal after a revocation).
+      await tx.$queryRaw`SELECT id FROM plan_grants WHERE id = ${grantId}::uuid FOR UPDATE`
       const current = await tx.planGrant.findUnique({ where: { id: grantId } })
       if (!current) throw grantNotFound()
       if (current.revokedAt) {

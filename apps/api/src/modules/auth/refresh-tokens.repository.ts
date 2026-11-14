@@ -1,6 +1,19 @@
 import type { RefreshToken, RefreshTokenRevocation } from '../../generated/prisma/client.js'
 import type { Database } from '../../shared/database.js'
 
+type Transaction = Parameters<Parameters<Database['$transaction']>[0]>[0]
+
+/**
+ * Locks the user's row for the rest of the transaction. Rotations and revocations of the
+ * same user take this lock first, so they run one after the other: without it, a refresh
+ * could store its new token after a revocation had already swept the table (READ COMMITTED
+ * doesn't see rows inserted after the UPDATE began), and that session would escape a
+ * logout, a password change or a reuse detection.
+ */
+async function lockUser(tx: Transaction, userId: string) {
+  await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId}::uuid FOR UPDATE`
+}
+
 export interface NewRefreshToken {
   userId: string
   tokenHash: string
@@ -27,6 +40,7 @@ export class RefreshTokensRepository {
    */
   async replace(id: string, next: NewRefreshToken, at: Date): Promise<boolean> {
     return this.db.$transaction(async (tx) => {
+      await lockUser(tx, next.userId)
       const { count } = await tx.refreshToken.updateMany({
         where: { id, revokedAt: null },
         data: { revokedAt: at, revokedReason: 'ROTATED' },
@@ -39,9 +53,17 @@ export class RefreshTokensRepository {
 
   /** Revokes every still-active token of the family; already revoked ones keep their reason. */
   async revokeFamily(familyId: string, at: Date, reason: RefreshTokenRevocation): Promise<void> {
-    await this.db.refreshToken.updateMany({
-      where: { familyId, revokedAt: null },
-      data: { revokedAt: at, revokedReason: reason },
+    await this.db.$transaction(async (tx) => {
+      const token = await tx.refreshToken.findFirst({
+        where: { familyId },
+        select: { userId: true },
+      })
+      if (!token) return
+      await lockUser(tx, token.userId)
+      await tx.refreshToken.updateMany({
+        where: { familyId, revokedAt: null },
+        data: { revokedAt: at, revokedReason: reason },
+      })
     })
   }
 
@@ -52,9 +74,12 @@ export class RefreshTokensRepository {
     at: Date,
     reason: RefreshTokenRevocation,
   ): Promise<void> {
-    await this.db.refreshToken.updateMany({
-      where: { userId, revokedAt: null, ...(keep ? { familyId: { not: keep } } : {}) },
-      data: { revokedAt: at, revokedReason: reason },
+    await this.db.$transaction(async (tx) => {
+      await lockUser(tx, userId)
+      await tx.refreshToken.updateMany({
+        where: { userId, revokedAt: null, ...(keep ? { familyId: { not: keep } } : {}) },
+        data: { revokedAt: at, revokedReason: reason },
+      })
     })
   }
 
