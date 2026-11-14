@@ -18,6 +18,7 @@ import { type Booking, bookingInputOf, useCreateBooking, useDeleteBooking } from
 import { type BookingDraft, BookingSheet } from './booking-sheet'
 import { BookingsCalendar, type CalendarView } from './bookings-calendar'
 import { BookingsList } from './bookings-list'
+import { ExportButton } from './export-button'
 import { FirstSteps } from './first-steps'
 import { formatStay, todayISO, validDateOrNull } from './dates'
 import { MonthMoney } from './month-money'
@@ -162,7 +163,7 @@ export function BookingsPage() {
             onOpenBooking={openBooking}
           />
           <div className="flex flex-wrap items-end gap-3">
-            <div className="grid gap-2">
+            <div className="mr-auto grid gap-2">
               <label htmlFor="booking-property-filter" className="text-sm font-medium">
                 Imóvel
               </label>
@@ -182,10 +183,14 @@ export function BookingsPage() {
                 ))}
               </select>
             </div>
+            <ExportButton
+              date={date}
+              propertyId={filter}
+              propertyName={properties.data.find((property) => property.id === filter)?.name}
+            />
             <ToggleGroup
               type="single"
               variant="outline"
-              className="ml-auto"
               value={mode}
               aria-label="Modo de exibição"
               onValueChange={(value) => {
