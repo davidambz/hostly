@@ -22,6 +22,7 @@ describe('loadEnv', () => {
       JWT_SECRET,
       ACCESS_TOKEN_TTL_SECONDS: 900,
       REFRESH_TOKEN_TTL_DAYS: 30,
+      REFRESH_SESSION_MAX_DAYS: 90,
       COOKIE_SECURE: true,
     })
   })
@@ -40,6 +41,7 @@ describe('loadEnv', () => {
       DOCS_ENABLED: '',
       ACCESS_TOKEN_TTL_SECONDS: '',
       REFRESH_TOKEN_TTL_DAYS: '',
+      REFRESH_SESSION_MAX_DAYS: '',
       COOKIE_SECURE: '',
     })
 
@@ -60,6 +62,7 @@ describe('loadEnv', () => {
       DOCS_ENABLED: 'false',
       ACCESS_TOKEN_TTL_SECONDS: '300',
       REFRESH_TOKEN_TTL_DAYS: '7',
+      REFRESH_SESSION_MAX_DAYS: '60',
       COOKIE_SECURE: 'true',
     })
 
@@ -77,8 +80,15 @@ describe('loadEnv', () => {
       JWT_SECRET,
       ACCESS_TOKEN_TTL_SECONDS: 300,
       REFRESH_TOKEN_TTL_DAYS: 7,
+      REFRESH_SESSION_MAX_DAYS: 60,
       COOKIE_SECURE: true,
     })
+  })
+
+  it('refuses a session max shorter than the idle TTL', () => {
+    expect(() =>
+      loadEnv({ ...base, REFRESH_TOKEN_TTL_DAYS: '30', REFRESH_SESSION_MAX_DAYS: '7' }),
+    ).toThrow(/REFRESH_SESSION_MAX_DAYS/)
   })
 
   it('ignores unknown variables', () => {

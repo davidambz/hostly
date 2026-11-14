@@ -53,9 +53,16 @@ const envSchema = z
         .positive()
         .default(15 * 60),
     ),
+    /** How long a session lasts without use: each refresh pushes the end this far ahead. */
     REFRESH_TOKEN_TTL_DAYS: optional(z.coerce.number().int().positive().default(30)),
+    /** The most a session lasts from its login, however much it's used. */
+    REFRESH_SESSION_MAX_DAYS: optional(z.coerce.number().int().positive().default(90)),
     /** Send the refresh cookie only over HTTPS. Defaults to on in production. */
     COOKIE_SECURE: optional(booleanString.optional()),
+  })
+  .refine((env) => env.REFRESH_SESSION_MAX_DAYS >= env.REFRESH_TOKEN_TTL_DAYS, {
+    path: ['REFRESH_SESSION_MAX_DAYS'],
+    message: 'Must be at least REFRESH_TOKEN_TTL_DAYS',
   })
   .refine(
     (env) => env.NODE_ENV !== 'production' || !env.JWT_SECRET.startsWith(DEV_JWT_SECRET_PREFIX),

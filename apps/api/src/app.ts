@@ -83,6 +83,7 @@ export async function buildApp(env: Env, options: BuildAppOptions = {}) {
     rateLimitMax: env.AUTH_RATE_LIMIT_MAX,
     accessTokenTtlSeconds: env.ACCESS_TOKEN_TTL_SECONDS,
     refreshTokenTtlDays: env.REFRESH_TOKEN_TTL_DAYS,
+    refreshSessionMaxDays: env.REFRESH_SESSION_MAX_DAYS,
     cookieSecure: env.COOKIE_SECURE,
   })
   await app.register(usersRoutes)
