@@ -2,6 +2,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 
 import { errorResponseSchema } from '../../shared/error-response.js'
+import { plansAdminRoutes } from '../plans/plans-admin.routes.js'
 import { AdminRepository } from './admin.repository.js'
 import {
   adminUserPageSchema,
@@ -26,6 +27,8 @@ export const adminRoutes: FastifyPluginAsyncZod = async (app) => {
   app.addHook('onRequest', async (request) => {
     await service.assertAdmin(request.user.sub)
   })
+
+  await app.register(plansAdminRoutes)
 
   app.get(
     '/users',

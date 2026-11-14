@@ -1960,6 +1960,223 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/admin/plans': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List the plans
+     * @description Free first, then by name; on sale or not.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Plan'][]
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    /**
+     * Create a plan
+     * @description Prices in cents, per period; null while a period is not offered.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            name: string
+            description?: string | null
+            /** @default null */
+            maxProperties?: number | null
+            monthlyPrice?: number | null
+            semiannualPrice?: number | null
+            annualPrice?: number | null
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        201: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Plan']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/plans/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Change a plan
+     * @description Send only what changes; `active: false` takes it off sale. 400 FREE_PLAN_IS_FREE for a price on Free or turning it off; 404 PLAN_NOT_FOUND.
+     */
+    patch: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            name?: string
+            description?: string | null
+            maxProperties?: number | null
+            monthlyPrice?: number | null
+            semiannualPrice?: number | null
+            annualPrice?: number | null
+            active?: boolean
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Plan']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    trace?: never
+  }
   '/admin/users': {
     parameters: {
       query?: never
@@ -2132,6 +2349,22 @@ export interface components {
       message: string
       details?: unknown
     }
+    PlanInput: {
+      /** Format: uuid */
+      id: string
+      code: string | null
+      name: string
+      description: string | null
+      active: boolean
+      maxProperties: number | null
+      monthlyPrice: number | null
+      semiannualPrice: number | null
+      annualPrice: number | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
     AdminUserInput: {
       /** Format: uuid */
       id: string
@@ -2291,6 +2524,22 @@ export interface components {
       code: string
       message: string
       details?: unknown
+    }
+    Plan: {
+      /** Format: uuid */
+      id: string
+      code: string | null
+      name: string
+      description: string | null
+      active: boolean
+      maxProperties: number | null
+      monthlyPrice: number | null
+      semiannualPrice: number | null
+      annualPrice: number | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
     }
     AdminUser: {
       /** Format: uuid */
