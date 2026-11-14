@@ -35,3 +35,15 @@ export function useMonthly({ year, propertyId }: { year: number; propertyId?: st
     placeholderData: keepPreviousData,
   })
 }
+
+export type BrokersReport = components['schemas']['BrokersReport']
+
+/** What to pay each broker, and how each channel did, in the period. */
+export function useBrokersReport({ from, to }: Period, propertyId?: string) {
+  return useQuery({
+    queryKey: ['reports', 'brokers', from, to, propertyId ?? 'all'] as const,
+    queryFn: async () =>
+      unwrap(await api.GET('/reports/brokers', { params: { query: { from, to, propertyId } } })),
+    placeholderData: keepPreviousData,
+  })
+}

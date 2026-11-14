@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 const TABS = [
   { to: '/relatorios', label: 'Desempenho' },
   { to: '/relatorios/ano', label: 'Ano mês a mês' },
+  { to: '/relatorios/comissoes', label: 'Comissões e canais' },
 ]
 
 /** Switches between the reports, keeping each one's own URL. */

@@ -113,6 +113,13 @@ export const routes: RouteObject[] = [
                 }),
               },
               {
+                path: '/relatorios/comissoes',
+                handle: handle('Comissões e canais · Relatórios'),
+                lazy: async () => ({
+                  Component: (await import('@/features/reports/brokers-page')).BrokersReportPage,
+                }),
+              },
+              {
                 path: '/plano',
                 handle: handle('Meu plano'),
                 lazy: async () => ({

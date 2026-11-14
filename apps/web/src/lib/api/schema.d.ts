@@ -2233,6 +2233,76 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/reports/brokers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Commissions per broker, and each channel
+     * @description What to pay each broker: the bookings checking in during the period, each with its whole fee, listed. Channels (each broker and direct bookings) follow the performance rules instead: nights inside the period, spread per night. Optionally for one property (404 PROPERTY_NOT_FOUND when not yours).
+     */
+    get: {
+      parameters: {
+        query: {
+          from: string
+          to: string
+          propertyId?: string
+        }
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['BrokersReport']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/billing/checkout': {
     parameters: {
       query?: never
@@ -3692,6 +3762,52 @@ export interface components {
       /** @description Average nights of those bookings */
       averageStay: number | null
     }
+    BrokersReportInput: {
+      /** Format: date */
+      from: string
+      /** Format: date */
+      to: string
+      brokers: {
+        /** Format: uuid */
+        id: string
+        name: string
+        bookings: number
+        nights: number
+        lodging: number
+        averageCommissionBps: number
+        /** @description Whole fees of the bookings checking in during the period */
+        fees: number
+        items: {
+          /** Format: uuid */
+          bookingId: string
+          guestName: string
+          propertyName: string
+          /** Format: date */
+          checkIn: string
+          /** Format: date */
+          checkOut: string
+          nights: number
+          lodging: number
+          commissionBps: number
+          fee: number
+        }[]
+      }[]
+      channels: {
+        /**
+         * Format: uuid
+         * @description Null for direct bookings
+         */
+        brokerId: string | null
+        name: string | null
+        bookings: number
+        nights: number
+        revenue: number
+        brokerFees: number
+        net: number
+        /** @description Share of the period's revenue */
+        shareBps: number
+      }[]
+    }
     MonthlyReportInput: {
       year: number
       months: {
@@ -4099,6 +4215,52 @@ export interface components {
       bookings: number
       /** @description Average nights of those bookings */
       averageStay: number | null
+    }
+    BrokersReport: {
+      /** Format: date */
+      from: string
+      /** Format: date */
+      to: string
+      brokers: {
+        /** Format: uuid */
+        id: string
+        name: string
+        bookings: number
+        nights: number
+        lodging: number
+        averageCommissionBps: number
+        /** @description Whole fees of the bookings checking in during the period */
+        fees: number
+        items: {
+          /** Format: uuid */
+          bookingId: string
+          guestName: string
+          propertyName: string
+          /** Format: date */
+          checkIn: string
+          /** Format: date */
+          checkOut: string
+          nights: number
+          lodging: number
+          commissionBps: number
+          fee: number
+        }[]
+      }[]
+      channels: {
+        /**
+         * Format: uuid
+         * @description Null for direct bookings
+         */
+        brokerId: string | null
+        name: string | null
+        bookings: number
+        nights: number
+        revenue: number
+        brokerFees: number
+        net: number
+        /** @description Share of the period's revenue */
+        shareBps: number
+      }[]
     }
     MonthlyReport: {
       year: number

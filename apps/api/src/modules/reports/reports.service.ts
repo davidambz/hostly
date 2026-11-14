@@ -1,5 +1,6 @@
 import { formatDate, parseDate } from '../../shared/dates.js'
 import { NotFoundError } from '../../shared/errors.js'
+import { brokersReport } from './brokers-report.js'
 import { type Figures, type Performance, performance } from './performance.js'
 import type { ReportsRepository } from './reports.repository.js'
 
@@ -42,6 +43,26 @@ export class ReportsService {
       }
     })
     return { year, months, total: performance(properties, bookings, start, end).total }
+  }
+
+  /** Commissions per broker and the channels' mix, for one property or all of them. */
+  async brokers(userId: string, from: string, to: string, propertyId?: string) {
+    if (propertyId) {
+      const owned = await this.reports.properties(userId)
+      if (!owned.some((property) => property.id === propertyId)) {
+        throw new NotFoundError('Property not found', {
+          code: 'PROPERTY_NOT_FOUND',
+          details: { field: 'propertyId' },
+        })
+      }
+    }
+    const start = parseDate(from)
+    const end = parseDate(to)
+    return brokersReport(
+      await this.reports.brokerBookings(userId, start, end, propertyId),
+      start,
+      end,
+    )
   }
 }
 
