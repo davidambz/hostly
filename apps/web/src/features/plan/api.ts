@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 import { api } from '@/lib/api/client'
 import { unwrap } from '@/lib/api/errors'
@@ -33,5 +33,15 @@ export function useMyGrants() {
   return useQuery({
     queryKey: ['plan', 'grants'],
     queryFn: async () => unwrap(await api.GET('/me/grants')),
+  })
+}
+
+export type BillingPeriod = 'MONTHLY' | 'SEMIANNUAL' | 'ANNUAL'
+
+/** Starts paying for a plan: answers the Stripe checkout page to go to. */
+export function useCheckout() {
+  return useMutation({
+    mutationFn: async (input: { planId: string; period: BillingPeriod }) =>
+      unwrap(await api.POST('/billing/checkout', { body: input })),
   })
 }

@@ -14,7 +14,7 @@ const data: AdminDashboard = {
     { id: '018f0000-0000-7000-8000-0000000000f1', code: 'free', name: 'Free', users: 10 },
     { id: '018f0000-0000-7000-8000-0000000000f2', code: 'premium', name: 'Premium', users: 2 },
   ],
-  bySource: { free: 10, grant: 2 },
+  bySource: { free: 10, grant: 2, subscription: 0 },
   grantsEndingSoon: [
     {
       grantId: '018f0000-0000-7000-8000-0000000000a1',
@@ -55,7 +55,7 @@ describe('backoffice dashboard', () => {
   })
 
   it('says when no grant ends soon', async () => {
-    serve({ ...data, grantsEndingSoon: [], bySource: { free: 12, grant: 1 } })
+    serve({ ...data, grantsEndingSoon: [], bySource: { free: 12, grant: 1, subscription: 0 } })
     renderRoute(routes, '/admin')
 
     expect(

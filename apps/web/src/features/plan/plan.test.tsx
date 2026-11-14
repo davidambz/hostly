@@ -1,7 +1,9 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/lib/navigate', () => ({ leaveTo: vi.fn() }))
 
 import { routes } from '@/test/app-routes'
 import { nth } from '@/test/nth'
@@ -9,7 +11,9 @@ import { renderRoute } from '@/test/render'
 import { freePlan, loggedInHandlers, server, url } from '@/test/server'
 
 import type { MyGrant, Plan } from './api'
-import { grantLabel, periodPrices, sourceLabel, usageLabel } from './plan-labels'
+import { leaveTo } from '@/lib/navigate'
+
+import { grantLabel, periodPrices, sourceLabel, subscriptionLabel, usageLabel } from './plan-labels'
 
 function serve(plan: ReturnType<typeof freePlan>, properties: { id: string; name: string }[] = []) {
   server.use(...loggedInHandlers)
@@ -179,7 +183,9 @@ describe('plans on the plan page', () => {
     expect(paid).toHaveTextContent('R$ 39,90 por mês')
     expect(paid).toHaveTextContent('R$ 383,00 por ano')
     expect(paid).not.toHaveTextContent('por semestre')
-    expect(paid).toHaveTextContent('A contratação pelo Hostly chega em breve.')
+    expect(within(paid).getByRole('button', { name: 'Assinar · R$ 39,90 por mês' })).toBeEnabled()
+    expect(within(paid).getByRole('button', { name: 'Assinar · R$ 383,00 por ano' })).toBeEnabled()
+    expect(within(free).queryByRole('button')).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Cortesias' })).not.toBeInTheDocument()
   })
 
@@ -218,13 +224,99 @@ describe('plans on the plan page', () => {
 describe('plan helpers', () => {
   it('lists only the periods with a price', () => {
     expect(periodPrices(premium)).toEqual([
-      { label: 'por mês', price: 3990 },
-      { label: 'por ano', price: 38300 },
+      { period: 'MONTHLY', label: 'por mês', price: 3990 },
+      { period: 'ANNUAL', label: 'por ano', price: 38300 },
     ])
     expect(periodPrices(plan({}))).toEqual([])
   })
 
   it('describes a grant', () => {
     expect(grantLabel(lifetime)).toBe('Premium, vitalícia, desde 14/11/2026')
+  })
+})
+
+describe('subscribing', () => {
+  it('sends the user to Stripe for the chosen period', async () => {
+    serve(freePlan())
+    const bodies: unknown[] = []
+    server.use(
+      http.get(url('/plans'), () => HttpResponse.json([plan({}), premium])),
+      http.get(url('/me/grants'), () => HttpResponse.json([])),
+      http.post(url('/billing/checkout'), async ({ request }) => {
+        bodies.push(await request.json())
+        return HttpResponse.json({ url: 'https://checkout.stripe.com/c/pay/cs_test_1' })
+      }),
+    )
+    const user = userEvent.setup()
+    renderRoute(routes, '/plano')
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Assinar · R$ 383,00 por ano' }, { timeout: 5000 }),
+    )
+
+    await vi.waitFor(() => {
+      expect(leaveTo).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_test_1')
+    })
+    expect(bodies).toEqual([{ planId: premium.id, period: 'ANNUAL' }])
+  })
+
+  it('says it is confirming after Stripe, then that it is done', async () => {
+    let paid = false
+    serve(freePlan())
+    server.use(
+      http.get(url('/plans'), () => HttpResponse.json([plan({}), premium])),
+      http.get(url('/me/grants'), () => HttpResponse.json([])),
+      http.get(url('/me/plan'), () =>
+        HttpResponse.json(
+          paid
+            ? {
+                ...freePlan(),
+                source: 'SUBSCRIPTION',
+                plan: {
+                  ...freePlan().plan,
+                  id: premium.id,
+                  code: 'premium',
+                  name: 'Premium',
+                  maxProperties: null,
+                },
+                subscription: {
+                  period: 'MONTHLY',
+                  currentPeriodEnd: '2026-12-14T12:00:00.000Z',
+                  cancelAtPeriodEnd: false,
+                },
+              }
+            : freePlan(),
+        ),
+      ),
+    )
+    const { router } = renderRoute(routes, '/plano?assinatura=confirmando')
+
+    expect(
+      await screen.findByText(/A Stripe está confirmando/, {}, { timeout: 5000 }),
+    ).toBeInTheDocument()
+    paid = true
+
+    expect(
+      await screen.findByText('Assinatura confirmada. Bom proveito!', {}, { timeout: 8000 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Assinatura mensal. Próxima cobrança em 14/12/2026.'),
+    ).toBeInTheDocument()
+    expect(router.state.location.search).toBe('')
+  }, 15_000)
+
+  it('describes a cancelled renewal', () => {
+    expect(
+      subscriptionLabel({
+        ...freePlan(),
+        source: 'SUBSCRIPTION',
+        subscription: {
+          period: 'ANNUAL',
+          currentPeriodEnd: '2027-11-14T12:00:00.000Z',
+          cancelAtPeriodEnd: true,
+        },
+      }),
+    ).toBe('Assinatura anual. Renovação cancelada: vale até 14/11/2027.')
+    expect(subscriptionLabel(freePlan())).toBeNull()
   })
 })

@@ -1,18 +1,57 @@
-import { Check } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
+import { useEffect } from 'react'
+import { useSearchParams } from 'react-router'
+import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/page-header'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { errorMessage } from '@/lib/api/form-errors'
+import { leaveTo } from '@/lib/navigate'
 import { formatBRL } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
-import { type MyPlan, type Plan, useMyGrants, useMyPlan, usePlans } from './api'
-import { grantLabel, periodPrices, sourceLabel, usageLabel } from './plan-labels'
+import { type MyPlan, type Plan, useCheckout, useMyGrants, useMyPlan, usePlans } from './api'
+import {
+  grantLabel,
+  type PeriodPrice,
+  periodPrices,
+  sourceLabel,
+  subscriptionLabel,
+  usageLabel,
+} from './plan-labels'
 
 /** The user's plan, the plans there are, and the courtesy plans received. */
+/** How often, and how many times, to ask again while Stripe confirms a payment. */
+const CONFIRM_POLL_MS = 3000
+const CONFIRM_POLLS = 10
+
 export function PlanPage() {
   const myPlan = useMyPlan()
+  const [params, setParams] = useSearchParams()
+  // Back from Stripe's checkout: the payment is confirmed by a webhook, a moment later.
+  const confirming = params.get('assinatura') === 'confirmando'
+  const confirmed = myPlan.data?.source === 'SUBSCRIPTION'
+  const { refetch } = myPlan
+
+  useEffect(() => {
+    if (!confirming) return
+    if (confirmed) {
+      toast.success('Assinatura confirmada. Bom proveito!')
+      setParams({}, { replace: true })
+      return
+    }
+    let polls = 0
+    const timer = setInterval(() => {
+      polls += 1
+      void refetch()
+      if (polls >= CONFIRM_POLLS) clearInterval(timer)
+    }, CONFIRM_POLL_MS)
+    return () => {
+      clearInterval(timer)
+    }
+  }, [confirming, confirmed, refetch, setParams])
 
   return (
     <>
@@ -23,8 +62,17 @@ export function PlanPage() {
         <ErrorState message={errorMessage(myPlan.error)} onRetry={() => void myPlan.refetch()} />
       ) : (
         <div className="grid gap-8">
+          {confirming && !confirmed && (
+            <p
+              role="status"
+              className="bg-accent text-accent-foreground flex max-w-2xl items-center gap-2 rounded-md p-3 text-sm"
+            >
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+              Pagamento recebido. A Stripe está confirmando; seu plano muda em instantes.
+            </p>
+          )}
           <CurrentPlan myPlan={myPlan.data} />
-          <Plans currentId={myPlan.data.plan.id} />
+          <Plans currentId={myPlan.data.plan.id} paying={myPlan.data.source === 'SUBSCRIPTION'} />
           <Grants />
         </div>
       )}
@@ -46,6 +94,9 @@ function CurrentPlan({ myPlan }: { myPlan: MyPlan }) {
           <p className="text-muted-foreground">{myPlan.plan.description}</p>
         )}
         {sourceLabel(myPlan) && <p className="text-sm font-medium">{sourceLabel(myPlan)}</p>}
+        {subscriptionLabel(myPlan) && (
+          <p className="text-sm font-medium">{subscriptionLabel(myPlan)}</p>
+        )}
       </div>
       <dl className="grid gap-1">
         <dt className="text-muted-foreground text-sm">Imóveis</dt>
@@ -62,7 +113,7 @@ function CurrentPlan({ myPlan }: { myPlan: MyPlan }) {
 }
 
 /** The plans on sale, side by side, the user's own marked. */
-function Plans({ currentId }: { currentId: string }) {
+function Plans({ currentId, paying }: { currentId: string; paying: boolean }) {
   const plans = usePlans()
   return (
     <section aria-labelledby="plans-title" className="grid gap-3">
@@ -76,7 +127,7 @@ function Plans({ currentId }: { currentId: string }) {
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {plans.data.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} current={plan.id === currentId} />
+            <PlanCard key={plan.id} plan={plan} current={plan.id === currentId} paying={paying} />
           ))}
         </ul>
       )}
@@ -84,9 +135,11 @@ function Plans({ currentId }: { currentId: string }) {
   )
 }
 
-function PlanCard({ plan, current }: { plan: Plan; current: boolean }) {
+function PlanCard({ plan, current, paying }: { plan: Plan; current: boolean; paying: boolean }) {
   const prices = periodPrices(plan)
   const free = plan.code === 'free'
+  // Free needs no paying, and a running subscription is changed, not bought twice.
+  const buyable = !free && !current && !paying && prices.length > 0
   return (
     <li
       aria-label={plan.name}
@@ -122,9 +175,7 @@ function PlanCard({ plan, current }: { plan: Plan; current: boolean }) {
           ))}
         </ul>
       )}
-      {!free && !current && (
-        <p className="text-muted-foreground text-sm">A contratação pelo Hostly chega em breve.</p>
-      )}
+      {buyable && <Subscribe plan={plan} prices={prices} />}
     </li>
   )
 }
@@ -156,5 +207,37 @@ function Grants() {
         ))}
       </ul>
     </section>
+  )
+}
+
+/** One button per period: each opens Stripe's checkout for it. */
+function Subscribe({ plan, prices }: { plan: Plan; prices: PeriodPrice[] }) {
+  const checkout = useCheckout()
+
+  const start = async (period: PeriodPrice['period']) => {
+    try {
+      const { url } = await checkout.mutateAsync({ planId: plan.id, period })
+      leaveTo(url)
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
+  }
+
+  return (
+    <div className="grid gap-2 pt-1">
+      {prices.map((price) => (
+        <Button
+          key={price.period}
+          variant={price.period === 'MONTHLY' ? 'default' : 'outline'}
+          disabled={checkout.isPending}
+          onClick={() => void start(price.period)}
+        >
+          Assinar · {formatBRL(price.price)} {price.label}
+        </Button>
+      ))}
+      <p className="text-muted-foreground text-xs">
+        O pagamento é feito na página segura da Stripe.
+      </p>
+    </div>
   )
 }
