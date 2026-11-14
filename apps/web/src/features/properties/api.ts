@@ -5,6 +5,8 @@ import { api } from '@/lib/api/client'
 import { unwrap } from '@/lib/api/errors'
 import type { components, paths } from '@/lib/api/schema'
 
+import { myPlanKey } from '../plan/api'
+
 export type Property = components['schemas']['Property']
 export type PropertyType = Property['type']
 /** What create (and a full update) sends, as the API contract defines it. */
@@ -57,6 +59,8 @@ function useInvalidateProperties({ bookings }: { bookings: boolean }) {
   return () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: propertyKeys.all }),
+      // How much of the plan is used changes with the properties.
+      queryClient.invalidateQueries({ queryKey: myPlanKey }),
       bookings && queryClient.invalidateQueries({ queryKey: ['bookings'] }),
     ])
 }

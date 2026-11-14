@@ -1,4 +1,6 @@
 import { http, HttpResponse } from 'msw'
+
+import type { MyPlan } from '@/features/plan/api'
 import { setupServer } from 'msw/node'
 
 import { API_URL } from '@/lib/api/client'
@@ -36,6 +38,24 @@ export const loggedInHandlers = [
     http.get(url(path), () => HttpResponse.json({ items: [], total: 0, page: 1, pageSize: 20 })),
   ),
   http.get(url('/bookings/calendar'), () => HttpResponse.json([])),
+  http.get(url('/me/plan'), () => HttpResponse.json(freePlan())),
 ]
+
+/** GET /me/plan for an account on Free, with room for its one property unless `full`. */
+export function freePlan({ full = false } = {}): MyPlan {
+  return {
+    plan: {
+      id: '018f0000-0000-7000-8000-0000000000f1',
+      code: 'free',
+      name: 'Free',
+      description: 'Para começar: um imóvel, de graça, sem prazo.',
+      maxProperties: 1,
+    },
+    source: 'FREE',
+    endsAt: null,
+    propertyCount: full ? 1 : 0,
+    canAddProperty: !full,
+  }
+}
 
 export const server = setupServer(...defaultHandlers)

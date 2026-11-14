@@ -2,6 +2,7 @@ import type { Property } from '../../generated/prisma/client.js'
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js'
 import { deleteOrFail } from '../../shared/owned-rows.js'
 import type { Page } from '../../shared/pagination.js'
+import { currentPlan } from '../plans/current-plan.js'
 import type { PropertiesRepository } from './properties.repository.js'
 import {
   APARTMENT_FIELDS,
@@ -27,8 +28,20 @@ export class PropertiesService {
     return property
   }
 
+  /**
+   * 409 PLAN_LIMIT_REACHED when the user's plan allows no more properties. Existing ones are
+   * never touched: a user over the limit (back on Free after Premium) just can't add more.
+   */
   create(userId: string, input: CreatePropertyInput): Promise<Property> {
-    return this.properties.create(userId, input)
+    return this.properties.create(userId, input, async (tx, count) => {
+      const { plan } = await currentPlan(tx, userId)
+      if (plan.maxProperties !== null && count >= plan.maxProperties) {
+        throw new ConflictError('The plan allows no more properties', {
+          code: 'PLAN_LIMIT_REACHED',
+          details: { limit: plan.maxProperties, count, plan: plan.name },
+        })
+      }
+    })
   }
 
   /**

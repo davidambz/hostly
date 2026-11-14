@@ -40,3 +40,24 @@ export const updateProfileBodySchema = z
   .refine((body) => Object.keys(body).length > 0, { message: 'Nothing to update' })
 
 export type UpdateProfileInput = z.infer<typeof updateProfileBodySchema>
+
+/** GET /me/plan: the plan the user is on and how much of it is used. */
+export const myPlanSchema = z
+  .object({
+    plan: z.object({
+      id: z.uuid(),
+      code: z.string().nullable(),
+      name: z.string(),
+      description: z.string().nullable(),
+      /** Null: unlimited. */
+      maxProperties: z.number().int().nullable(),
+    }),
+    /** FREE, or GRANT when an administrator gave it. */
+    source: z.enum(['FREE', 'GRANT']),
+    /** When a granted plan ends; null when it doesn't (lifetime, or Free). */
+    endsAt: z.iso.datetime().nullable(),
+    propertyCount: z.number().int(),
+    /** Whether the plan lets the user add another property now. */
+    canAddProperty: z.boolean(),
+  })
+  .meta({ id: 'MyPlan' })
