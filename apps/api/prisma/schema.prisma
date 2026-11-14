@@ -115,6 +115,10 @@ model Booking {
   propertyId          String   @map("property_id") @db.Uuid
   brokerId            String?  @map("broker_id") @db.Uuid
   guestName           String   @map("guest_name") @db.VarChar(255)
+  /// The guest's phone, digits only: DDD + 9 (mobile) or + 8 (landline).
+  guestPhone          String?  @map("guest_phone") @db.VarChar(11)
+  /// Free text: arrival time, how many people, anything worth remembering.
+  notes               String?  @db.VarChar(2000)
   checkIn             DateTime @map("check_in") @db.Date
   checkOut            DateTime @map("check_out") @db.Date
   /// Cents.

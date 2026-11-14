@@ -92,6 +92,12 @@ export const optionalMobilePhoneSchema = optionalPhoneSchema(
   'Invalid mobile phone number',
 )
 
+/** Optional phone, mobile (DDD + 9 digits) or landline (DDD + 8 digits). */
+export const optionalPhoneNumberSchema = optionalPhoneSchema(
+  (phone) => isValidMobilePhone(phone) || isValidLandlinePhone(phone),
+  'Invalid phone number',
+)
+
 /** Optional landline number, DDD + 8 digits. */
 export const optionalLandlinePhoneSchema = optionalPhoneSchema(
   isValidLandlinePhone,

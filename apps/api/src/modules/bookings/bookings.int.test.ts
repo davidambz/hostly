@@ -61,6 +61,44 @@ describe('authentication', () => {
 })
 
 describe('POST /bookings', () => {
+  it("keeps the guest's phone as digits and the notes trimmed", async () => {
+    const response = await book('2030-12-20', '2030-12-27', {
+      guestPhone: '(48) 99999-0000',
+      notes: '  Chegam às 22h, 4 pessoas.  ',
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(response.json()).toMatchObject({
+      guestPhone: '48999990000',
+      notes: 'Chegam às 22h, 4 pessoas.',
+    })
+  })
+
+  it('takes a landline as the guest phone too', async () => {
+    const response = await book('2030-12-20', '2030-12-27', { guestPhone: '(48) 3333-4444' })
+
+    expect(response.json()).toMatchObject({ guestPhone: '4833334444' })
+  })
+
+  it.each([
+    ['a phone without the DDD', { guestPhone: '99999-0000' }],
+    ['letters in the phone', { guestPhone: '48 abc' }],
+    ['notes past 2000 characters', { notes: 'x'.repeat(2001) }],
+  ])('answers 400 for %s', async (_case, extra) => {
+    const response = await book('2030-12-20', '2030-12-27', extra)
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('refuses, in the database, a phone that is not digits', async () => {
+    const response = await book('2030-12-20', '2030-12-27')
+    const { id } = response.json<{ id: string }>()
+
+    await expect(
+      db.booking.update({ where: { id }, data: { guestPhone: '(48) 9999' } }),
+    ).rejects.toThrow()
+  })
+
   it('creates a booking with the property name and the nights', async () => {
     const response = await book('2030-12-20', '2030-12-27', { cleaningFee: 25_000 })
 
@@ -70,6 +108,8 @@ describe('POST /bookings', () => {
       property: { id: house.id, name: 'Casa da praia' },
       broker: null,
       guestName: 'Mariana Costa',
+      guestPhone: null,
+      notes: null,
       checkIn: '2030-12-20',
       checkOut: '2030-12-27',
       nights: 7,
@@ -520,6 +560,19 @@ describe('GET /bookings/:id', () => {
 })
 
 describe('PATCH /bookings/:id', () => {
+  it("changes and clears the guest's phone and the notes", async () => {
+    const created = await book('2030-12-20', '2030-12-27', {
+      guestPhone: '48999990000',
+      notes: 'Pet',
+    })
+    const { id } = created.json<{ id: string }>()
+
+    const changed = await request('PATCH', `/bookings/${id}`, { guestPhone: null, notes: '  ' })
+
+    expect(changed.statusCode).toBe(200)
+    expect(changed.json()).toMatchObject({ guestPhone: null, notes: null })
+  })
+
   it('answers BOOKING_NOT_FOUND for a missing booking, whatever the body points at', async () => {
     const response = await request('PATCH', '/bookings/018f0000-0000-7000-8000-000000000001', {
       propertyId: '018f0000-0000-7000-8000-000000000002',

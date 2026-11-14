@@ -3,7 +3,11 @@ import { z } from 'zod'
 import type { Booking } from '../../generated/prisma/client.js'
 import { formatDate, nightsBetween, parseDate } from '../../shared/dates.js'
 import { pageSchema, paginationQuerySchema } from '../../shared/pagination.js'
-import { nameSchema } from '../../shared/validation/fields.js'
+import {
+  nameSchema,
+  optionalPhoneNumberSchema,
+  optionalText,
+} from '../../shared/validation/fields.js'
 import { bpsSchema, centsSchema } from '../../shared/validation/money.js'
 
 export { MAX_AMOUNT_CENTS } from '../../shared/validation/money.js'
@@ -20,6 +24,10 @@ const bookingFields = {
   propertyId: z.uuid(),
   brokerId: z.uuid().nullable(),
   guestName: nameSchema,
+  /** The guest's phone, mobile or landline; masks accepted. */
+  guestPhone: optionalPhoneNumberSchema,
+  /** Free text, up to 2000 characters. */
+  notes: optionalText(2000),
   /** `YYYY-MM-DD`. */
   checkIn: dateSchema,
   /** `YYYY-MM-DD`, after check-in. The check-out day is free for the next check-in. */
@@ -123,6 +131,8 @@ export const bookingSchema = z
     property: reference,
     broker: reference.nullable(),
     guestName: z.string(),
+    guestPhone: z.string().nullable(),
+    notes: z.string().nullable(),
     checkIn: dateSchema,
     checkOut: dateSchema,
     nights: z.number().int(),
@@ -154,6 +164,8 @@ export function toPublicBooking(booking: BookingWithRefs): PublicBooking {
     property: booking.property,
     broker: booking.broker,
     guestName: booking.guestName,
+    guestPhone: booking.guestPhone,
+    notes: booking.notes,
     checkIn: formatDate(booking.checkIn),
     checkOut: formatDate(booking.checkOut),
     nights,

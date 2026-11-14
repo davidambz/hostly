@@ -218,6 +218,14 @@
           "guestName": {
             "type": "string"
           },
+          "guestPhone": {
+            "nullable": true,
+            "type": "string"
+          },
+          "notes": {
+            "nullable": true,
+            "type": "string"
+          },
           "checkIn": {
             "type": "string",
             "format": "date",
@@ -277,6 +285,8 @@
           "property",
           "broker",
           "guestName",
+          "guestPhone",
+          "notes",
           "checkIn",
           "checkOut",
           "nights",
@@ -762,6 +772,14 @@
           "guestName": {
             "type": "string"
           },
+          "guestPhone": {
+            "nullable": true,
+            "type": "string"
+          },
+          "notes": {
+            "nullable": true,
+            "type": "string"
+          },
           "checkIn": {
             "type": "string",
             "format": "date",
@@ -821,6 +839,8 @@
           "property",
           "broker",
           "guestName",
+          "guestPhone",
+          "notes",
           "checkIn",
           "checkOut",
           "nights",
@@ -2632,6 +2652,16 @@
                     "minLength": 1,
                     "maxLength": 255
                   },
+                  "guestPhone": {
+                    "nullable": true,
+                    "type": "string",
+                    "pattern": "^[\\d\\s().+-]*$"
+                  },
+                  "notes": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 2000
+                  },
                   "checkIn": {
                     "type": "string",
                     "format": "date",
@@ -3026,6 +3056,16 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 255
+                  },
+                  "guestPhone": {
+                    "nullable": true,
+                    "type": "string",
+                    "pattern": "^[\\d\\s().+-]*$"
+                  },
+                  "notes": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 2000
                   },
                   "checkIn": {
                     "type": "string",
