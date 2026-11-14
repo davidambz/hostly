@@ -1,8 +1,9 @@
 import { Link, NavLink, Outlet, useNavigation } from 'react-router'
 
-import { NAV_ITEMS } from '@/app/navigation'
+import { ADMIN_NAV_ITEM, NAV_ITEMS } from '@/app/navigation'
 import { Brand } from '@/components/brand'
 import { ModeToggle } from '@/components/theme/mode-toggle'
+import { useAuth } from '@/features/auth/auth-context'
 import { cn } from '@/lib/utils'
 
 import { UserMenu } from './user-menu'
@@ -27,12 +28,15 @@ function NavigationProgress() {
  * scrolling sideways if they ever outgrow it.
  */
 function SectionTabs() {
+  const { user } = useAuth()
+  // The backoffice only shows to administrators (the API checks it too).
+  const items = user?.isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS
   return (
     <nav
       aria-label="Principal"
       className="order-last -mx-4 flex w-[calc(100%+2rem)] overflow-x-auto px-2 md:order-none md:mx-0 md:h-full md:w-auto md:px-0"
     >
-      {NAV_ITEMS.map(({ title, to, icon: Icon }) => (
+      {items.map(({ title, to, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}

@@ -1960,6 +1960,168 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/admin/users': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List the accounts
+     * @description Sorted by name; `search` matches part of the name or the e-mail.
+     */
+    get: {
+      parameters: {
+        query?: {
+          page?: number
+          pageSize?: number
+          search?: string
+        }
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['AdminUserPage']
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/users/{id}/admin': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Grant or remove the administrator role
+     * @description 409 OWN_ADMIN_ROLE for your own account; 404 USER_NOT_FOUND.
+     */
+    patch: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            isAdmin: boolean
+          }
+        }
+      }
+      responses: {
+        /** @description Default Response */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': null
+          }
+        }
+        /** @description Default Response */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Default Response */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1969,6 +2131,28 @@ export interface components {
       code: string
       message: string
       details?: unknown
+    }
+    AdminUserInput: {
+      /** Format: uuid */
+      id: string
+      name: string
+      email: string
+      isAdmin: boolean
+      /** Format: date-time */
+      createdAt: string
+      propertyCount: number
+      plan: {
+        /** Format: uuid */
+        id: string
+        code: string | null
+        name: string
+      }
+    }
+    AdminUserPageInput: {
+      items: components['schemas']['AdminUserInput'][]
+      page: number
+      pageSize: number
+      total: number
     }
     UserInput: {
       /** Format: uuid */
@@ -2107,6 +2291,28 @@ export interface components {
       code: string
       message: string
       details?: unknown
+    }
+    AdminUser: {
+      /** Format: uuid */
+      id: string
+      name: string
+      email: string
+      isAdmin: boolean
+      /** Format: date-time */
+      createdAt: string
+      propertyCount: number
+      plan: {
+        /** Format: uuid */
+        id: string
+        code: string | null
+        name: string
+      }
+    }
+    AdminUserPage: {
+      items: components['schemas']['AdminUser'][]
+      page: number
+      pageSize: number
+      total: number
     }
     User: {
       /** Format: uuid */
