@@ -11,6 +11,7 @@ import {
   type AuthState,
   RESUME_RETRY_DELAYS_MS,
 } from './auth-context'
+import { rememberSession } from './session-hint'
 
 const ANONYMOUS: AuthState = { status: 'anonymous', user: null }
 
@@ -88,6 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [login],
   )
+
+  // The hint follows the session; while it can't be resolved (unavailable), it stays put.
+  useEffect(() => {
+    if (state.status === 'authenticated' || state.status === 'anonymous') {
+      rememberSession(state.status === 'authenticated')
+    }
+  }, [state.status])
 
   const logout = useCallback(() => {
     // Leave right away; telling the API is best-effort and needn't hold the user up.

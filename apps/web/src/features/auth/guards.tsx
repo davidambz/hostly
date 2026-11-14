@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 
 import { useAuth } from './auth-context'
 import { APP_HOME, safeRedirect } from './redirect'
+import { hadSession } from './session-hint'
 
 function FullScreenSpinner() {
   return (
@@ -54,14 +55,16 @@ export function RequireGuest() {
 }
 
 /**
- * The public home page: shown at once, without waiting for the session to resume, and left
- * for the app as soon as it turns out the visitor is logged in. If the API can't be reached,
- * a notice offers to try again, since the visitor may well have a session.
+ * The public home page: shown at once to a new visitor, without waiting for the session to
+ * resume. A browser that was logged in last time waits instead, so the home page doesn't
+ * flash before the app takes over. If the API can't be reached, a notice offers to try
+ * again, since the visitor may well have a session.
  */
 export function RequireVisitor() {
   const { status, retry } = useAuth()
 
   if (status === 'authenticated') return <Navigate to={APP_HOME} replace />
+  if (status === 'loading' && hadSession()) return <FullScreenSpinner />
   return (
     <>
       {status === 'unavailable' && (
