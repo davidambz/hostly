@@ -18,8 +18,12 @@ import listDarkPhone from '@/assets/landing/list-dark-phone.webp'
 import listLightPhone from '@/assets/landing/list-light-phone.webp'
 import propertiesDarkPhone from '@/assets/landing/properties-dark-phone.webp'
 import propertiesLightPhone from '@/assets/landing/properties-light-phone.webp'
+import reportsDark from '@/assets/landing/reports-dark.webp'
+import reportsDarkPhone from '@/assets/landing/reports-dark-phone.webp'
+import reportsLight from '@/assets/landing/reports-light.webp'
+import reportsLightPhone from '@/assets/landing/reports-light-phone.webp'
 
-export type ScreenId = 'calendar' | 'list' | 'booking' | 'properties' | 'brokers'
+export type ScreenId = 'calendar' | 'list' | 'booking' | 'reports' | 'properties' | 'brokers'
 
 export function isScreenId(value: string): value is ScreenId {
   return SCREENS.some((screen) => screen.id === value)
@@ -70,6 +74,16 @@ export const SCREENS: Screen[] = [
     alt: 'Formulário de reserva com o resumo: total do hóspede, comissão, quanto você recebe e quanto falta receber.',
     image: { light: bookingLight, dark: bookingDark },
     phone: { light: bookingLightPhone, dark: bookingDarkPhone },
+  },
+  {
+    id: 'reports',
+    label: 'Relatórios',
+    title: 'Como cada imóvel foi no mês',
+    caption:
+      'Ocupação, receita, líquido, diária média e RevPAR de cada imóvel, comparados com o mês anterior e com o mesmo mês do ano passado. Também o ano mês a mês e as comissões de cada intermediador.',
+    alt: 'Relatório de desempenho de janeiro: receita, líquido, ocupação, diária média e RevPAR de todos os imóveis, com a variação, e uma tabela por imóvel.',
+    image: { light: reportsLight, dark: reportsDark },
+    phone: { light: reportsLightPhone, dark: reportsDarkPhone },
   },
   {
     id: 'properties',

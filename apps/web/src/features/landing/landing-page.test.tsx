@@ -1,9 +1,11 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { THEME_STORAGE_KEY } from '@/components/theme/theme-context'
 import { renderRoute, renderWithProviders } from '@/test/render'
+import { server, url } from '@/test/server'
 
 import { LandingPage, REPOSITORY_URL } from './landing-page'
 import { SCREENS } from './screens'
@@ -203,5 +205,91 @@ describe('LandingPage', () => {
     expect(link).toHaveAttribute('href', REPOSITORY_URL)
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noreferrer')
+  })
+})
+
+describe('LandingPage, what came later', () => {
+  const plans = [
+    {
+      id: '018f0000-0000-7000-8000-0000000000f1',
+      code: 'free',
+      name: 'Free',
+      description: 'Para começar.',
+      active: true,
+      maxProperties: 1,
+      monthlyPrice: null,
+      semiannualPrice: null,
+      annualPrice: null,
+      createdAt: '',
+      updatedAt: '',
+    },
+    {
+      id: '018f0000-0000-7000-8000-0000000000f2',
+      code: 'premium',
+      name: 'Premium',
+      description: 'Imóveis ilimitados.',
+      active: true,
+      maxProperties: null,
+      monthlyPrice: 3990,
+      semiannualPrice: null,
+      annualPrice: 38300,
+      createdAt: '',
+      updatedAt: '',
+    },
+  ]
+
+  it('shows the plans with the prices the API gives, not made-up ones', async () => {
+    server.use(http.get(url('/plans'), () => HttpResponse.json(plans)))
+    renderPage()
+
+    const list = await screen.findByRole('list', { name: 'Planos' })
+    const free = within(list).getByRole('listitem', { name: 'Free' })
+    expect(free).toHaveTextContent('1 imóvel')
+    expect(free).toHaveTextContent('De graça')
+    const premium = within(list).getByRole('listitem', { name: 'Premium' })
+    expect(premium).toHaveTextContent('Imóveis sem limite')
+    expect(premium).toHaveTextContent('R$ 39,90por mês')
+    expect(premium).toHaveTextContent('R$ 383,00por ano')
+    expect(premium).not.toHaveTextContent('semestre')
+    expect(within(premium).getByRole('link', { name: 'Criar conta e assinar' })).toHaveAttribute(
+      'href',
+      '/cadastro',
+    )
+  })
+
+  it('shows no price at all when the plans can not be read', async () => {
+    server.use(
+      http.get(url('/plans'), () =>
+        HttpResponse.json({ statusCode: 404, code: 'NOT_FOUND', message: 'x' }, { status: 404 }),
+      ),
+    )
+    renderPage()
+
+    expect(await screen.findByText(/Os planos aparecem aqui/)).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Planos' })).not.toBeInTheDocument()
+  })
+
+  it('draws the year report and switches it to occupancy', async () => {
+    server.use(http.get(url('/plans'), () => HttpResponse.json(plans)))
+    const user = userEvent.setup()
+    renderPage()
+
+    const section = screen.getByRole('region', { name: 'Como cada imóvel vai, mês a mês' })
+    expect(within(section).getByRole('img', { name: /Receita por mês, 2027/ })).toBeInTheDocument()
+    expect(section).toHaveTextContent('Ocupação no ano46,3%')
+    await user.click(within(section).getByRole('radio', { name: 'Ocupação' }))
+
+    expect(within(section).getByRole('img', { name: /Ocupação por mês, 2027/ })).toBeInTheDocument()
+  })
+
+  it('lists what else comes with the app', () => {
+    renderPage()
+
+    const section = screen.getByRole('region', { name: 'E o que mais vem junto' })
+    expect(within(section).getByText('Pagamentos da reserva')).toBeInTheDocument()
+    expect(within(section).getByRole('link', { name: 'no GitHub' })).toHaveAttribute(
+      'href',
+      REPOSITORY_URL,
+    )
   })
 })

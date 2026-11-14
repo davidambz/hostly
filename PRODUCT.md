@@ -29,9 +29,15 @@ Feito para o aluguel de temporada brasileiro de quem tem poucos imóveis ou gere
 
 ## Capabilities and Constraints
 
-- Funciona hoje: cadastro e login, imóveis, intermediadores, reservas com calendário e lista, cálculo do resumo financeiro, tema claro e escuro.
-- Fora por enquanto: contratos.
-- Planos: **Free** (até 1 imóvel, de graça, sem prazo) e **Premium** (imóveis ilimitados), cobrado por mês, semestre ou ano. Não há período de teste: o Free é o jeito de conhecer. Os preços ainda não foram definidos (ficam no backoffice): não publicar preços até lá. Um administrador pode dar um plano de cortesia por 1 mês, 6 meses, 1 ano ou vitalício.
+- Funciona hoje:
+  - Cadastro e login com sessão que continua (refresh token), troca de senha, sair dos outros aparelhos.
+  - Imóveis (endereço pelo CEP, diária e limpeza padrão), intermediadores (CPF ou CNPJ, comissão padrão).
+  - Reservas em calendário (mês e semana) e lista, sem datas sobrepostas, com o resumo financeiro ao vivo, pagamentos registrados um a um (sinal, parcelas) e o que falta receber; próximas entradas e saídas; exportação do mês em planilha.
+  - Relatórios: desempenho por imóvel (ocupação, receita, líquido, diária média, RevPAR, comparados com o período anterior e o ano passado), o ano mês a mês com gráficos, e comissões a pagar por intermediador com os canais (cada intermediador e a reserva direta).
+  - Planos e assinatura pela Stripe (cartão), com troca de periodicidade, cancelamento da renovação e histórico de pagamentos; backoffice para administradores (usuários, planos e preços, cortesias, painel).
+  - Instalável no celular (PWA), tema claro e escuro.
+- Fora por enquanto: contratos, recuperação de senha por e-mail, sincronização com Airbnb/Booking (iCal).
+- Planos: **Free** (1 imóvel, de graça, sem prazo) e **Premium** (imóveis ilimitados), por mês, semestre ou ano. Não há período de teste: o Free é o jeito de conhecer. Os preços são definidos no backoffice e lidos da API (`GET /plans`): a página pública mostra os preços reais, nunca valores escritos à mão. Um administrador pode dar um plano de cortesia por 1 mês, 6 meses, 1 ano ou vitalício.
 - Código aberto em github.com/davidambz/hostly.
 
 ## Brand Commitments
@@ -44,8 +50,9 @@ Feito para o aluguel de temporada brasileiro de quem tem poucos imóveis ou gere
 
 ## Evidence on Hand
 
-- As telas reais do app (calendário e lista de reservas, imóveis, intermediadores, formulário de reserva com o resumo ao vivo), que podem ser capturadas com dados fictícios.
-- Não existem clientes, depoimentos, números de uso, logos de parceiros nem preços. Não inventar nenhum deles.
+- As telas reais do app (calendário e lista de reservas, reserva com o resumo e os pagamentos, imóveis, intermediadores, relatórios), capturadas com a conta de demonstração e dados fictícios.
+- Os planos e preços reais, vindos da API.
+- Não existem clientes, depoimentos, números de uso nem logos de parceiros. Não inventar nenhum deles.
 
 ## Product Principles
 

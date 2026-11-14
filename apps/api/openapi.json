@@ -6444,12 +6444,7 @@
         "tags": [
           "plans"
         ],
-        "description": "Free first, then by name. Prices in cents; null while a period is not offered.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "description": "Public. Free first, then by name. Prices in cents; null while a period is not offered.",
         "responses": {
           "200": {
             "description": "Default Response",
@@ -6460,16 +6455,6 @@
                   "items": {
                     "$ref": "#/components/schemas/Plan"
                   }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
