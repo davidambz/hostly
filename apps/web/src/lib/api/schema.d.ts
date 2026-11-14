@@ -640,6 +640,54 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/me/grants': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Plans given to me
+     * @description Courtesy plans an administrator gave this account, newest first. The reason and who granted them stay in the backoffice.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['MyGrant'][]
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/properties': {
     parameters: {
       query?: never
@@ -2008,6 +2056,54 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/plans': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * The plans on sale
+     * @description Free first, then by name. Prices in cents; null while a period is not offered.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Plan'][]
+          }
+        }
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/admin/plans': {
     parameters: {
       query?: never
@@ -2955,6 +3051,22 @@ export interface components {
       propertyCount: number
       canAddProperty: boolean
     }
+    MyGrantInput: {
+      /** Format: uuid */
+      id: string
+      plan: {
+        name: string
+      }
+      /** @enum {string} */
+      duration: 'ONE_MONTH' | 'SIX_MONTHS' | 'ONE_YEAR' | 'LIFETIME'
+      /** Format: date-time */
+      startsAt: string
+      /** Format: date-time */
+      endsAt: string | null
+      /** Format: date-time */
+      revokedAt: string | null
+      inForce: boolean
+    }
     AccessTokenInput: {
       accessToken: string
       /** @enum {string} */
@@ -3201,6 +3313,22 @@ export interface components {
       endsAt: string | null
       propertyCount: number
       canAddProperty: boolean
+    }
+    MyGrant: {
+      /** Format: uuid */
+      id: string
+      plan: {
+        name: string
+      }
+      /** @enum {string} */
+      duration: 'ONE_MONTH' | 'SIX_MONTHS' | 'ONE_YEAR' | 'LIFETIME'
+      /** Format: date-time */
+      startsAt: string
+      /** Format: date-time */
+      endsAt: string | null
+      /** Format: date-time */
+      revokedAt: string | null
+      inForce: boolean
     }
     AccessToken: {
       accessToken: string

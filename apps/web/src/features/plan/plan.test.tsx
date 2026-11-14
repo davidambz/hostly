@@ -8,7 +8,8 @@ import { nth } from '@/test/nth'
 import { renderRoute } from '@/test/render'
 import { freePlan, loggedInHandlers, server, url } from '@/test/server'
 
-import { sourceLabel, usageLabel } from './plan-labels'
+import type { MyGrant, Plan } from './api'
+import { grantLabel, periodPrices, sourceLabel, usageLabel } from './plan-labels'
 
 function serve(plan: ReturnType<typeof freePlan>, properties: { id: string; name: string }[] = []) {
   server.use(...loggedInHandlers)
@@ -120,5 +121,110 @@ describe('plan labels', () => {
       'Cortesia até 10/03/2027.',
     )
     expect(sourceLabel(freePlan())).toBeNull()
+  })
+})
+
+function plan(overrides: Partial<Plan>): Plan {
+  return {
+    id: '018f0000-0000-7000-8000-0000000000f1',
+    code: 'free',
+    name: 'Free',
+    description: 'Para começar: um imóvel, de graça, sem prazo.',
+    active: true,
+    maxProperties: 1,
+    monthlyPrice: null,
+    semiannualPrice: null,
+    annualPrice: null,
+    createdAt: '',
+    updatedAt: '',
+    ...overrides,
+  }
+}
+
+const premium = plan({
+  id: '018f0000-0000-7000-8000-0000000000f2',
+  code: 'premium',
+  name: 'Premium',
+  description: 'Imóveis ilimitados.',
+  maxProperties: null,
+  monthlyPrice: 3990,
+  annualPrice: 38300,
+})
+
+const lifetime: MyGrant = {
+  id: '018f0000-0000-7000-8000-0000000000a1',
+  plan: { name: 'Premium' },
+  duration: 'LIFETIME',
+  startsAt: '2026-11-14T12:00:00.000Z',
+  endsAt: null,
+  revokedAt: null,
+  inForce: true,
+}
+
+describe('plans on the plan page', () => {
+  it('shows each plan with its prices, marking the current one', async () => {
+    serve(freePlan())
+    server.use(
+      http.get(url('/plans'), () => HttpResponse.json([plan({}), premium])),
+      http.get(url('/me/grants'), () => HttpResponse.json([])),
+    )
+    renderRoute(routes, '/plano')
+
+    const list = await screen.findByRole('region', { name: 'Planos' }, { timeout: 5000 })
+    const free = await within(list).findByRole('listitem', { name: 'Free' })
+    expect(free).toHaveTextContent('Seu plano')
+    expect(free).toHaveTextContent('De graça')
+    const paid = within(list).getByRole('listitem', { name: 'Premium' })
+    expect(paid).toHaveTextContent('Imóveis ilimitados')
+    expect(paid).toHaveTextContent('R$ 39,90 por mês')
+    expect(paid).toHaveTextContent('R$ 383,00 por ano')
+    expect(paid).not.toHaveTextContent('por semestre')
+    expect(paid).toHaveTextContent('A contratação pelo Hostly chega em breve.')
+    expect(screen.queryByRole('region', { name: 'Cortesias' })).not.toBeInTheDocument()
+  })
+
+  it('lists the courtesy plans received', async () => {
+    serve({ ...freePlan(), source: 'GRANT', plan: { ...freePlan().plan, name: 'Premium' } })
+    server.use(
+      http.get(url('/plans'), () => HttpResponse.json([plan({}), premium])),
+      http.get(url('/me/grants'), () =>
+        HttpResponse.json([
+          lifetime,
+          {
+            ...lifetime,
+            id: '018f0000-0000-7000-8000-0000000000a2',
+            duration: 'ONE_MONTH',
+            startsAt: '2026-01-01T12:00:00.000Z',
+            endsAt: '2026-02-01T12:00:00.000Z',
+            inForce: false,
+          },
+        ]),
+      ),
+    )
+    renderRoute(routes, '/plano')
+
+    const grants = await screen.findByRole('region', { name: 'Cortesias' }, { timeout: 5000 })
+    expect(
+      within(grants)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      'Premium, vitalícia, desde 14/11/2026Em vigor',
+      'Premium por 1 mês, de 01/01/2026 a 01/02/2026Terminou',
+    ])
+  })
+})
+
+describe('plan helpers', () => {
+  it('lists only the periods with a price', () => {
+    expect(periodPrices(premium)).toEqual([
+      { label: 'por mês', price: 3990 },
+      { label: 'por ano', price: 38300 },
+    ])
+    expect(periodPrices(plan({}))).toEqual([])
+  })
+
+  it('describes a grant', () => {
+    expect(grantLabel(lifetime)).toBe('Premium, vitalícia, desde 14/11/2026')
   })
 })

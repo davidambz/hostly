@@ -16,3 +16,22 @@ export function useMyPlan() {
     queryFn: async () => unwrap(await api.GET('/me/plan')),
   })
 }
+
+export type Plan = components['schemas']['Plan']
+export type MyGrant = components['schemas']['MyGrant']
+
+/** The plans on sale, Free first. */
+export function usePlans() {
+  return useQuery({
+    queryKey: ['plan', 'all'],
+    queryFn: async () => unwrap(await api.GET('/plans')),
+  })
+}
+
+/** The courtesy plans an administrator gave this account. */
+export function useMyGrants() {
+  return useQuery({
+    queryKey: ['plan', 'grants'],
+    queryFn: async () => unwrap(await api.GET('/me/grants')),
+  })
+}
