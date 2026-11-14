@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Trash2 } from 'lucide-react'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 
 import { FormError } from '@/components/form/form-error'
@@ -19,6 +19,8 @@ import {
   bookingFormSchema,
   toBookingInput,
   toQuoteInput,
+  type BookingDefaults,
+  defaultsToFill,
 } from './booking-schema'
 import { DateRangeField } from './date-range-field'
 import { formatShortDate } from './dates'
@@ -61,6 +63,7 @@ export function BookingForm({
   brokers,
   bookingId,
   fallbackMonth,
+  defaults,
 }: {
   defaultValues: BookingFormValues
   /** The choices, loaded before the form: a native select drops a value it has no option for. */
@@ -75,6 +78,8 @@ export function BookingForm({
   bookingId?: string
   /** Where the date picker opens when there are no dates yet. */
   fallbackMonth?: string
+  /** Values a property or broker brings along when picked. */
+  defaults?: BookingDefaults
 }) {
   const form = useForm<BookingFormValues, unknown, ReturnType<typeof bookingFormSchema.parse>>({
     resolver: zodResolver(bookingFormSchema),
@@ -103,6 +108,35 @@ export function BookingForm({
 
   const money = (name: 'nightlyRate' | 'cleaningFee' | 'discount' | 'amountPaid') =>
     withMask(form.register(name), maskMoney)
+
+  /**
+   * Picking a property or broker brings its defaults into the fields not typed in. The
+   * previous pick is remembered here: by the time a change is seen, the form holds the new one.
+   */
+  useEffect(() => {
+    if (!defaults) return
+    const previous = {
+      propertyId: form.getValues('propertyId'),
+      brokerId: form.getValues('brokerId'),
+    }
+    return form.subscribe({
+      name: ['propertyId', 'brokerId'],
+      formState: { values: true },
+      callback: ({ name, type }) => {
+        if (type !== 'change' || (name !== 'propertyId' && name !== 'brokerId')) return
+        const nextId = form.getValues(name)
+        const fill = defaultsToFill(form.getValues(), defaults, {
+          field: name,
+          previousId: previous[name],
+          nextId,
+        })
+        previous[name] = nextId
+        for (const [field, value] of Object.entries(fill) as [keyof typeof fill, string][]) {
+          form.setValue(field, value)
+        }
+      },
+    })
+  }, [form, defaults])
 
   return (
     <form noValidate onSubmit={(event) => void submit(event)} className="grid gap-5">

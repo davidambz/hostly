@@ -128,3 +128,63 @@ export function toBookingInput(values: z.output<typeof bookingFormSchema>): Requ
     brokerCommissionBps: values.brokerId ? (percentToBps(values.brokerCommissionBps) ?? 0) : 0,
   }
 }
+
+/** What a new booking starts with, from its property and its broker. */
+export interface BookingDefaults {
+  /** Per property id: cents per night and cleaning fee, or null when it has none. */
+  properties: Map<string, { nightlyRate: number | null; cleaningFee: number | null }>
+  /** Per broker id: the commission in basis points, or null when it has none. */
+  brokers: Map<string, number | null>
+}
+
+type DefaultField = 'nightlyRate' | 'cleaningFee' | 'brokerCommissionBps'
+
+/**
+ * The fields to fill when the property or broker becomes `nextId`: each field still blank,
+ * or still holding the default of the one it replaces (`previousId`), takes the new
+ * default. Anything the user typed stays.
+ */
+export function defaultsToFill(
+  values: BookingFormValues,
+  defaults: BookingDefaults,
+  change: { field: 'propertyId' | 'brokerId'; previousId: string; nextId: string },
+): Partial<Pick<BookingFormValues, DefaultField>> {
+  const fill: Partial<Pick<BookingFormValues, DefaultField>> = {}
+  const take = (field: DefaultField, previous: string, next: string) => {
+    if (next !== '' && (values[field] === '' || values[field] === previous)) fill[field] = next
+  }
+  if (change.field === 'propertyId') {
+    const before = defaults.properties.get(change.previousId)
+    const after = defaults.properties.get(change.nextId)
+    take('nightlyRate', amountText(before?.nightlyRate), amountText(after?.nightlyRate))
+    take('cleaningFee', amountText(before?.cleaningFee), amountText(after?.cleaningFee))
+  } else {
+    take(
+      'brokerCommissionBps',
+      percentText(defaults.brokers.get(change.previousId)),
+      percentText(defaults.brokers.get(change.nextId)),
+    )
+  }
+  return fill
+}
+
+const amountText = (cents: number | null | undefined) =>
+  cents === null || cents === undefined ? '' : formatBRL(cents)
+const percentText = (bps: number | null | undefined) =>
+  bps === null || bps === undefined ? '' : bpsToPercent(bps)
+
+/** A new booking's first values: the draft, plus its property's defaults when it has one. */
+export function newBookingForm(
+  draft: Parameters<typeof emptyBookingForm>[0],
+  defaults: BookingDefaults,
+): BookingFormValues {
+  const values = emptyBookingForm(draft)
+  return {
+    ...values,
+    ...defaultsToFill(values, defaults, {
+      field: 'propertyId',
+      previousId: '',
+      nextId: values.propertyId,
+    }),
+  }
+}

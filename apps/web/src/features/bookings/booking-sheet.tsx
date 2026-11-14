@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { toast } from 'sonner'
 
 import { ErrorState, LoadingState } from '@/components/states'
@@ -15,7 +16,12 @@ import { useAllBrokers } from '../brokers/api'
 import { useAllProperties } from '../properties/api'
 import { type Booking, useCreateBooking, useUpdateBooking } from './api'
 import { BookingForm } from './booking-form'
-import { type BookingFormValues, emptyBookingForm, toFormValues } from './booking-schema'
+import {
+  type BookingDefaults,
+  type BookingFormValues,
+  newBookingForm,
+  toFormValues,
+} from './booking-schema'
 
 /** What a new booking starts with: the property filtered on, the days picked. */
 export type BookingDraft = Partial<Pick<BookingFormValues, 'propertyId' | 'checkIn' | 'checkOut'>>
@@ -44,6 +50,20 @@ export function BookingSheet({
   const toOptions = (items: { id: string; name: string }[] = []) =>
     items.map((item) => ({ value: item.id, label: item.name }))
   const failed = properties.isError ? properties : brokers.isError ? brokers : null
+  const defaults = useMemo<BookingDefaults>(
+    () => ({
+      properties: new Map(
+        (properties.data ?? []).map((property) => [
+          property.id,
+          { nightlyRate: property.defaultNightlyRate, cleaningFee: property.defaultCleaningFee },
+        ]),
+      ),
+      brokers: new Map(
+        (brokers.data ?? []).map((broker) => [broker.id, broker.defaultCommissionBps]),
+      ),
+    }),
+    [properties.data, brokers.data],
+  )
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -70,7 +90,8 @@ export function BookingSheet({
               properties={toOptions(properties.data)}
               brokers={toOptions(brokers.data)}
               key={booking?.id ?? `new-${JSON.stringify(draft ?? {})}`}
-              defaultValues={booking ? toFormValues(booking) : emptyBookingForm(draft)}
+              defaultValues={booking ? toFormValues(booking) : newBookingForm(draft, defaults)}
+              defaults={defaults}
               submitLabel={booking ? 'Salvar' : 'Criar reserva'}
               bookingId={booking?.id}
               fallbackMonth={month}

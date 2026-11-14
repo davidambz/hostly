@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import type { Booking } from './api'
 import {
+  type BookingDefaults,
   bookingFormSchema,
+  defaultsToFill,
   emptyBookingForm,
+  newBookingForm,
   toBookingInput,
   toFormValues,
   toQuoteInput,
@@ -178,5 +181,64 @@ describe('toFormValues', () => {
       brokerId: '',
       brokerCommissionBps: '',
     })
+  })
+})
+
+describe('booking defaults', () => {
+  const defaults: BookingDefaults = {
+    properties: new Map([
+      ['casa', { nightlyRate: 45000, cleaningFee: 18000 }],
+      ['ape', { nightlyRate: 30000, cleaningFee: null }],
+      ['bare', { nightlyRate: null, cleaningFee: null }],
+    ]),
+    brokers: new Map([
+      ['maria', 1000],
+      ['joao', null],
+    ]),
+  }
+
+  it("starts a new booking with its property's rate and cleaning fee", () => {
+    expect(newBookingForm({ propertyId: 'casa' }, defaults)).toMatchObject({
+      nightlyRate: 'R$ 450,00',
+      cleaningFee: 'R$ 180,00',
+    })
+  })
+
+  it('starts blank without a property, or for one with no defaults', () => {
+    expect(newBookingForm({}, defaults)).toMatchObject({ nightlyRate: '', cleaningFee: '' })
+    expect(newBookingForm({ propertyId: 'bare' }, defaults)).toMatchObject({ nightlyRate: '' })
+  })
+
+  it('swaps the defaults of the property it replaces, keeping what the user typed', () => {
+    const values = { ...emptyBookingForm(), nightlyRate: 'R$ 450,00', cleaningFee: 'R$ 99,00' }
+
+    expect(
+      defaultsToFill(values, defaults, { field: 'propertyId', previousId: 'casa', nextId: 'ape' }),
+    ).toEqual({ nightlyRate: 'R$ 300,00' })
+  })
+
+  it('leaves a typed rate alone', () => {
+    const values = { ...emptyBookingForm(), nightlyRate: 'R$ 500,00' }
+
+    expect(
+      defaultsToFill(values, defaults, { field: 'propertyId', previousId: '', nextId: 'casa' }),
+    ).toEqual({ cleaningFee: 'R$ 180,00' })
+  })
+
+  it("fills the broker's commission, and swaps it for the next broker's", () => {
+    const blank = emptyBookingForm()
+    expect(
+      defaultsToFill(blank, defaults, { field: 'brokerId', previousId: '', nextId: 'maria' }),
+    ).toEqual({ brokerCommissionBps: '10' })
+
+    // João has no default: Maria's stays, as it may be what the user wants.
+    const withMaria = { ...blank, brokerCommissionBps: '10' }
+    expect(
+      defaultsToFill(withMaria, defaults, {
+        field: 'brokerId',
+        previousId: 'maria',
+        nextId: 'joao',
+      }),
+    ).toEqual({})
   })
 })
